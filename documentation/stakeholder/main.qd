@@ -17,7 +17,7 @@
     - Impatto sul progetto
     - Startegia di comunicazione
 
-.tableyrows {.headers}
+.tablebyrows {.headers}
     - - Alessandro Ricci (docente SAP, Committente)
       - Corretta implementazione delle architetture richieste (es. sistemi multi-agente o microservizi), aderenza alle tecnologie studiate e rispetto delle scadenze accademiche.
       - Alto. Definisce i vincoli tecnici "invalicabili" e determina il superamento o meno della componente informatica del corso.

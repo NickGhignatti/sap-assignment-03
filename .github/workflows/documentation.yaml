@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - master
 
 permissions:
   contents: write
@@ -18,12 +18,6 @@ jobs:
         with:
           ref: ${{ github.event.push.base.ref }}
 
-      # - name: Setup Node
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: 24
-      #     cache: npm
-
       - name: Configure Git credentials
         run: |
           git config user.name github-actions[bot]
@@ -34,7 +28,10 @@ jobs:
       - uses: quarkdown-labs/setup-quarkdown@v1
 
       - name: Build Project Overview Statement
-        run: quarkdown c documentation/pos/main.qd --out documentation/out/pos.pdf
+        run: quarkdown c documentation/pos/main.qd --pdf --out ./documentation/out --out-name pos
+
+      - name: Build Stakeholder
+        run: quarkdown c documentation/stakeholder/main.qd --pdf --out ./documentation/out --out-name stakeholder
 
       - name: Deploy to ghpages
         uses: peaceiris/actions-gh-pages@v3
@@ -42,3 +39,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./documentation
           force_orphan: true
+          exclude_assets: ''
