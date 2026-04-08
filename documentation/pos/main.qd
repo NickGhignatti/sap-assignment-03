@@ -1,0 +1,34 @@
+.docname {pos}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Project Overview Statement
+**Nome del Progetto:** Piattaforma Logistica di Consegna tramite Droni as-a-Service
+
+## Problema
+Nel mercato logistico attuale, gli utenti necessitano di un metodo sempre più rapido, flessibile e prevedibile per la spedizione di pacchi point-to-point. Vi è una chiara opportunità di business nell'offrire un servizio di consegna automatizzato tramite droni on-demand. I clienti richiedono un controllo totale sull'esperienza di spedizione: devono poter definire le caratteristiche del pacco, programmare le consegne (con effetto immediato o schedulato) e avere visibilità totale sul processo tramite un tracciamento in tempo reale accurato.
+
+## Scopo del progetto
+Lo scopo del progetto è ideare e sviluppare un sistema online end-to-end che abiliti il servizio di consegna pacchi tramite droni. Il progetto si concentrerà sulla realizzazione delle funzionalità strategiche necessarie a connettere l'esigenza di spedizione dell'utente con la gestione operativa della consegna, fornendo un'esperienza fluida dalla prenotazione fino all'arrivo a destinazione.
+
+## Obiettivi del Progetto
+- *Gestione delle Prenotazioni*: Sviluppare un portale/sistema che permetta agli utenti di inserire le richieste di spedizione, specificando il punto di ritiro, la destinazione, il peso del pacco e i vincoli temporali (consegna immediata o programmata).
+- *Motore di Gestione e Dispacciamento*: Creare la logica core per elaborare le richieste e garantire che le consegne vengano completate in modo affidabile entro i limiti di tempo richiesti.
+- *Sistema di Tracciamento Real-Time*: Implementare una funzionalità di monitoraggio continuo che restituisca all'utente, in ogni istante, la posizione geografica esatta del drone e aggiorni dinamicamente il tempo stimato per il completamento della consegna (ETA).
+
+## Criteri di successo
+- Il sistema elabora e gestisce correttamente l'intero ciclo di vita della spedizione, dalla presa in carico alla notifica di consegna avvenuta.
+- Il tracciamento in tempo reale è accurato e fornisce aggiornamenti di posizione e tempistiche senza latenze che degradino l'esperienza utente.
+- Raggiungimento di un'alta percentuale di consegne completate con successo all'interno delle finestre temporali definite in fase di prenotazione.
+
+##  Vincoli e Assunzioni
+- Vincoli Operativi/Fisici: Il servizio sarà limitato da parametri fisici specifici (es. peso massimo consentito per il pacco, raggio d'azione chilometrico coperto dalla flotta).
+- Vincoli Normativi: Le operazioni di volo e consegna dovranno tenere conto delle normative aeree e di sicurezza locali vigenti.
+- Assunzioni: Si assume che i droni siano dotati di sistemi di telemetria in grado di trasmettere costantemente e in modo affidabile i propri dati (coordinate, stato, autonomia) al sistema centrale per alimentare il tracciamento.
