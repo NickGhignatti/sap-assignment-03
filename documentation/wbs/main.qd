@@ -1,0 +1,72 @@
+.docname {wbs}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Work Breakdown Structure (WBS)
+
+![Work Breakdown Structure](./images/wbs.png)
+
+**1.0 SAP Assignment 03**
+
+- **1.1 Setup workspace**
+  - 1.1.1 Creazione repository
+  - 1.1.2 Setup Rust toolchain
+  - 1.1.3 Dipendenze e workspace
+  - 1.1.4 Configurazione CI/CD base
+
+- **1.2 Crate common**
+  - 1.2.1 Definizione dominio base
+  - 1.2.2 Setup client Apache Kafka
+  - 1.2.3 Data Transfer Objects
+  - 1.2.4 Error handling e Utils
+  - 1.2.5 Test unitari comuni
+
+- **1.3 Customer service**
+  - 1.3.1 Setup progetto base
+  - 1.3.2 Modello dati e Repository
+  - 1.3.3 Sviluppo API REST
+  - 1.3.4 Adattamento per interazione con microservizio EDA (Delivery)
+  - 1.3.5 Logica di validazione
+  - 1.3.6 Unit & Integration test
+
+- **1.4 Delivery service (Refactoring EDA)**
+  - 1.4.1 Riprogettazione Event-Driven Architecture (EDA)
+  - 1.4.2 Integrazione middleware Apache Kafka
+  - 1.4.3 Sviluppo logica di pubblicazione/sottoscrizione eventi
+  - 1.4.4 Adattamento logica di business agli eventi
+  - 1.4.5 Unit & Integration test (Kafka)
+
+- **1.5 Drone service (Agent-Based)**
+  - 1.5.1 Setup progetto base
+  - 1.5.2 Identificazione e design del modello/architettura Agent-Based
+  - 1.5.3 Sviluppo prototipo del sistema software autonomo di controllo
+  - 1.5.4 Sviluppo API interne e integrazione
+  - 1.5.5 Simulazione di volo
+  - 1.5.6 Unit & Integration test
+
+- **1.6 Infrastruttura & Scaling**
+  - 1.6.1 Docker compose base (Ambiente di sviluppo)
+  - 1.6.2 Setup middleware Apache Kafka
+  - 1.6.3 Setup Database
+  - 1.6.4 Implementazione deployment basato su Kubernetes
+  - 1.6.5 Definizione di 2 SLO e corrispondenti SLI
+  - 1.6.6 Estensione dell'implementazione per misurazione SLI
+
+- **1.7 Testing & validazione**
+  - 1.7.1 End-to-End testing
+  - 1.7.2 Testing flussi Event-Driven
+  - 1.7.3 Validazione architetturale (Agenti e Microservizi)
+  - 1.7.4 Analisi misurazioni SLI e valutazioni
+
+- **1.8 Documentazione**
+  - 1.8.1 Setup README
+  - 1.8.2 Documentazione API e interfacce
+  - 1.8.3 Diagrammi architetturali (K8s, EDA, Multi-Agent)
+  - 1.8.4 Stesura report finale
