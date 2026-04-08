@@ -36,6 +36,9 @@ jobs:
       - name: Build Methodology
         run: quarkdown c documentation/methodology/main.qd --pdf --out ./documentation/out --out-name methodology
 
+      - name: WBS Methodology
+        run: quarkdown c documentation/wbs/main.qd --pdf --out ./documentation/out --out-name wbs
+
       - name: Deploy to ghpages
         uses: peaceiris/actions-gh-pages@v3
         with:
