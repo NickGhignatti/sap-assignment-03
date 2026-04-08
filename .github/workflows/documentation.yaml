@@ -33,6 +33,9 @@ jobs:
       - name: Build Stakeholder
         run: quarkdown c documentation/stakeholder/main.qd --pdf --out ./documentation/out --out-name stakeholder
 
+      - name: Build Methodology
+        run: quarkdown c documentation/methodology/main.qd --pdf --out ./documentation/out --out-name methodology
+
       - name: Deploy to ghpages
         uses: peaceiris/actions-gh-pages@v3
         with:
