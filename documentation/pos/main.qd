@@ -9,26 +9,93 @@
 .pagemargin {bottomcenter}
     .currentpage
 
-# Project Overview Statement
-**Nome del Progetto:** Piattaforma Logistica di Consegna tramite Droni as-a-Service
+# Project Overview Statement (POS)
 
-## Problema
-Nel mercato logistico attuale, gli utenti necessitano di un metodo sempre più rapido, flessibile e prevedibile per la spedizione di pacchi point-to-point. Vi è una chiara opportunità di business nell'offrire un servizio di consegna automatizzato tramite droni on-demand. I clienti richiedono un controllo totale sull'esperienza di spedizione: devono poter definire le caratteristiche del pacco, programmare le consegne (con effetto immediato o schedulato) e avere visibilità totale sul processo tramite un tracciamento in tempo reale accurato.
+---
 
-## Scopo del progetto
-Lo scopo del progetto è ideare e sviluppare un sistema online end-to-end che abiliti il servizio di consegna pacchi tramite droni. Il progetto si concentrerà sulla realizzazione delle funzionalità strategiche necessarie a connettere l'esigenza di spedizione dell'utente con la gestione operativa della consegna, fornendo un'esperienza fluida dalla prenotazione fino all'arrivo a destinazione.
+| Campo               | Valore                                             |
+|---------------------|----------------------------------------------------|
+| **Nome progetto**   | DroneFlow — Servizio di Consegna Pacchi con Droni  |
+| **Project No.**     | SAP-03                                             |
+| **Project Manager** | Ghignatti Nicolò                                   |
+| **Redatto da**      | Ghignatti Nicolò                                   |
+| **Data**            | Aprile 2026                                        |
 
-## Obiettivi del Progetto
-- *Gestione delle Prenotazioni*: Sviluppare un portale/sistema che permetta agli utenti di inserire le richieste di spedizione, specificando il punto di ritiro, la destinazione, il peso del pacco e i vincoli temporali (consegna immediata o programmata).
-- *Motore di Gestione e Dispacciamento*: Creare la logica core per elaborare le richieste e garantire che le consegne vengano completate in modo affidabile entro i limiti di tempo richiesti.
-- *Sistema di Tracciamento Real-Time*: Implementare una funzionalità di monitoraggio continuo che restituisca all'utente, in ogni istante, la posizione geografica esatta del drone e aggiorni dinamicamente il tempo stimato per il completamento della consegna (ETA).
+---
+
+## Problema / Opportunità
+
+La spedizione di un pacco richiede oggi di affidarsi a servizi di corriere tradizionali che
+non offrono flessibilità nell'orario di consegna, non garantiscono il rispetto di una finestra
+temporale precisa e non consentono all'utente di seguire in tempo reale la posizione del pacco
+durante il trasporto.
+
+L'opportunità consiste nel fornire un servizio di consegna autonomo basato su droni,
+accessibile tramite web, che consenta a qualsiasi utente di spedire un pacco da un indirizzo
+a un altro scegliendo il momento di ritiro e imponendo un tempo massimo di consegna,
+con la possibilità di monitorare la posizione del pacco e il tempo rimanente in ogni istante.
+
+---
+
+## Obiettivo del progetto
+
+Realizzare **DroneFlow**, una piattaforma online che permetta a un utente di:
+
+1. Richiedere la consegna di un pacco, specificando indirizzo di partenza, destinazione,
+   peso, data/ora desiderata e tempo massimo di consegna.
+2. Ricevere la conferma della presa in carico e un identificativo di tracciamento.
+3. Seguire in tempo reale la posizione del drone e il tempo stimato di arrivo.
+4. Essere notificato al completamento della consegna.
+
+---
+
+## Obiettivi specifici
+
+1. Offrire un'interfaccia semplice per la creazione di una richiesta di consegna.
+2. Garantire che ogni richiesta venga presa in carico, verificata (peso, indirizzi, finestra
+   temporale) e affidata a un drone disponibile in modo automatico, senza intervento umano.
+3. Assicurare che, in caso di impossibilità di completare la consegna (drone non disponibile,
+   peso fuori specifica, ecc.), l'utente venga informato tempestivamente e la richiesta venga
+   annullata in modo ordinato.
+4. Rendere tracciabile ogni consegna: l'utente deve poter conoscere in ogni momento lo stato
+   del pacco (in attesa, in viaggio, consegnato) e la posizione approssimativa del drone.
+5. Mantenere uno storico completo di ogni consegna effettuata, consultabile sia dall'utente
+   sia dall'operatore del servizio.
+
+---
 
 ## Criteri di successo
-- Il sistema elabora e gestisce correttamente l'intero ciclo di vita della spedizione, dalla presa in carico alla notifica di consegna avvenuta.
-- Il tracciamento in tempo reale è accurato e fornisce aggiornamenti di posizione e tempistiche senza latenze che degradino l'esperienza utente.
-- Raggiungimento di un'alta percentuale di consegne completate con successo all'interno delle finestre temporali definite in fase di prenotazione.
 
-##  Vincoli e Assunzioni
-- Vincoli Operativi/Fisici: Il servizio sarà limitato da parametri fisici specifici (es. peso massimo consentito per il pacco, raggio d'azione chilometrico coperto dalla flotta).
-- Vincoli Normativi: Le operazioni di volo e consegna dovranno tenere conto delle normative aeree e di sicurezza locali vigenti.
-- Assunzioni: Si assume che i droni siano dotati di sistemi di telemetria in grado di trasmettere costantemente e in modo affidabile i propri dati (coordinate, stato, autonomia) al sistema centrale per alimentare il tracciamento.
+| # | Criterio                                                  | Metrica                                              | Target     |
+|---|-----------------------------------------------------------|------------------------------------------------------|------------|
+| 1 | L'utente può creare una richiesta di consegna             | Richiesta accettata e confermata                     | 100%       |
+| 2 | Ogni richiesta valida riceve un drone assegnato           | % richieste valide con drone assegnato automaticamente | ≥ 95%    |
+| 3 | Le consegne avvengono entro la finestra temporale         | % consegne completate entro il tempo massimo dichiarato | ≥ 95%   |
+| 4 | La tracciabilità è disponibile per tutta la durata        | Aggiornamenti di stato disponibili senza interruzioni | ✓         |
+| 5 | Le richieste non soddisfabili vengono annullate ordinatamente | % annullamenti senza dati corrotti o stati bloccati | 100%     |
+| 6 | Lo storico delle consegne è consultabile                  | Dati di ogni consegna disponibili dopo il completamento | ✓        |
+
+---
+
+## Assunzioni, Rischi e Ostacoli
+
+### Assunzioni
+- I droni operano in un'area geografica definita e hanno una capacità di peso massima nota.
+- La rete di comunicazione tra il sistema e i droni è disponibile durante tutta la consegna.
+- Il servizio è destinato a un contesto inizialmente limitato (prototipo / progetto accademico),
+  con droni simulati software.
+- Non sono richiesti meccanismi di autenticazione utente avanzati nella versione iniziale.
+
+### Rischi
+
+| Rischio                                                    | Probabilità | Impatto | Mitigazione                                             |
+|------------------------------------------------------------|-------------|---------|----------------------------------------------------------|
+| Richiesta di consegna con dati non validi (peso, indirizzi)| Alta        | Basso   | Validazione automatica prima della presa in carico       |
+| Nessun drone disponibile al momento della richiesta        | Media       | Medio   | Annullamento ordinato con notifica all'utente            |
+| Interruzione della comunicazione con il drone in volo      | Bassa       | Alto    | Registro immutabile degli eventi; ricostruzione stato    |
+| Crescita del volume di richieste oltre la capacità         | Media       | Alto    | Architettura scalabile orizzontalmente (vincolo tecnico) |
+
+### Ostacoli
+- Il progetto è sviluppato in ambito accademico con risorse e tempo limitati.
+- I droni sono simulati: le dinamiche reali (meteo, ostacoli, batteria) non sono modellate
+  nella versione prototipale.

@@ -1,0 +1,151 @@
+.docname {pos}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Business Case
+
+> Fornisce le informazioni necessarie per valutare se il progetto vale l'investimento
+> richiesto. È utilizzato dal senior management nel processo decisionale.
+
+---
+
+| Campo           | Valore                                             |
+|-----------------|----------------------------------------------------|
+| **Progetto**    | DroneFlow — Servizio di Consegna Pacchi con Droni  |
+| **Redatto da**  | Ghignatti Nicolò                                   |
+| **Data**        | Aprile 2026                                        |
+| **Versione**    | 1.0                                                |
+
+---
+
+## 1. Executive Summary
+
+Il mercato della consegna dell'ultimo miglio è in forte crescita, trainato dall'espansione
+dell'e-commerce e dalla domanda di consegne sempre più rapide e prevedibili. I servizi
+tradizionali non riescono a garantire finestre temporali strette né tracciabilità in tempo
+reale, lasciando un gap significativo tra le aspettative degli utenti e l'offerta attuale.
+
+DroneFlow è un servizio di consegna pacchi tramite droni che colma questo gap: l'utente
+specifica origine, destinazione, peso, orario e tempo massimo, e il sistema si occupa
+automaticamente di tutto il resto — dalla verifica della richiesta all'assegnazione del
+drone, fino alla conferma di consegna.
+
+Il progetto, realizzato in contesto accademico, dimostra la fattibilità del servizio e
+delle sue garanzie di qualità. Il ritorno sull'investimento è misurato in termini di
+competenze acquisite, qualità dell'artefatto e completezza della documentazione.
+
+---
+
+## 2. Bisogno di business (Business Need)
+
+### 2.1 Domanda di mercato
+- Il mercato globale della consegna con droni è previsto crescere a oltre **$40 miliardi
+  entro il 2030** (fonte: Allied Market Research).
+- Il costo dell'ultimo miglio rappresenta il **53% del costo totale di spedizione**
+  (fonte: Capgemini Research Institute).
+- Il **72% dei consumatori** si aspetta opzioni di consegna nello stesso giorno o
+  nella stessa ora (fonte: McKinsey & Company).
+
+### 2.2 Gap del servizio attuale
+I corrieri tradizionali non offrono:
+- Garanzia di consegna entro una finestra temporale inferiore alle 2 ore.
+- Visibilità in tempo reale sulla posizione del pacco durante il trasporto.
+- Automazione completa del processo di assegnazione del vettore.
+
+### 2.3 Soluzione proposta
+DroneFlow automatizza l'intero ciclo di vita di una consegna:
+il cliente invia una richiesta → il sistema la verifica e assegna un drone → il drone
+effettua la consegna → l'utente monitora ogni fase e riceve conferma finale.
+In caso di problemi, il sistema annulla la richiesta in modo ordinato, senza lasciare
+risorse bloccate o l'utente senza risposta.
+
+---
+
+## 3. Analisi delle alternative
+
+| Alternativa                               | Pro                                          | Contro                                                   | Scelta |
+|-------------------------------------------|----------------------------------------------|----------------------------------------------------------|--------|
+| **A1** — Corriere tradizionale            | Già disponibile, nessun investimento         | Nessuna garanzia temporale stretta, nessuna tracciabilità| ✗      |
+| **A2** — Servizio di taxi aereo manuale   | Maggiore controllo operativo                 | Non scalabile, costi operativi alti, lentezza assegnazione| ✗     |
+| **A3** — DroneFlow (soluzione proposta)   | Automatico, tracciabile, scalabile, rapido   | Richiede sviluppo, droni fisici non inclusi nel prototipo | ✓     |
+| **A4** — Acquisto di piattaforma esistente| Pronto all'uso                               | Costo licenze, nessuna dimostrazione di competenze       | ✗      |
+
+---
+
+## 4. Analisi Costi-Benefici
+
+### 4.1 Costi (contesto accademico)
+
+| Voce                                     | Stima             |
+|------------------------------------------|-------------------|
+| Ore di studio e ricerca                  | ~30 ore           |
+| Ore di sviluppo del sistema              | ~80 ore           |
+| Ore di documentazione PM                 | ~20 ore           |
+| Infrastruttura (ambiente locale)         | € 0               |
+| Software e licenze                       | € 0               |
+| **Totale**                               | **~130 ore**      |
+
+### 4.2 Benefici — Framework IRACIS
+
+| Categoria                        | Descrizione                                                                          |
+|----------------------------------|--------------------------------------------------------------------------------------|
+| **IS — Improve Service**         | L'utente riceve una garanzia temporale reale sulla consegna (non disponibile oggi)   |
+| **IS — Improve Service**         | Tracciabilità in tempo reale della posizione del pacco durante il trasporto          |
+| **IS — Improve Service**         | Annullamento automatico e comunicazione chiara in caso di impossibilità di servizio  |
+| **IR — Increase Revenue** (ipot.)| Ogni drone può effettuare più consegne al giorno rispetto a un corriere su strada    |
+| **AC — Avoid Cost** (ipot.)      | Riduzione del costo per consegna stimata al 30–40% rispetto al corriere tradizionale |
+| **Competenze acquisite**         | PM documentation, architettura distribuita, gestione di progetti software complessi  |
+
+### 4.3 Breakeven (scenario industriale ipotetico)
+
+Assumendo:
+- Costo di sviluppo: 3 sviluppatori × 4 mesi × €4.000/mese = **€ 48.000**
+- Risparmio per consegna rispetto al corriere: **€ 2,00**
+- Volume: **500 consegne/giorno**
+
+→ Breakeven: 48.000 / (2,00 × 500) = **48 giorni di operatività**
+
+---
+
+## 5. Analisi SWOT
+
+|                  | **Positivo**                                                                                     | **Negativo**                                                                        |
+|------------------|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
+| **Interno**      | **Strengths**: servizio completamente automatizzato; tracciabilità totale; garanzia temporale    | **Weaknesses**: prototipo con droni simulati; nessuna integrazione con hardware reale |
+| **Esterno**      | **Opportunities**: mercato in forte crescita; normativa EU sui droni urbani in definizione (first-mover advantage) | **Threats**: concorrenti con piattaforme già operative; vincoli regolatori sul volo urbano dei droni |
+
+---
+
+## 6. Raccomandazione
+
+Si raccomanda di **procedere con il progetto DroneFlow** per i seguenti motivi:
+
+1. Il bisogno di business è reale e documentato da ricerche di mercato autorevoli.
+2. Nessuna delle alternative offre la stessa combinazione di automazione, tracciabilità
+   e garanzia temporale.
+3. Il costo di realizzazione del prototipo è contenuto (ore studente, zero costi
+   infrastrutturali).
+4. In uno scenario industriale, il breakeven si raggiunge in meno di due mesi.
+5. Il progetto sviluppa competenze direttamente spendibili nel mercato del lavoro
+   (progettazione di servizi distribuiti, project management documentato).
+
+---
+
+## 7. Vincoli tecnici rilevanti per il business case
+
+Le scelte tecnologiche adottate nel progetto non sono obiettivi di business in sé, ma
+sono necessarie per garantire le proprietà del servizio richieste:
+
+| Proprietà di servizio richiesta                     | Vincolo tecnico che la garantisce                              |
+|-----------------------------------------------------|----------------------------------------------------------------|
+| Il sistema non va in stallo se un componente fallisce | Architettura a microservizi con comunicazione asincrona        |
+| Annullamento ordinato delle operazioni parziali      | Pattern SAGA per la gestione di transazioni distribuite        |
+| Storico immutabile e consultabile di ogni consegna   | Event Sourcing per la persistenza degli stati del drone        |
+| Scalabilità al crescere delle richieste              | Componenti indipendenti scalabili orizzontalmente              |

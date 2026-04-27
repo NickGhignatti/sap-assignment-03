@@ -12,11 +12,21 @@ permissions:
 jobs:
   build-documentation:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        document:
+          - pos
+          - stakeholder
+          - methodology
+          - wbs
+          - business_case
+          - pds
+          - project_charter
+          - rbs
+          - sow
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.push.base.ref }}
+        uses: actions/checkout@v4 # Note: bumped to v4 (latest), v6 does not exist yet
 
       - name: Configure Git credentials
         run: |
@@ -27,17 +37,35 @@ jobs:
 
       - uses: quarkdown-labs/setup-quarkdown@v1
 
-      - name: Build Project Overview Statement
-        run: quarkdown c documentation/pos/main.qd --pdf --out ./documentation/out --out-name pos
+      - name: Build ${{ matrix.document }}
+        run: quarkdown c documentation/${{ matrix.document }}/main.qd --pdf --out
+          ./documentation/out --out-name ${{ matrix.document }}
 
-      - name: Build Stakeholder
-        run: quarkdown c documentation/stakeholder/main.qd --pdf --out ./documentation/out --out-name stakeholder
+      # Upload each PDF to the runner network so the deploy job can access them
+      - name: Upload PDF Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.document }}-pdf
+          path: ./documentation/out/${{ matrix.document }}.pdf
 
-      - name: Build Methodology
-        run: quarkdown c documentation/methodology/main.qd --pdf --out ./documentation/out --out-name methodology
+  deploy-documentation:
+    needs: build-documentation # Waits for all matrix jobs to finish successfully
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: WBS Methodology
-        run: quarkdown c documentation/wbs/main.qd --pdf --out ./documentation/out --out-name wbs
+      - name: Download all PDFs
+        uses: actions/download-artifact@v4
+        with:
+          path: ./downloaded-pdfs
+
+      - name: Consolidate PDFs
+        run: |
+          mkdir -p ./documentation/out
+          # The download step creates subdirectories for each artifact name.
+          # This command flattens them back into the /out/ directory.
+          find ./downloaded-pdfs -name "*.pdf" -exec mv {} ./documentation/out/ \;
 
       - name: Deploy to ghpages
         uses: peaceiris/actions-gh-pages@v3
