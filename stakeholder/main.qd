@@ -1,0 +1,36 @@
+.docname {stakeholder}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Stakeholder
+
+.var {headers}
+    - Nome / Ruolo
+    - Interesse nel progetto
+    - Impatto sul progetto
+    - Startegia di comunicazione
+
+.tablebyrows {.headers}
+    - - Alessandro Ricci (docente SAP, Committente)
+      - Corretta implementazione delle architetture richieste (es. sistemi multi-agente o microservizi), aderenza alle tecnologie studiate e rispetto delle scadenze accademiche.
+      - Alto. Definisce i vincoli tecnici "invalicabili" e determina il superamento o meno della componente informatica del corso.
+      - Formale/Accademica. Sottomissione del codice sorgente su repository (es. GitHub/GitLab), consegna di diagrammi architetturali e demo del prototipo.
+    - - Marco Boschetti (docente PM, Valutatore)
+      - Verifica della corretta applicazione delle best practice di Project Management (PMBOK), qualità del POS, pianificazione del lavoro e gestione dei rischi.
+      - Alto. Valuta la maturità gestionale del lavoro. Come indicato, cerca la differenza tra un approccio "mediocre" e uno "eccellente".
+      - Formale. Consegna dei deliverable di progetto (POS, registro stakeholder, WBS/Gantt) e discussione metodologica in sede d'esame.
+    - - Me stesso (Project Manager & Sviluppatore)
+      - Completare l'assignment rispettando i requisiti, ottimizzare i tempi di sviluppo, superare l'esame con un voto alto e acquisire competenze tecniche/gestionali.
+      - Altissimo. Sei la risorsa chiave. Le tue decisioni operative e di pianificazione determinano direttamente il successo o il fallimento del progetto.
+      - Interna/Continua. Utilizzo di strumenti di tracciamento task (es. Trello, Jira, Notion), commit messages chiari, e auto-revisione periodica dei progressi.
+    - - Utenti finali (Mittenti e Destinatari dei pacchi)
+      - Semplicità d'uso della piattaforma, affidabilità del sistema di tracciamento in tempo reale, puntualità della consegna simulata.
+      - Medio. Essendo simulati non bloccano il progetto fisicamente, ma i loro "bisogni" dettano tutti i requisiti funzionali (casi d'uso) e la logica di business del sistema.
+      - Simulata/Indiretta. Attraverso il design della User Experience (UX), messaggi di stato/notifiche del prototipo ed eventuale manualistica utente simulata.

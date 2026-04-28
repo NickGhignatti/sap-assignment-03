@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentazione Progetto</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@300;400&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --ink: #1a1a18;
+            --paper: #f4f1ea;
+            --accent: #c0392b;
+            --muted: #8a8579;
+            --rule: #d4cfc4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--paper);
+            color: var(--ink);
+            font-family: 'DM Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 24px;
+            background-image:
+                radial-gradient(ellipse at 20% 50%, rgba(192, 57, 43, 0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(26, 26, 24, 0.04) 0%, transparent 50%);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 64px;
+            opacity: 0;
+            animation: fadeUp 0.7s ease forwards;
+        }
+
+        .eyebrow {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 300;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: clamp(2.2rem, 5vw, 3.8rem);
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            color: var(--ink);
+        }
+
+        .rule {
+            width: 48px;
+            height: 2px;
+            background: var(--accent);
+            margin: 24px auto 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1px;
+            width: 100%;
+            max-width: 860px;
+            background: var(--rule);
+            border: 1px solid var(--rule);
+            overflow: hidden;
+        }
+
+        .doc-card {
+            background: var(--paper);
+            padding: 36px 32px;
+            text-decoration: none;
+            color: var(--ink);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+            transition: background 0.2s ease;
+            opacity: 0;
+            animation: fadeUp 0.6s ease forwards;
+        }
+
+        .doc-card:nth-child(1) {
+            animation-delay: 0.15s;
+        }
+
+        .doc-card:nth-child(2) {
+            animation-delay: 0.25s;
+        }
+
+        .doc-card:nth-child(3) {
+            animation-delay: 0.35s;
+        }
+
+        .doc-card:nth-child(4) {
+            animation-delay: 0.45s;
+        }
+
+        .doc-card:nth-child(5) {
+            animation-delay: 0.55s;
+        }
+
+        .doc-card:nth-child(6) {
+            animation-delay: 0.65s;
+        }
+
+        .doc-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0%;
+            height: 2px;
+            background: var(--accent);
+            transition: width 0.3s ease;
+        }
+
+        .doc-card:hover {
+            background: #eeebe2;
+        }
+
+        .doc-card:hover::after {
+            width: 100%;
+        }
+
+        .doc-number {
+            font-size: 0.65rem;
+            letter-spacing: 0.18em;
+            color: var(--muted);
+            font-weight: 300;
+        }
+
+        .doc-title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            line-height: 1.25;
+            color: var(--ink);
+        }
+
+        .doc-arrow {
+            margin-top: auto;
+            padding-top: 20px;
+            font-size: 0.7rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: gap 0.2s ease;
+        }
+
+        .doc-card:hover .doc-arrow {
+            gap: 14px;
+        }
+
+        .doc-arrow::after {
+            content: '→';
+            font-size: 1rem;
+        }
+
+        footer {
+            margin-top: 48px;
+            font-size: 0.65rem;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+            text-align: center;
+            opacity: 0;
+            animation: fadeUp 0.6s ease 0.6s forwards;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <p class="eyebrow">Archivio</p>
+        <h1>Documentazione<br>Ufficiale</h1>
+        <div class="rule"></div>
+    </header>
+
+    <div class="grid">
+        <a href="./out/pos.pdf" class="doc-card">
+            <span class="doc-number">DOC — 01</span>
+            <span class="doc-title">Project Overview Statement</span>
+            <span class="doc-arrow">Apri PDF</span>
+        </a>
+        <a href="./out/pds.pdf" class="doc-card">
+            <span class="doc-number">DOC — 02</span>
+            <span class="doc-title">Project Definition Statement</span>
+            <span class="doc-arrow">Apri PDF</span>
+        </a>
+        <a href="./out/project_charter.pdf" class="doc-card">
+            <span class="doc-number">DOC — 03</span>
+            <span class="doc-title">Project Charter</span>
+            <span class="doc-arrow">Apri PDF</span>
+        </a>
+        <a href="./out/business_case.pdf" class="doc-card">
+            <span class="doc-number">DOC — 04</span>
+            <span class="doc-title">Business Case</span>
+            <span class="doc-arrow">Apri PDF</span>
+        </a>
+        <a href="./out/stakeholder.pdf" class="doc-card">
+            <span class="doc-number">DOC — 05</span>
+            <span class="doc-title">Stakeholder</span>
+            <span class="doc-arrow">Apri PDF</span>
+        </a>
+        <a href="./out/sow.pdf" class="doc-card">
+            <span class="doc-number">DOC — 06</span>
+            <span class="doc-title">Statement of Work</span>
+            <span class="doc-arrow">Apri PDF</span>
+        </a>
+        <a href="./out/methodology.pdf" class="doc-card">
+            <span class="doc-number">DOC — 07</span>
+            <span class="doc-title">Methodology</span>
+            <span class="doc-arrow">Apri PDF</span>
+        </a>
+        <a href="./out/rbs.pdf" class="doc-card">
+            <span class="doc-number">DOC — 08</span>
+            <span class="doc-title">Requirements Breakdown Structure</span>
+            <span class="doc-arrow">Apri PDF</span>
+        </a>
+        <a href="./out/wbs.pdf" class="doc-card">
+            <span class="doc-number">DOC — 09</span>
+            <span class="doc-title">Work Breakdown Structure</span>
+            <span class="doc-arrow">Apri PDF</span>
+        </a>
+    </div>
+
+    <footer>
+        Seleziona un documento per aprirlo nel browser
+    </footer>
+
+</body>
+
+</html>
