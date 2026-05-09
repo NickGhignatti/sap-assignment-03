@@ -20,6 +20,7 @@ impl std::fmt::Display for DroneState {
     }
 }
 
+/// In-memory only – not persisted. Persistent state is tracked via `DroneEvent` in the event store.
 #[derive(Debug, Clone)]
 pub struct DroneEntry {
     pub drone_id: String,
@@ -51,8 +52,10 @@ impl DroneEntry {
         self.state = DroneState::Returning;
         self.delivery_time = Some(Utc::now());
     }
+}
 
-    pub fn display(&self) -> String {
+impl std::fmt::Display for DroneEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let elapsed = self
             .dispatch_time
             .map(|t| {
@@ -61,7 +64,8 @@ impl DroneEntry {
             })
             .unwrap_or_else(|| "not dispatched".to_string());
 
-        format!(
+        write!(
+            f,
             "Drone {} {} from '{}' to '{}' — {}",
             self.drone_id, self.state, self.order.from_address, self.order.to_address, elapsed
         )

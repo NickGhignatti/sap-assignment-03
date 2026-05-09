@@ -7,11 +7,7 @@ pub mod service;
 
 use anyhow::Result;
 use axum::{Router, routing::get, routing::post};
-use lapin::{
-    Connection, ConnectionProperties,
-    options::ExchangeDeclareOptions,
-    types::{AMQPValue, FieldTable},
-};
+use lapin::{Connection, ConnectionProperties, options::ExchangeDeclareOptions, types::FieldTable};
 use mongodb::Client;
 use orchestrator::{SAGA_EVENTS_EXCHANGE, SagaOrchestrator};
 use repository::SagaRepository;
@@ -72,7 +68,16 @@ async fn main() -> Result<()> {
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
     info!("Order Service listening on port {port}");
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    tokio::signal::ctrl_c()
+        .await
+        .expect("failed to install CTRL+C handler");
+    info!("Shutdown signal received");
 }
