@@ -224,6 +224,15 @@ impl DroneEvent {
             DroneEvent::Returned { .. } => "DRONE_RETURNED",
         }
     }
+
+    pub fn timestamp(&self) -> DateTime<Utc> {
+        match self {
+            DroneEvent::Created { timestamp, .. }
+            | DroneEvent::Dispatched { timestamp, .. }
+            | DroneEvent::Delivered { timestamp, .. }
+            | DroneEvent::Returned { timestamp, .. } => *timestamp,
+        }
+    }
 }
 
 #[cfg(test)]

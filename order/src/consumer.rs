@@ -42,10 +42,11 @@ pub async fn start(channel: Channel, orchestrator: SagaOrchestrator) -> anyhow::
         )
         .await?;
 
+    let tag = format!("order-service-{}", uuid::Uuid::new_v4());
     let mut consumer = channel
         .basic_consume(
             SAGA_EVENTS_QUEUE,
-            "order-service",
+            tag.as_str(),
             BasicConsumeOptions::default(),
             FieldTable::default(),
         )
@@ -73,6 +74,14 @@ pub async fn start(channel: Channel, orchestrator: SagaOrchestrator) -> anyhow::
                         }
                         Err(e) => {
                             error!("Failed to deserialise SAGA event: {e}");
+                            // Malformed message: nack without requeue (poison-pill protection)
+                            let _ = delivery
+                                .nack(BasicNackOptions {
+                                    requeue: false,
+                                    ..Default::default()
+                                })
+                                .await;
+                            continue;
                         }
                     }
                     let _ = delivery.ack(BasicAckOptions::default()).await;

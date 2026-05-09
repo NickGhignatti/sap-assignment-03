@@ -46,7 +46,7 @@ pub struct SagaState {
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
 
-    // Order details in order failictating the rebuild in case of failure
+    // Order details in order facilitating the rebuild in case of failure
     pub customer_id: String,
     pub from_address: String,
     pub to_address: String,
@@ -94,13 +94,13 @@ impl SagaState {
     pub fn mark_step_completed(&mut self, step: SagaStep) {
         self.completed_steps.push(step);
         if let Some(next) = self.current_step.next() {
-            self.current_step = next.clone();
             if next == SagaStep::Completed {
                 self.status = SagaStatus::Completed;
                 self.end_time = Some(Utc::now());
             } else {
                 self.status = SagaStatus::InProgress;
             }
+            self.current_step = next;
         }
     }
 

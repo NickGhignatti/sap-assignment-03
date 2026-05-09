@@ -1,5 +1,5 @@
 //! Axum HTTP handlers for the Order service.
-use crate::service::{CreateOrderRequest, OrderResponse, OrderService, SagaStatusResponse};
+use crate::service::{CreateOrderRequest, OrderService, SagaStatusResponse};
 use axum::{
     Json,
     extract::{Path, State},
