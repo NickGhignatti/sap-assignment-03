@@ -1,0 +1,200 @@
+# DroneFlow — Architettura del Sistema
+
+## 1. Panoramica
+
+DroneFlow è una piattaforma a **microservizi event-driven** che gestisce l'intero ciclo di vita di una consegna con droni. Tre servizi indipendenti comunicano esclusivamente tramite messaggi AMQP su RabbitMQ; nessuna chiamata REST diretta esiste tra i backend.
+
+---
+
+## 2. Componenti del sistema
+
+```mermaid
+graph TB
+    Client(["👤 Client HTTP"])
+
+    subgraph Services["Microservizi"]
+        Order["Order Service\n:8080\n(Orchestratore SAGA)"]
+        Delivery["Delivery Service\n(Consumer AMQP)"]
+        Drone["Drone Service\n:8082\n(Event Sourcing)"]
+    end
+
+    subgraph Infra["Infrastruttura"]
+        RMQ[["RabbitMQ\n:5672 / :15672"]]
+        MDB_O[("MongoDB\norder_service")]
+        MDB_D[("MongoDB\ndrone_service")]
+    end
+
+    Client -->|"POST /\nGET /{id}/saga-status"| Order
+    Client -->|"GET /order/{id}/status\nGET /drone/{id}/events"| Drone
+
+    Order -->|"order_queue"| RMQ
+    Order -->|"saga_events_exchange"| RMQ
+    RMQ -->|"saga_events_queue"| Order
+
+    RMQ -->|"order_queue"| Delivery
+    Delivery -->|"drone_queue"| RMQ
+    Delivery -->|"saga_events_exchange"| RMQ
+
+    RMQ -->|"drone_queue"| Drone
+    RMQ -->|"drone_compensation_queue"| Drone
+    Drone -->|"saga_events_exchange"| RMQ
+
+    Order --- MDB_O
+    Drone --- MDB_D
+```
+
+---
+
+## 3. Topologia AMQP
+
+```mermaid
+graph LR
+    subgraph Exchanges
+        DEF["(default exchange)\nrouting key = queue name"]
+        SEX["saga_events_exchange\ntype: topic"]
+    end
+
+    subgraph Queues
+        OQ["order_queue"]
+        DRQ["drone_queue"]
+        SEQ["saga_events_queue\nbinding: saga.*"]
+        DCQ["drone_compensation_queue\nbinding: saga.compensate.drone"]
+    end
+
+    DEF -->|"order_queue"| OQ
+    DEF -->|"drone_queue"| DRQ
+    SEX -->|"saga.*"| SEQ
+    SEX -->|"saga.compensate.drone"| DCQ
+
+    OQ -->|consumed by| Delivery
+    DRQ -->|consumed by| Drone
+    SEQ -->|consumed by| Order
+    DCQ -->|consumed by| Drone
+```
+
+### Routing keys usate
+
+| Routing Key | Pubblicato da | Consumato da | Scopo |
+|---|---|---|---|
+| `saga.started` | Order | — | Audit/monitoring |
+| `saga.validated` | Order | — | Audit/monitoring |
+| `saga.delivery_scheduled` | Delivery | Order | Step 2 completato |
+| `saga.drone_assigned` | Drone | Order | Step 3 completato |
+| `saga.completed` | Order | — | SAGA terminata con successo |
+| `saga.validation_failed` | Order | — | Step 1 fallito |
+| `saga.compensate.drone` | Order | Drone | Compensazione Step 3 |
+| `saga.compensate_delivery` | Order | — | Compensazione Step 2 |
+| `saga.compensate_order` | Order | — | Compensazione Step 1 |
+| `saga.cancelled` | Order | — | Ordine annullato |
+
+---
+
+## 4. Flusso completo — Happy Path
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant O as Order Service
+    participant MDB_O as MongoDB (order)
+    participant RMQ as RabbitMQ
+    participant D as Delivery Service
+    participant DR as Drone Service
+    participant MDB_D as MongoDB (drone)
+
+    Client->>O: POST / {ordine}
+    O->>O: genera order_id + saga_id
+    O->>MDB_O: save SagaState (STARTED)
+    O->>O: valida ordine (Step 1)
+    O->>MDB_O: save SagaState (IN_PROGRESS, step: DeliveryScheduling)
+    O->>RMQ: publish → order_queue (OrderMessage)
+    O-->>Client: 201 {order_id, saga_id}
+
+    RMQ->>D: consume order_queue
+    D->>D: genera delivery_id
+    D->>RMQ: publish → drone_queue (OrderMessage)
+    D->>RMQ: publish → saga.delivery_scheduled
+
+    RMQ->>O: consume saga_events_queue (DeliveryScheduled)
+    O->>MDB_O: save SagaState (step: DroneAssignment)
+
+    RMQ->>DR: consume drone_queue
+    DR->>MDB_D: save DroneEvent::Created (v0)
+    DR->>RMQ: publish → saga.drone_assigned
+    DR->>MDB_D: save DroneEvent::Dispatched (v1)
+    DR->>DR: aggiunge a in_flight map
+
+    RMQ->>O: consume saga_events_queue (DroneAssigned)
+    O->>MDB_O: save SagaState (COMPLETED)
+    O->>RMQ: publish → saga.completed
+
+    Note over DR: scheduler ogni 10s
+    DR->>DR: settle_arrived()
+    DR->>MDB_D: save DroneEvent::Delivered (v2)
+    DR->>MDB_D: save DroneEvent::Returned (v3)
+    DR->>DR: rimuove da in_flight map
+```
+
+---
+
+## 5. Flusso completo — Compensazione (fallimento Step 3)
+
+```mermaid
+sequenceDiagram
+    participant O as Order Service
+    participant MDB_O as MongoDB (order)
+    participant RMQ as RabbitMQ
+    participant DR as Drone Service
+
+    Note over RMQ,O: DroneAssignmentFailed ricevuto
+    RMQ->>O: consume saga_events_queue
+    O->>MDB_O: save SagaState (FAILED)
+    O->>MDB_O: save SagaState (COMPENSATING)
+
+    Note over O: steps_to_compensate() = [DroneAssignment, DeliveryScheduling, OrderValidation]
+
+    O->>RMQ: publish → saga.compensate.drone
+    RMQ->>DR: consume drone_compensation_queue
+    DR->>DR: compensate(drone_id) — rimuove da in_flight
+
+    O->>RMQ: publish → saga.compensate_delivery
+    O->>RMQ: publish → saga.compensate_order
+    O->>MDB_O: save SagaState (COMPENSATED)
+    O->>RMQ: publish → saga.cancelled
+```
+
+---
+
+## 6. Struttura del workspace Rust
+
+```
+workspace/
+├── Cargo.toml              ← workspace root [members = [...]]
+├── Cargo.lock
+├── common/                 ← libreria condivisa (no binary)
+│   └── src/
+│       ├── lib.rs          ← pub mod events; pub mod messages;
+│       ├── events.rs       ← SagaEvent, DroneEvent
+│       └── messages.rs     ← OrderMessage
+├── order/
+│   └── src/
+│       ├── main.rs         ← wiring
+│       ├── api.rs          ← HTTP handlers (Axum)
+│       ├── service.rs      ← OrderService + DTOs
+│       ├── orchestrator.rs ← SagaOrchestrator
+│       ├── saga.rs         ← SagaState, SagaStatus, SagaStep
+│       ├── repository.rs   ← SagaRepository (MongoDB)
+│       └── consumer.rs     ← AMQP consumer task
+├── delivery/
+│   └── src/
+│       ├── main.rs
+│       ├── service.rs      ← DeliveryService
+│       └── consumer.rs     ← AMQP consumer task
+└── drone/
+    └── src/
+        ├── main.rs
+        ├── api.rs          ← HTTP handlers (Axum)
+        ├── service.rs      ← DroneService
+        ├── model.rs        ← DroneEntry, DroneState
+        ├── store.rs        ← DroneEventStore (MongoDB)
+        └── consumer.rs     ← AMQP consumer tasks (x2)
+```

@@ -1,0 +1,133 @@
+# Common — Libreria Condivisa
+
+## 1. Scopo
+
+`common` è una libreria Rust che espone i **tipi condivisi** tra i tre microservizi. Centralizzare questi tipi garantisce che tutti i servizi usino la stessa struttura dati per serializzare e deserializzare i messaggi AMQP, eliminando ogni possibilità di disallineamento.
+
+---
+
+## 2. Moduli
+
+```
+common/src/
+├── lib.rs          ← re-export pubblico di events e messages
+├── events.rs       ← SagaEvent, DroneEvent
+└── messages.rs     ← OrderMessage
+```
+
+---
+
+## 3. `OrderMessage`
+
+DTO che viaggia su due code: `order_queue` (Order → Delivery) e `drone_queue` (Delivery → Drone).
+
+```
+┌─────────────────────────────────┐
+│         OrderMessage            │
+├─────────────────────────────────┤
+│ + order_id     : String         │
+│ + customer_id  : String         │
+│ + from_address : String         │
+│ + to_address   : String         │
+│ + package_weight: f64           │
+│ + requested_delivery_time: Utc  │
+│ + max_delivery_time_minutes: i32│
+└─────────────────────────────────┘
+```
+
+### Decisioni di design
+- `PartialEq` confronta solo `order_id` — due messaggi con lo stesso ordine sono considerati equivalenti indipendentemente da eventuali campi aggiornati.
+- Il costruttore `::new()` usa `impl Into<String>` per tutti i campi stringa: evita chiamate `.to_string()` superflue nei call site (zero-cost se si passa già un `String`).
+- `Display` formatta una riga leggibile per i log (omette `requested_delivery_time` per brevità).
+
+---
+
+## 4. `SagaEvent`
+
+Enum tagged union con `#[serde(tag = "type")]`. Il campo `"type"` viene inserito automaticamente nel JSON e usato per deserializzare la variante corretta.
+
+```mermaid
+graph LR
+    SE["SagaEvent"]
+    SE --> A["OrderSagaStarted"]
+    SE --> B["OrderValidated"]
+    SE --> C["DeliveryScheduled"]
+    SE --> D["DroneAssigned"]
+    SE --> E["OrderCompleted"]
+    SE --> F["OrderValidationFailed"]
+    SE --> G["DeliverySchedulingFailed"]
+    SE --> H["DroneAssignmentFailed"]
+    SE --> I["OrderCancelled"]
+    SE --> J["CompensateOrder"]
+    SE --> K["CompensateDelivery"]
+    SE --> L["CompensateDrone"]
+```
+
+### Esempio JSON serializzato
+```json
+{
+  "type": "DELIVERY_SCHEDULED",
+  "saga_id": "",
+  "order_id": "a1b2-...",
+  "delivery_id": "c3d4-...",
+  "timestamp": "2026-04-10T14:00:00Z"
+}
+```
+
+### Helper methods
+| Metodo | Tipo di ritorno | Descrizione |
+|---|---|---|
+| `order_id()` | `&str` | Estrae `order_id` da qualsiasi variante |
+| `saga_id()` | `&str` | Estrae `saga_id` da qualsiasi variante |
+
+Entrambi usano pattern matching **esaustivo** — il compilatore garantisce che nessuna variante venga dimenticata.
+
+---
+
+## 5. `DroneEvent`
+
+Enum degli eventi del ciclo di vita di un drone. Implementa Event Sourcing: ogni istanza è un fatto immutabile persistito su MongoDB.
+
+```mermaid
+graph LR
+    DE["DroneEvent"]
+    DE --> C["Created\n(v=0)\nTutti i campi ordine"]
+    DE --> D["Dispatched\n(v=1)\ndispatch_time"]
+    DE --> DL["Delivered\n(v=2)\ndelivery_time"]
+    DE --> R["Returned\n(v=3)\nreturn_time"]
+```
+
+### Campo `version`
+Ogni variante porta un campo `version: u64` che rappresenta la posizione dell'evento nel log del drone. Viene calcolato con `DroneEventStore::count_events_for_drone()` prima di ogni insert, garantendo l'ordinamento cronologico dei documenti MongoDB indipendentemente dall'ordine di arrivo.
+
+### Helper methods
+| Metodo | Tipo di ritorno | Descrizione |
+|---|---|---|
+| `drone_id()` | `&str` | ID del drone |
+| `order_id()` | `&str` | ID dell'ordine associato |
+| `version()` | `u64` | Posizione nell'event log |
+| `event_type()` | `&'static str` | Stringa descrittiva (es. `"DRONE_CREATED"`) |
+| `timestamp()` | `DateTime<Utc>` | Momento di creazione dell'evento |
+
+### Perché due campi temporali su alcuni eventi?
+`Dispatched`, `Delivered` e `Returned` hanno sia `timestamp` (quando l'evento è stato creato nel sistema) sia un campo semantico (`dispatch_time`, `delivery_time`, `return_time`). Il `timestamp` è il momento di scrittura nel log; il campo semantico è il momento in cui l'azione si è verificata. In questo progetto coincidono, ma la separazione è utile in sistemi dove gli eventi possono essere processati in ritardo.
+
+---
+
+## 6. Serializzazione — Schema complessivo
+
+```
+┌──────────────┐   serde_json::to_vec   ┌────────────────┐
+│  Rust enum   │ ─────────────────────▶ │  JSON bytes    │
+│  (variant)   │                        │  + "type" tag  │
+└──────────────┘                        └────────────────┘
+                                               │
+                                         AMQP payload
+                                               │
+┌──────────────┐  serde_json::from_slice ┌────────────────┐
+│  Rust enum   │ ◀───────────────────── │  JSON bytes    │
+│  (variant)   │                        └────────────────┘
+└──────────────┘
+```
+
+Il discriminante `"type"` permette a `serde` di sapere quale variante istanziare senza ambiguità, anche se le varianti hanno campi diversi.

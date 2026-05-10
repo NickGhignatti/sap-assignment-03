@@ -1,0 +1,8 @@
+.docdescription {SAP Assignment 3 Code Documentation}
+.doclang {English}
+.theme {paperwhite} layout:{hyperlegible}
+
+.pagemargin {topleft}
+    Documentation
+
+.pageformat width:{1000}

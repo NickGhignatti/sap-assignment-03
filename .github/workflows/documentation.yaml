@@ -38,7 +38,8 @@ jobs:
       - uses: quarkdown-labs/setup-quarkdown@v1
 
       - name: Build ${{ matrix.document }}
-        run: quarkdown c documentation/${{ matrix.document }}/main.qd --pdf --out
+        run:
+          quarkdown c documentation/${{ matrix.document }}/main.qd --pdf --out
           ./documentation/out --out-name ${{ matrix.document }}
 
       # Upload each PDF to the runner network so the deploy job can access them
@@ -48,8 +49,22 @@ jobs:
           name: ${{ matrix.document }}-pdf
           path: ./documentation/out/${{ matrix.document }}.pdf
 
+  build-code-documentation:
+    name: Build Code Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: quarkdown-labs/setup-quarkdown@v1
+
+      - name: Build Code Documentation
+        run: quarkdown c documentation/code_documentation/main.qd --out ./documentation/out/code_documentation
+
   deploy-documentation:
-    needs: build-documentation # Waits for all matrix jobs to finish successfully
+    needs:
+      - build-documentation
+      - build-code-documentation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -73,4 +88,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./documentation
           force_orphan: true
-          exclude_assets: ''
+          exclude_assets: ""
