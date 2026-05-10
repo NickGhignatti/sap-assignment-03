@@ -1,0 +1,110 @@
+services:
+  # ── Infrastructure ───────────────────────────────────────────────────────────
+
+  mongodb:
+    image: mongo:7-jammy
+    container_name: droneflow-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test:
+        ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - droneflow
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: droneflow-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672" # AMQP
+      - "15672:15672" # Management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - droneflow
+
+  # ── Application services ─────────────────────────────────────────────────────
+
+  order:
+    build:
+      context: ./order
+    container_name: droneflow-order
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://root:root@mongodb:27017/order_service?authSource=admin
+      AMQP_URI: amqp://guest:guest@rabbitmq:5672/%2f
+      PORT: "8080"
+      RUST_LOG: "info"
+    ports:
+      - "8080:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - droneflow
+
+  delivery:
+    build:
+      context: ./delivery
+    container_name: droneflow-delivery
+    restart: unless-stopped
+    environment:
+      AMQP_URI: amqp://guest:guest@rabbitmq:5672/%2f
+      RUST_LOG: "info"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - droneflow
+
+  drone:
+    build:
+      context: ./drone
+    container_name: droneflow-drone
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://root:root@mongodb:27017/drone_service?authSource=admin
+      AMQP_URI: amqp://guest:guest@rabbitmq:5672/%2f
+      PORT: "8082"
+      RUST_LOG: "info"
+    ports:
+      - "8082:8082"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - droneflow
+
+# ── Volumes ───────────────────────────────────────────────────────────────────
+
+volumes:
+  mongodb_data:
+    driver: local
+
+# ── Networks ──────────────────────────────────────────────────────────────────
+
+networks:
+  droneflow:
+    driver: bridge
