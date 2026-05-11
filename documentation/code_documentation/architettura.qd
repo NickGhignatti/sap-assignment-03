@@ -1,3 +1,6 @@
+.docname {Code Docs}
+.include {docs}
+
 # DroneFlow — Architettura del Sistema
 
 ## 1. Panoramica
