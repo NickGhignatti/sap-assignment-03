@@ -61,6 +61,12 @@ jobs:
       - name: Build Code Documentation
         run: quarkdown c documentation/code_documentation/main.qd --out ./documentation/out/code_documentation
 
+      - name: Upload code documentation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-documentation-site
+          path: ./documentation/out/code_documentation
+
   deploy-documentation:
     needs:
       - build-documentation
@@ -70,10 +76,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download all PDFs
+      - name: Download PDF artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: "*-pdf"
           path: ./downloaded-pdfs
+
+      - name: Download code documentation artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: code-documentation-site
+          path: ./documentation/out/code_documentation
 
       - name: Consolidate PDFs
         run: |
