@@ -13,26 +13,25 @@ Il servizio Order è il **punto di ingresso** del sistema e l'**orchestratore de
 
 ## 2. Architettura interna
 
-```mermaid
-graph TD
-    HTTP["HTTP Client"]
-    API["api.rs\nAxum handlers"]
-    SVC["service.rs\nOrderService"]
-    ORCH["orchestrator.rs\nSagaOrchestrator"]
-    REPO["repository.rs\nSagaRepository"]
-    CONS["consumer.rs\nAMQP Consumer Task"]
-    MDB[("MongoDB\norder_sagas")]
-    RMQ[["RabbitMQ"]]
+.mermaid
+    graph TD
+        HTTP["HTTP Client"]
+        API["api.rs\nAxum handlers"]
+        SVC["service.rs\nOrderService"]
+        ORCH["orchestrator.rs\nSagaOrchestrator"]
+        REPO["repository.rs\nSagaRepository"]
+        CONS["consumer.rs\nAMQP Consumer Task"]
+        MDB[("MongoDB\norder_sagas")]
+        RMQ[["RabbitMQ"]]
 
-    HTTP -->|"POST /\nGET /{id}/saga-status"| API
-    API --> SVC
-    SVC --> ORCH
-    ORCH --> REPO
-    REPO <--> MDB
-    ORCH -->|publish| RMQ
-    RMQ -->|consume| CONS
-    CONS --> ORCH
-```
+        HTTP -->|"POST /\nGET /{id}/saga-status"| API
+        API --> SVC
+        SVC --> ORCH
+        ORCH --> REPO
+        REPO <--> MDB
+        ORCH -->|publish| RMQ
+        RMQ -->|consume| CONS
+        CONS --> ORCH
 
 ---
 
@@ -67,23 +66,22 @@ graph TD
 
 ## 4. Macchina a stati — `SagaStatus`
 
-```mermaid
-stateDiagram-v2
-    [*] --> Started : start_order_saga()
+.mermaid
+    stateDiagram-v2
+        [*] --> Started : start_order_saga()
 
-    Started --> InProgress : mark_step_completed(OrderValidation)
-    Started --> Failed : mark_failed() [peso ≤ 0 o indirizzi vuoti]
+        Started --> InProgress : mark_step_completed(OrderValidation)
+        Started --> Failed : mark_failed() [peso ≤ 0 o indirizzi vuoti]
 
-    InProgress --> InProgress : mark_step_completed(DeliveryScheduling)
-    InProgress --> Failed : mark_failed() [DeliverySchedulingFailed]
-    InProgress --> Failed : mark_failed() [DroneAssignmentFailed]
-    InProgress --> Completed : mark_step_completed(DroneAssignment)
+        InProgress --> InProgress : mark_step_completed(DeliveryScheduling)
+        InProgress --> Failed : mark_failed() [DeliverySchedulingFailed]
+        InProgress --> Failed : mark_failed() [DroneAssignmentFailed]
+        InProgress --> Completed : mark_step_completed(DroneAssignment)
 
-    Failed --> Compensating : start_compensation()
-    Compensating --> Compensated : mark_compensated()
-    Compensated --> [*]
-    Completed --> [*]
-```
+        Failed --> Compensating : start_compensation()
+        Compensating --> Compensated : mark_compensated()
+        Compensated --> [*]
+        Completed --> [*]
 
 ---
 
@@ -91,13 +89,12 @@ stateDiagram-v2
 
 Gli step sono ordinati tramite `Ord` derivato. Questo permette a `steps_to_compensate()` di invertirli con un semplice `sort().reverse()`.
 
-```mermaid
-stateDiagram-v2
-    [*] --> OrderValidation : nuovo ordine
-    OrderValidation --> DeliveryScheduling : step 1 OK
-    DeliveryScheduling --> DroneAssignment : step 2 OK
-    DroneAssignment --> Completed : step 3 OK
-```
+.mermaid
+    stateDiagram-v2
+        [*] --> OrderValidation : nuovo ordine
+        OrderValidation --> DeliveryScheduling : step 1 OK
+        DeliveryScheduling --> DroneAssignment : step 2 OK
+        DroneAssignment --> Completed : step 3 OK
 
 ### `steps_to_compensate()`
 ```rust
@@ -113,134 +110,125 @@ stateDiagram-v2
 
 Notazione: **○** = posto (stato), **▬** = transizione (evento), **●** = token (stato corrente)
 
-```mermaid
-flowchart LR
-    P0(("● p0\nOrdine\nricevuto"))
-    T0["t0: valida\nordine"]
-    P1(("p1\nOrdine\nvalidato"))
-    P_ERR1(("p_err1\nErrore\nvalidazione"))
-    T1["t1: invia a\nDelivery"]
-    P2(("p2\nIn attesa\nDeliveryScheduled"))
-    T2["t2: DeliveryScheduled\nricevuto"]
-    P3(("p3\nDelivery\nschedulata"))
-    P_ERR2(("p_err2\nErrore\nscheduling"))
-    T3["t3: DroneAssigned\nricevuto"]
-    P4(("p4\nSAGA\ncompletata"))
-    P_ERR3(("p_err3\nErrore\nassegnazione"))
-    T_COMP["t_comp:\ncompensa"]
-    P_COMP(("p_comp\nCompensato"))
+.mermaid
+    flowchart LR
+        P0(("● p0\nOrdine\nricevuto"))
+        T0["t0: valida\nordine"]
+        P1(("p1\nOrdine\nvalidato"))
+        P_ERR1(("p_err1\nErrore\nvalidazione"))
+        T1["t1: invia a\nDelivery"]
+        P2(("p2\nIn attesa\nDeliveryScheduled"))
+        T2["t2: DeliveryScheduled\nricevuto"]
+        P3(("p3\nDelivery\nschedulata"))
+        P_ERR2(("p_err2\nErrore\nscheduling"))
+        T3["t3: DroneAssigned\nricevuto"]
+        P4(("p4\nSAGA\ncompletata"))
+        P_ERR3(("p_err3\nErrore\nassegnazione"))
+        T_COMP["t_comp:\ncompensa"]
+        P_COMP(("p_comp\nCompensato"))
 
-    P0 --> T0
-    T0 -->|"peso > 0\nindirizzi OK"| P1
-    T0 -->|"dati non\nvalidi"| P_ERR1
-    P1 --> T1
-    T1 --> P2
-    P2 -->|"saga.delivery_scheduled"| T2
-    P2 -->|"saga.delivery_scheduling_failed"| P_ERR2
-    T2 --> P3
-    P3 -->|"saga.drone_assigned"| T3
-    P3 -->|"saga.drone_assignment_failed"| P_ERR3
-    T3 --> P4
-    P_ERR2 --> T_COMP
-    P_ERR3 --> T_COMP
-    T_COMP --> P_COMP
-```
+        P0 --> T0
+        T0 -->|"peso > 0\nindirizzi OK"| P1
+        T0 -->|"dati non\nvalidi"| P_ERR1
+        P1 --> T1
+        T1 --> P2
+        P2 -->|"saga.delivery_scheduled"| T2
+        P2 -->|"saga.delivery_scheduling_failed"| P_ERR2
+        T2 --> P3
+        P3 -->|"saga.drone_assigned"| T3
+        P3 -->|"saga.drone_assignment_failed"| P_ERR3
+        T3 --> P4
+        P_ERR2 --> T_COMP
+        P_ERR3 --> T_COMP
+        T_COMP --> P_COMP
 
 ---
 
 ## 7. Diagramma di sequenza — Happy Path
 
-```mermaid
-sequenceDiagram
-    actor Client
-    participant API as api.rs
-    participant SVC as service.rs
-    participant ORCH as orchestrator.rs
-    participant REPO as repository.rs
-    participant RMQ as RabbitMQ
-    participant CONS as consumer.rs
+.mermaid
+    sequenceDiagram
+        actor Client
+        participant API as api.rs
+        participant SVC as service.rs
+        participant ORCH as orchestrator.rs
+        participant REPO as repository.rs
+        participant RMQ as RabbitMQ
+        participant CONS as consumer.rs
 
-    Client->>API: POST / {customer_id, from, to, weight, time, max_minutes}
-    API->>SVC: create_order(...)
-    SVC->>SVC: order_id = Uuid::new_v4()
-    SVC->>ORCH: start_order_saga(order_id, ...)
-    ORCH->>ORCH: saga_id = Uuid::new_v4()
-    ORCH->>ORCH: SagaState::new(STARTED, step=OrderValidation)
-    ORCH->>REPO: save(saga) [upsert]
-    ORCH->>ORCH: validate_order()
-    Note over ORCH: Controlli sincroni: peso > 0, indirizzi non vuoti
-    ORCH->>REPO: save(saga) [step=DeliveryScheduling, IN_PROGRESS]
-    ORCH->>RMQ: publish order_queue (OrderMessage)
-    ORCH-->>SVC: Ok(saga_id)
-    SVC-->>API: Ok(OrderResponse)
-    API-->>Client: 201 {order_id, saga_id, status: "SAGA_STARTED"}
+        Client->>API: POST / {customer_id, from, to, weight, time, max_minutes}
+        API->>SVC: create_order(...)
+        SVC->>SVC: order_id = Uuid::new_v4()
+        SVC->>ORCH: start_order_saga(order_id, ...)
+        ORCH->>ORCH: saga_id = Uuid::new_v4()
+        ORCH->>ORCH: SagaState::new(STARTED, step=OrderValidation)
+        ORCH->>REPO: save(saga) [upsert]
+        ORCH->>ORCH: validate_order()
+        Note over ORCH: Controlli sincroni: peso > 0, indirizzi non vuoti
+        ORCH->>REPO: save(saga) [step=DeliveryScheduling, IN_PROGRESS]
+        ORCH->>RMQ: publish order_queue (OrderMessage)
+        ORCH-->>SVC: Ok(saga_id)
+        SVC-->>API: Ok(OrderResponse)
+        API-->>Client: 201 {order_id, saga_id, status: "SAGA_STARTED"}
 
-    Note over CONS,RMQ: Asincrono – dopo la risposta HTTP
-    RMQ-->>CONS: DeliveryScheduled event
-    CONS->>ORCH: handle_saga_event(DeliveryScheduled)
-    ORCH->>REPO: find_by_order_id → saga
-    ORCH->>REPO: save(saga) [delivery_id set, step=DroneAssignment]
+        Note over CONS,RMQ: Asincrono – dopo la risposta HTTP
+        RMQ-->>CONS: DeliveryScheduled event
+        CONS->>ORCH: handle_saga_event(DeliveryScheduled)
+        ORCH->>REPO: find_by_order_id → saga
+        ORCH->>REPO: save(saga) [delivery_id set, step=DroneAssignment]
 
-    RMQ-->>CONS: DroneAssigned event
-    CONS->>ORCH: handle_saga_event(DroneAssigned)
-    ORCH->>REPO: find_by_order_id → saga
-    ORCH->>REPO: save(saga) [drone_id set, step=Completed, COMPLETED]
-    ORCH->>RMQ: publish saga.completed
-```
+        RMQ-->>CONS: DroneAssigned event
+        CONS->>ORCH: handle_saga_event(DroneAssigned)
+        ORCH->>REPO: find_by_order_id → saga
+        ORCH->>REPO: save(saga) [drone_id set, step=Completed, COMPLETED]
+        ORCH->>RMQ: publish saga.completed
 
 ---
 
 ## 8. Diagramma di sequenza — Compensazione
 
-```mermaid
-sequenceDiagram
-    participant CONS as consumer.rs
-    participant ORCH as orchestrator.rs
-    participant REPO as repository.rs
-    participant RMQ as RabbitMQ
+.mermaid
+    sequenceDiagram
+        Note over CONS: DroneAssignmentFailed ricevuto (step 3)
+        CONS->>ORCH: handle_saga_event(DroneAssignmentFailed)
+        ORCH->>REPO: find_by_order_id → saga
+        ORCH->>REPO: save(saga) [FAILED]
+        ORCH->>REPO: save(saga) [COMPENSATING]
 
-    Note over CONS: DroneAssignmentFailed ricevuto (step 3)
-    CONS->>ORCH: handle_saga_event(DroneAssignmentFailed)
-    ORCH->>REPO: find_by_order_id → saga
-    ORCH->>REPO: save(saga) [FAILED]
-    ORCH->>REPO: save(saga) [COMPENSATING]
+        Note over ORCH: steps_to_compensate() = [DroneAssignment, DeliveryScheduling, OrderValidation]
 
-    Note over ORCH: steps_to_compensate() = [DroneAssignment, DeliveryScheduling, OrderValidation]
+        ORCH->>RMQ: publish saga.compensate.drone (CompensateDrone)
+        ORCH->>RMQ: publish saga.compensate_delivery (CompensateDelivery)
+        ORCH->>RMQ: publish saga.compensate_order (CompensateOrder)
 
-    ORCH->>RMQ: publish saga.compensate.drone (CompensateDrone)
-    ORCH->>RMQ: publish saga.compensate_delivery (CompensateDelivery)
-    ORCH->>RMQ: publish saga.compensate_order (CompensateOrder)
-
-    Note over ORCH: Solo dopo tutti i publish con successo (?)
-    ORCH->>REPO: save(saga) [COMPENSATED]
-    ORCH->>RMQ: publish saga.cancelled (OrderCancelled)
-```
+        Note over ORCH: Solo dopo tutti i publish con successo (?)
+        ORCH->>REPO: save(saga) [COMPENSATED]
+        ORCH->>RMQ: publish saga.cancelled (OrderCancelled)
 
 ---
 
 ## 9. AMQP — Gestione ack/nack nel consumer
 
-```mermaid
-flowchart TD
-    A["Messaggio ricevuto\nda saga_events_queue"]
-    B{Deserializzazione\nSagaEvent}
-    C["handle_saga_event()"]
-    D{Esito}
-    E["delivery.ack()"]
-    F["delivery.nack(requeue=false)\n+ continue"]
-    G["delivery.nack(requeue=false)\n+ continue"]
+.mermaid
+    flowchart TD
+        A["Messaggio ricevuto\nda saga_events_queue"]
+        B{Deserializzazione\nSagaEvent}
+        C["handle_saga_event()"]
+        D{Esito}
+        E["delivery.ack()"]
+        F["delivery.nack(requeue=false)\n+ continue"]
+        G["delivery.nack(requeue=false)\n+ continue"]
 
-    A --> B
-    B -->|"Ok(event)"| C
-    B -->|"Err: malformato"| G
-    C --> D
-    D -->|"Ok(())"| E
-    D -->|"Err: errore handler"| F
+        A --> B
+        B -->|"Ok(event)"| C
+        B -->|"Err: malformato"| G
+        C --> D
+        D -->|"Ok(())"| E
+        D -->|"Err: errore handler"| F
 
-    style G fill:#fdd
-    style F fill:#fdd
-    style E fill:#dfd
-```
+        style G fill:#fdd
+        style F fill:#fdd
+        style E fill:#dfd
 
 **Perché `requeue: false` su entrambi gli errori?**
 Un messaggio malformato non diventerà mai valido riprocessandolo. Un errore nell'handler (es. MongoDB non raggiungibile) è invece transiente: in questo caso si potrebbe volere `requeue: true`, ma si rischia un loop di retry su bug del codice. La scelta conservativa è `requeue: false` + log dell'errore.

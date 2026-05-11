@@ -1,2 +1,157 @@
 .docname {Code Docs}
 .include {docs}
+
+# Delivery Service — Documentazione Tecnica
+
+## 1. Responsabilità
+
+Il Delivery Service è il **servizio di coordinamento intermedio** della pipeline. Non ha un'interfaccia HTTP esposta verso l'esterno: la sua unica interfaccia è AMQP. Riceve ordini validati dall'Order Service, li assegna a un piano di consegna (generando un `delivery_id`) e li inoltra al Drone Service, notificando contestualmente l'orchestratore SAGA.
+
+---
+
+## 2. Architettura interna
+
+.mermaid
+    graph LR
+        RMQ_IN[["RabbitMQ\norder_queue"]]
+        CONS["consumer.rs\nAMQP Consumer Task"]
+        SVC["service.rs\nDeliveryService"]
+        RMQ_OUT_D[["RabbitMQ\ndrone_queue"]]
+        RMQ_OUT_S[["RabbitMQ\nsaga_events_exchange"]]
+
+        RMQ_IN -->|"OrderMessage"| CONS
+        CONS --> SVC
+        SVC -->|"OrderMessage"| RMQ_OUT_D
+        SVC -->|"DeliveryScheduled"| RMQ_OUT_S
+
+
+Il servizio non ha database: è **stateless**. L'unico stato è il `delivery_id` generato per ogni ordine, che viene incluso nel messaggio AMQP e non necessita di persistenza locale.
+
+---
+
+## 3. Flusso interno — `DeliveryService::schedule()`
+
+.mermaid
+    flowchart TD
+        A["OrderMessage ricevuto"]
+        B["delivery_id = Uuid::new_v4()"]
+        C["publish_to_queue\ndrone_queue\nOrderMessage"]
+        D["publish_event\nsaga_events_exchange\nsaga.delivery_scheduled\nDeliveryScheduled"]
+        E["Ok(())"]
+
+        A --> B --> C --> D --> E
+
+
+### Perché il `saga_id` è vuoto in `DeliveryScheduled`?
+
+```rust
+SagaEvent::DeliveryScheduled {
+    saga_id: String::new(),  // intenzionalmente vuoto
+    order_id: order.order_id.clone(),
+    delivery_id,
+    timestamp: Utc::now(),
+}
+```
+
+Il Delivery Service non conosce il `saga_id` (non lo riceve nell'`OrderMessage`). L'orchestratore Order, al momento di processare il `DeliveryScheduled`, lo ignora e recupera la SAGA tramite `find_by_order_id(order_id)`, che è la sua chiave di correlazione naturale.
+
+---
+
+## 4. Diagramma di sequenza
+
+.mermaid
+    sequenceDiagram
+        participant RMQ as RabbitMQ
+        participant CONS as consumer.rs
+        participant SVC as service.rs
+
+        RMQ->>CONS: delivery da order_queue (OrderMessage)
+        CONS->>CONS: deserializza OrderMessage
+
+        alt order_id vuoto
+            CONS->>RMQ: nack(requeue=false) — scarta
+        else errore transiente in schedule()
+            CONS->>SVC: schedule(order)
+            SVC-->>CONS: Err(e)
+            CONS->>RMQ: nack(requeue=true) — riprova
+        else successo
+            CONS->>SVC: schedule(order)
+            SVC->>SVC: delivery_id = Uuid::new_v4()
+            SVC->>RMQ: publish drone_queue (OrderMessage)
+            SVC->>RMQ: publish saga.delivery_scheduled (DeliveryScheduled)
+            SVC-->>CONS: Ok(())
+            CONS->>RMQ: ack
+        end
+
+---
+
+## 5. AMQP — Strategia ack/nack
+
+| Caso | Comportamento | Motivazione |
+|---|---|---|
+| `order_id` vuoto | `nack(requeue=false)` | Il messaggio non diventerà mai valido |
+| Deserializzazione fallita | `nack(requeue=false)` | Messaggio malformato — scartare evita loop |
+| Errore in `schedule()` (transiente) | `nack(requeue=true)` | Es. broker irraggiungibile — ritentare ha senso |
+| Successo | `ack` | Messaggio processato correttamente |
+
+---
+
+## 6. Rete di Petri — Ciclo di vita del messaggio nel Delivery Service
+
+.mermaid
+    flowchart LR
+        P0(("● p0\nMessaggio\nin coda"))
+        T0["t0: consume\norder_queue"]
+        P1(("p1\nMessaggio\nletto"))
+        T_VAL["t_val: valida\norder_id"]
+        P2(("p2\nOrdine\nvalido"))
+        P_INV(("p_inv\nOrdine\nnon valido"))
+        T_PUB1["t_pub1: publish\ndrone_queue"]
+        P3(("p3\ndrone_queue\naggiornata"))
+        T_PUB2["t_pub2: publish\nDeliveryScheduled"]
+        P4(("p4\nSAGA\nnotificata"))
+        T_ACK["t_ack: ack"]
+        T_NACK["t_nack: nack\nno-requeue"]
+        P_END(("p_end\nDone"))
+
+        P0 --> T0 --> P1
+        P1 --> T_VAL
+        T_VAL -->|"valido"| P2
+        T_VAL -->|"non valido"| P_INV
+        P_INV --> T_NACK --> P_END
+        P2 --> T_PUB1 --> P3
+        P3 --> T_PUB2 --> P4
+        P4 --> T_ACK --> P_END
+
+---
+
+## 7. Consumer tag univoco
+
+```rust
+&format!("delivery-service-{}", uuid::Uuid::new_v4())
+```
+
+In RabbitMQ ogni consumer su una coda deve avere un tag univoco. Usare un UUID generato al runtime evita conflitti quando più istanze del Delivery Service girano in parallelo (scaling orizzontale). Al contrario, un tag fisso causerebbe un errore `PRECONDITION_FAILED` dal broker.
+
+---
+
+## 8. Topologia AMQP dichiarata all'avvio
+
+`main.rs` dichiara due risorse in modo idempotente prima di avviare il consumer:
+
+| Risorsa | Tipo | Perché la dichiara il Delivery Service |
+|---|---|---|
+| `saga_events_exchange` | Topic exchange, durable | Deve pubblicarci `DeliveryScheduled` |
+| `drone_queue` | Queue, durable | Deve pubblicarci gli ordini per il Drone Service |
+
+La dichiarazione idempotente (stessi parametri) non crea un duplicato se la risorsa esiste già — la usa e basta. Questo rende il Delivery Service autonomo: parte anche se gli altri servizi non sono ancora online.
+
+---
+
+## 9. Graceful shutdown
+
+```rust
+tokio::signal::ctrl_c().await?;
+```
+
+Il Delivery Service non ha un server HTTP da spegnere. Il `ctrl_c()` aspetta `SIGINT` e permette al processo di terminare in modo pulito, dando tempo al consumer loop di completare l'eventuale messaggio in processing prima di uscire.

@@ -49,22 +49,21 @@ DTO che viaggia su due code: `order_queue` (Order → Delivery) e `drone_queue` 
 
 Enum tagged union con `#[serde(tag = "type")]`. Il campo `"type"` viene inserito automaticamente nel JSON e usato per deserializzare la variante corretta.
 
-```mermaid
-graph LR
-    SE["SagaEvent"]
-    SE --> A["OrderSagaStarted"]
-    SE --> B["OrderValidated"]
-    SE --> C["DeliveryScheduled"]
-    SE --> D["DroneAssigned"]
-    SE --> E["OrderCompleted"]
-    SE --> F["OrderValidationFailed"]
-    SE --> G["DeliverySchedulingFailed"]
-    SE --> H["DroneAssignmentFailed"]
-    SE --> I["OrderCancelled"]
-    SE --> J["CompensateOrder"]
-    SE --> K["CompensateDelivery"]
-    SE --> L["CompensateDrone"]
-```
+.mermaid
+    graph LR
+        SE["SagaEvent"]
+        SE --> A["OrderSagaStarted"]
+        SE --> B["OrderValidated"]
+        SE --> C["DeliveryScheduled"]
+        SE --> D["DroneAssigned"]
+        SE --> E["OrderCompleted"]
+        SE --> F["OrderValidationFailed"]
+        SE --> G["DeliverySchedulingFailed"]
+        SE --> H["DroneAssignmentFailed"]
+        SE --> I["OrderCancelled"]
+        SE --> J["CompensateOrder"]
+        SE --> K["CompensateDelivery"]
+        SE --> L["CompensateDrone"]
 
 ### Esempio JSON serializzato
 ```json
@@ -91,14 +90,13 @@ Entrambi usano pattern matching **esaustivo** — il compilatore garantisce che 
 
 Enum degli eventi del ciclo di vita di un drone. Implementa Event Sourcing: ogni istanza è un fatto immutabile persistito su MongoDB.
 
-```mermaid
-graph LR
-    DE["DroneEvent"]
-    DE --> C["Created\n(v=0)\nTutti i campi ordine"]
-    DE --> D["Dispatched\n(v=1)\ndispatch_time"]
-    DE --> DL["Delivered\n(v=2)\ndelivery_time"]
-    DE --> R["Returned\n(v=3)\nreturn_time"]
-```
+.mermaid
+    graph LR
+        DE["DroneEvent"]
+        DE --> C["Created\n(v=0)\nTutti i campi ordine"]
+        DE --> D["Dispatched\n(v=1)\ndispatch_time"]
+        DE --> DL["Delivered\n(v=2)\ndelivery_time"]
+        DE --> R["Returned\n(v=3)\nreturn_time"]
 
 ### Campo `version`
 Ogni variante porta un campo `version: u64` che rappresenta la posizione dell'evento nel log del drone. Viene calcolato con `DroneEventStore::count_events_for_drone()` prima di ogni insert, garantendo l'ordinamento cronologico dei documenti MongoDB indipendentemente dall'ordine di arrivo.
