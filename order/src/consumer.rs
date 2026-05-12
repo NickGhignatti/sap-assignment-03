@@ -1,95 +1,77 @@
-//! AMQP consumer: listens on the saga_events_queue and forwards events to the
+//! Kafka consumer: subscribes to saga-events and forwards events to the
 //! orchestrator. Runs as a background tokio task.
-use crate::orchestrator::SagaOrchestrator;
+use crate::orchestrator::{SAGA_EVENTS_TOPIC, SagaOrchestrator};
 use common::SagaEvent;
-use lapin::{
-    Channel,
-    options::{
-        BasicAckOptions, BasicConsumeOptions, BasicNackOptions, QueueBindOptions,
-        QueueDeclareOptions,
-    },
-    types::FieldTable,
+use rdkafka::{
+    consumer::{CommitMode, Consumer, StreamConsumer},
+    message::Message,
 };
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
-pub const SAGA_EVENTS_QUEUE: &str = "saga_events_queue";
-pub const SAGA_EVENTS_EXCHANGE: &str = "saga_events_exchange";
-
-/// Declare the queue + binding, then spawn a task that drives the consumer.
-/// The task runs until the channel is closed or the process exits.
-pub async fn start(channel: Channel, orchestrator: SagaOrchestrator) -> anyhow::Result<()> {
-    use futures::StreamExt;
-
-    // Idempotent declarations – safe to call on every startup.
-    channel
-        .queue_declare(
-            SAGA_EVENTS_QUEUE,
-            QueueDeclareOptions {
-                durable: true,
-                ..Default::default()
-            },
-            FieldTable::default(),
-        )
-        .await?;
-
-    channel
-        .queue_bind(
-            SAGA_EVENTS_QUEUE,
-            SAGA_EVENTS_EXCHANGE,
-            "saga.*",
-            QueueBindOptions::default(),
-            FieldTable::default(),
-        )
-        .await?;
-
-    let tag = format!("order-service-{}", uuid::Uuid::new_v4());
-    let mut consumer = channel
-        .basic_consume(
-            SAGA_EVENTS_QUEUE,
-            tag.as_str(),
-            BasicConsumeOptions::default(),
-            FieldTable::default(),
-        )
-        .await?;
-
-    info!("SAGA event consumer started");
+/// Subscribe to the saga-events topic, then spawn a task that drives the
+/// consumer loop. The task runs until the process exits.
+pub async fn start(consumer: StreamConsumer, orchestrator: SagaOrchestrator) -> anyhow::Result<()> {
+    // subscribe() replaces queue_declare + queue_bind.
+    // No wildcards needed: we get every message on the topic and filter
+    // in application code (orchestrator.handle_saga_event already ignores
+    // events it doesn't care about via the `_ => Ok(())` arm).
+    consumer.subscribe(&[SAGA_EVENTS_TOPIC])?;
+    info!("SAGA event consumer subscribed to topic '{SAGA_EVENTS_TOPIC}'");
 
     tokio::spawn(async move {
-        while let Some(delivery) = consumer.next().await {
-            match delivery {
-                Ok(delivery) => {
-                    match serde_json::from_slice::<SagaEvent>(&delivery.data) {
+        loop {
+            // recv() is the pull: we ask Kafka for the next message.
+            // This blocks (asynchronously) until one arrives or an error occurs.
+            match consumer.recv().await {
+                Ok(msg) => {
+                    // msg.payload() returns Option<&[u8]> — None for tombstone records.
+                    let Some(payload) = msg.payload() else {
+                        warn!("Received empty payload (tombstone?), skipping");
+                        // Commit to advance past this message.
+                        let _ = consumer.commit_message(&msg, CommitMode::Async);
+                        continue;
+                    };
+
+                    match serde_json::from_slice::<SagaEvent>(payload) {
                         Ok(event) => {
-                            if let Err(e) = orchestrator.handle_saga_event(event).await {
-                                error!("Error handling SAGA event: {e}");
-                                // nack without requeue to avoid poison-pill loops
-                                let _ = delivery
-                                    .nack(BasicNackOptions {
-                                        requeue: false,
-                                        ..Default::default()
-                                    })
-                                    .await;
-                                continue;
+                            match orchestrator.handle_saga_event(event).await {
+                                Ok(_) => {
+                                    // ✅ Processing succeeded → commit the offset.
+                                    // This is the equivalent of basic_ack.
+                                    // CommitMode::Async: fire-and-forget commit (higher throughput).
+                                    // Use CommitMode::Sync if you need the strongest guarantee.
+                                    if let Err(e) = consumer.commit_message(&msg, CommitMode::Async)
+                                    {
+                                        error!("Failed to commit Kafka offset: {e}");
+                                    }
+                                }
+                                Err(e) => {
+                                    // ❌ Processing failed → do NOT commit.
+                                    // Kafka will re-deliver this message on the next poll
+                                    // (after a consumer restart or rebalance).
+                                    // This is the equivalent of basic_nack { requeue: true }.
+                                    error!("Error handling SAGA event: {e}. Offset NOT committed.");
+                                }
                             }
                         }
                         Err(e) => {
-                            error!("Failed to deserialise SAGA event: {e}");
-                            // Malformed message: nack without requeue (poison-pill protection)
-                            let _ = delivery
-                                .nack(BasicNackOptions {
-                                    requeue: false,
-                                    ..Default::default()
-                                })
-                                .await;
-                            continue;
+                            // ☠️ Poison pill: malformed JSON that will never parse.
+                            // Commit to skip it — retrying would loop forever.
+                            // This is the equivalent of basic_nack { requeue: false }.
+                            error!(
+                                "Failed to deserialise SAGA event: {e}. Skipping poison-pill message."
+                            );
+                            let _ = consumer.commit_message(&msg, CommitMode::Async);
                         }
                     }
-                    let _ = delivery.ack(BasicAckOptions::default()).await;
                 }
-                Err(e) => error!("AMQP delivery error: {e}"),
+                Err(e) => {
+                    // Kafka errors here are usually transient (e.g. rebalance).
+                    // Log and keep looping — rdkafka handles reconnection internally.
+                    error!("Kafka receive error: {e}");
+                }
             }
         }
-        error!("SAGA event consumer stopped – channel closed");
     });
 
     Ok(())

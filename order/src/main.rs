@@ -7,9 +7,11 @@ pub mod service;
 
 use anyhow::Result;
 use axum::{Router, routing::get, routing::post};
-use lapin::{Connection, ConnectionProperties, options::ExchangeDeclareOptions, types::FieldTable};
 use mongodb::Client;
-use orchestrator::{SAGA_EVENTS_EXCHANGE, SagaOrchestrator};
+use orchestrator::SagaOrchestrator;
+use rdkafka::ClientConfig;
+use rdkafka::consumer::StreamConsumer;
+use rdkafka::producer::FutureProducer;
 use repository::SagaRepository;
 use service::OrderService;
 use std::{env, sync::Arc};
@@ -30,31 +32,44 @@ async fn main() -> Result<()> {
     let db = mongo.database("order_service");
     let repo = SagaRepository::new(&db);
 
-    // ── RabbitMQ ──────────────────────────────────────────────────────────────
-    let amqp_uri = env::var("AMQP_URI")
-        .unwrap_or_else(|_| "amqp://guest:guest@localhost:5672/%2f".to_string());
-    let conn = Connection::connect(&amqp_uri, ConnectionProperties::default()).await?;
+    // ── Kafka ─────────────────────────────────────────────────────────────────
+    // A single broker address (or comma-separated list for a cluster).
+    // Kafka clients auto-discover the full cluster topology from this seed.
+    let brokers = env::var("KAFKA_BROKERS").unwrap_or_else(|_| "localhost:9092".to_string());
 
-    // Separate channels: one for publishing (orchestrator) and one for consuming.
-    let publish_channel = conn.create_channel().await?;
-    let consume_channel = conn.create_channel().await?;
+    // Producer: sends events to Kafka topics.
+    // acks=all → waits for the leader AND all in-sync replicas to acknowledge.
+    // This is the strongest durability guarantee (no data loss on broker failure).
+    let producer: FutureProducer = ClientConfig::new()
+        .set("bootstrap.servers", &brokers)
+        .set("message.timeout.ms", "5000")
+        .set("acks", "all")
+        .create()?;
 
-    // Declare the topic exchange idempotently on startup.
-    publish_channel
-        .exchange_declare(
-            SAGA_EVENTS_EXCHANGE,
-            lapin::ExchangeKind::Topic,
-            ExchangeDeclareOptions {
-                durable: true,
-                ..Default::default()
-            },
-            FieldTable::default(),
-        )
-        .await?;
+    // Consumer: receives events from Kafka topics.
+    //
+    // group.id → "order-service" is our consumer group name.
+    //   All replicas of this service share the same group.id, so Kafka
+    //   distributes partitions among them (load balancing). Each partition
+    //   is assigned to exactly one consumer in the group at a time.
+    //
+    // auto.offset.reset → "earliest": if this group has no committed offset
+    //   (first run, or after a reset), start reading from the beginning of
+    //   the topic. Use "latest" if you only care about new messages.
+    //
+    // enable.auto.commit → "false": we commit offsets manually, AFTER
+    //   successfully processing each message. This is the equivalent of
+    //   basic_ack in AMQP and is critical for at-least-once delivery.
+    let consumer: StreamConsumer = ClientConfig::new()
+        .set("bootstrap.servers", &brokers)
+        .set("group.id", "order-service")
+        .set("auto.offset.reset", "earliest")
+        .set("enable.auto.commit", "false")
+        .create()?;
 
     // ── Wire up services ──────────────────────────────────────────────────────
-    let orchestrator = SagaOrchestrator::new(repo, publish_channel);
-    consumer::start(consume_channel, orchestrator.clone()).await?;
+    let orchestrator = SagaOrchestrator::new(repo, producer);
+    consumer::start(consumer, orchestrator.clone()).await?;
 
     let svc = Arc::new(OrderService::new(orchestrator));
 

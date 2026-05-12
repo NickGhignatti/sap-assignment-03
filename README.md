@@ -15,8 +15,8 @@ The last assignment consist of 3 points:
   - implement a simple prototype, to show your idea
 
 Current Job-Done timeline:
-- [ ] Redesigning a service with an event driven architecture
-- [ ] Adapt other services to interact with the redesigned one
+- [x] Redesigning a service with an event driven architecture
+- [x] Adapt other services to interact with the redesigned one
 - [ ] Use Kafka
 - [ ] Define SLOs and SLIs 
 - [ ] K8s deploy implementation
