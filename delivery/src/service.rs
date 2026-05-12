@@ -1,40 +1,33 @@
-//! Delivery business logic.
-//!
-//! Responsibilities:
-//!   1. Assign a unique delivery ID to the incoming order.
-//!   2. Forward the order to the Drone Service via `drone_queue`.
-//!   3. Notify the SAGA orchestrator by publishing a `DeliveryScheduled` event.
-//!
-//! `lapin::Channel` is Arc-backed, so cloning `DeliveryService` is cheap.
 use anyhow::Result;
 use chrono::Utc;
 use common::{OrderMessage, SagaEvent};
-use lapin::{BasicProperties, Channel, options::BasicPublishOptions};
+use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::util::Timeout;
+use std::time::Duration;
 use tracing::info;
 use uuid::Uuid;
 
-const SAGA_EVENTS_EXCHANGE: &str = "saga_events_exchange";
-const DRONE_QUEUE: &str = "drone_queue";
+// These replace the old DRONE_QUEUE and SAGA_EVENTS_EXCHANGE constants.
+pub const SAGA_EVENTS_TOPIC: &str = "saga-events";
+pub const DRONE_REQUESTS_TOPIC: &str = "drone-requests";
 
+// FutureProducer is Arc-backed → Clone is cheap, same as Channel was.
 #[derive(Clone)]
 pub struct DeliveryService {
-    channel: Channel,
+    producer: FutureProducer,
 }
 
 impl DeliveryService {
-    pub fn new(channel: Channel) -> Self {
-        Self { channel }
+    pub fn new(producer: FutureProducer) -> Self {
+        Self { producer }
     }
 
     /// Schedule a delivery for the given order:
     ///
     /// 1. Assign a `delivery_id`.
-    /// 2. Forward the `OrderMessage` to the Drone Service via `drone_queue`.
-    /// 3. Publish `DeliveryScheduled` on the SAGA exchange so the orchestrator
+    /// 2. Forward the `OrderMessage` to the Drone Service via `drone-requests`.
+    /// 3. Publish `DeliveryScheduled` on `saga-events` so the orchestrator
     ///    can advance to Step 3 (drone assignment).
-    ///
-    /// The `saga_id` is intentionally left empty: the orchestrator correlates
-    /// events by `order_id`, so it does not need the saga_id here.
     pub async fn schedule(&self, order: OrderMessage) -> Result<()> {
         let delivery_id = Uuid::new_v4().to_string();
 
@@ -44,17 +37,22 @@ impl DeliveryService {
         );
 
         // Step 1: forward the full order to the Drone Service.
-        // The drone service will use it to create and dispatch the drone.
-        self.publish_to_queue(DRONE_QUEUE, &order).await?;
+        // Key = order_id ensures all messages for the same order go to the
+        // same partition on drone-requests, preserving ordering.
+        self.publish_to_topic(DRONE_REQUESTS_TOPIC, &order.order_id.clone(), &order)
+            .await?;
 
         // Step 2: notify the SAGA orchestrator that delivery scheduling succeeded.
         let event = SagaEvent::DeliveryScheduled {
-            saga_id: String::new(),
+            saga_id: String::new(), // orchestrator correlates by order_id
             order_id: order.order_id.clone(),
             delivery_id: delivery_id.clone(),
             timestamp: Utc::now(),
         };
-        self.publish_event("saga.delivery_scheduled", &event).await?;
+        // Same key → same partition as the drone-requests message above.
+        // The orchestrator will process these in order.
+        self.publish_to_topic(SAGA_EVENTS_TOPIC, &order.order_id, &event)
+            .await?;
 
         info!(
             order_id = order.order_id,
@@ -64,38 +62,22 @@ impl DeliveryService {
         Ok(())
     }
 
-    // ── Private AMQP helpers ──────────────────────────────────────────────────
+    // ── Private Kafka helper ──────────────────────────────────────────────────
 
-    /// Publish a `SagaEvent` on the topic exchange.
-    async fn publish_event(&self, routing_key: &str, event: &SagaEvent) -> Result<()> {
-        let payload = serde_json::to_vec(event)?;
-        self.channel
-            .basic_publish(
-                SAGA_EVENTS_EXCHANGE,
-                routing_key,
-                BasicPublishOptions::default(),
-                &payload,
-                BasicProperties::default().with_content_type("application/json".into()),
-            )
-            .await?
-            .await?;
-        Ok(())
-    }
-
-    /// Publish any serialisable message directly to a named queue
-    /// (via the default exchange, routing key = queue name).
-    async fn publish_to_queue<T: serde::Serialize>(&self, queue: &str, msg: &T) -> Result<()> {
+    async fn publish_to_topic<T: serde::Serialize>(
+        &self,
+        topic: &str,
+        key: &str,
+        msg: &T,
+    ) -> Result<()> {
         let payload = serde_json::to_vec(msg)?;
-        self.channel
-            .basic_publish(
-                "",
-                queue,
-                BasicPublishOptions::default(),
-                &payload,
-                BasicProperties::default().with_content_type("application/json".into()),
+        self.producer
+            .send(
+                FutureRecord::to(topic).key(key).payload(payload.as_slice()),
+                Timeout::After(Duration::from_secs(5)),
             )
-            .await?
-            .await?;
+            .await
+            .map_err(|(e, _)| anyhow::anyhow!("Kafka produce error on '{topic}': {e}"))?;
         Ok(())
     }
 }

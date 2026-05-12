@@ -2,17 +2,12 @@ mod consumer;
 mod service;
 
 use anyhow::Result;
-use lapin::{
-    Connection, ConnectionProperties,
-    options::{ExchangeDeclareOptions, QueueDeclareOptions},
-    types::FieldTable,
-};
+use rdkafka::ClientConfig;
+use rdkafka::consumer::StreamConsumer;
+use rdkafka::producer::FutureProducer;
 use service::DeliveryService;
 use std::env;
 use tracing::info;
-
-const SAGA_EVENTS_EXCHANGE: &str = "saga_events_exchange";
-const DRONE_QUEUE: &str = "drone_queue";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -22,55 +17,36 @@ async fn main() -> Result<()> {
         )
         .init();
 
-    // ── RabbitMQ ──────────────────────────────────────────────────────────────
-    let amqp_uri = env::var("AMQP_URI")
-        .unwrap_or_else(|_| "amqp://guest:guest@localhost:5672/%2f".to_string());
+    // ── Kafka ─────────────────────────────────────────────────────────────────
+    let brokers = env::var("KAFKA_BROKERS").unwrap_or_else(|_| "localhost:9092".to_string());
 
-    let conn = Connection::connect(&amqp_uri, ConnectionProperties::default()).await?;
+    // Producer shared by DeliveryService to publish to saga-events
+    // and drone-requests topics.
+    let producer: FutureProducer = ClientConfig::new()
+        .set("bootstrap.servers", &brokers)
+        .set("message.timeout.ms", "5000")
+        .set("acks", "all")
+        .create()?;
 
-    // Two channels: one for publishing (DeliveryService), one for consuming.
-    // Keeping them separate isolates back-pressure between the two directions.
-    let publish_channel = conn.create_channel().await?;
-    let consume_channel = conn.create_channel().await?;
-
-    // ── AMQP topology ─────────────────────────────────────────────────────────
-    // Idempotent declarations – safe to call on every startup regardless of
-    // whether another service has already created these resources.
-
-    // The topic exchange used for all SAGA events.
-    publish_channel
-        .exchange_declare(
-            SAGA_EVENTS_EXCHANGE,
-            lapin::ExchangeKind::Topic,
-            ExchangeDeclareOptions {
-                durable: true,
-                ..Default::default()
-            },
-            FieldTable::default(),
-        )
-        .await?;
-
-    // The queue consumed by the Drone Service.
-    // Declared here so the Delivery Service can publish to it even if the
-    // Drone Service has not started yet.
-    publish_channel
-        .queue_declare(
-            DRONE_QUEUE,
-            QueueDeclareOptions {
-                durable: true,
-                ..Default::default()
-            },
-            FieldTable::default(),
-        )
-        .await?;
+    // Consumer belonging to "delivery-service" group.
+    // Note: different group.id from the order service → each service gets its
+    // own independent cursor through the same topics.
+    // If you ran two replicas of delivery-service they'd SHARE this group,
+    // so Kafka would split the partitions between them automatically.
+    let consumer: StreamConsumer = ClientConfig::new()
+        .set("bootstrap.servers", &brokers)
+        .set("group.id", "delivery-service")
+        .set("auto.offset.reset", "earliest")
+        .set("enable.auto.commit", "false")
+        .create()?;
 
     // ── Wire up services ──────────────────────────────────────────────────────
-    let delivery_svc = DeliveryService::new(publish_channel);
-    consumer::start(consume_channel, delivery_svc).await?;
+    // No topology declarations needed — topics are created automatically.
+    let delivery_svc = DeliveryService::new(producer);
+    consumer::start(consumer, delivery_svc).await?;
 
     info!("Delivery Service running – waiting for orders");
 
-    // Keep the process alive until SIGINT / SIGTERM.
     tokio::signal::ctrl_c().await?;
     info!("Shutdown signal received – goodbye");
 

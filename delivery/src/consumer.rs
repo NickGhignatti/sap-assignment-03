@@ -1,104 +1,79 @@
-//! AMQP consumer: listens on `order_queue` for new orders from the orchestrator.
-//!
-//! Replaces the Java `@RabbitListener` on `OrderMessageConsumer`.
-//! Ack/nack is handled explicitly for full control over requeue behaviour:
-//!   - Invalid message (empty order_id)  → nack, no requeue  (discard silently)
-//!   - Transient service error           → nack, requeue     (retry later)
-//!   - Success                           → ack
+//! Kafka consumer: subscribes to order-requests and forwards orders to
+//! DeliveryService. Runs as a background tokio task.
 use crate::service::DeliveryService;
 use common::OrderMessage;
-use lapin::{
-    Channel,
-    options::{BasicAckOptions, BasicConsumeOptions, BasicNackOptions, QueueDeclareOptions},
-    types::FieldTable,
+use rdkafka::{
+    consumer::{CommitMode, Consumer, StreamConsumer},
+    message::Message,
 };
 use tracing::{error, info, warn};
 
-const ORDER_QUEUE: &str = "order_queue";
+pub const ORDER_REQUESTS_TOPIC: &str = "order-requests";
 
-/// Declare the queue, start a background consumer task and return immediately.
-/// The task runs until the channel is closed or the process exits.
-pub async fn start(channel: Channel, svc: DeliveryService) -> anyhow::Result<()> {
-    use futures::StreamExt;
-
-    // Idempotent declaration – safe to call on every startup.
-    channel
-        .queue_declare(
-            ORDER_QUEUE,
-            QueueDeclareOptions {
-                durable: true,
-                ..Default::default()
-            },
-            FieldTable::default(),
-        )
-        .await?;
-
-    let mut consumer = channel
-        .basic_consume(
-            ORDER_QUEUE,
-            // Unique consumer tag – avoids conflicts when multiple instances run.
-            &format!("delivery-service-{}", uuid::Uuid::new_v4()),
-            BasicConsumeOptions::default(),
-            FieldTable::default(),
-        )
-        .await?;
-
-    info!("Delivery order consumer started");
+/// Subscribe to order-requests, spawn the consumer loop, return immediately.
+pub async fn start(consumer: StreamConsumer, svc: DeliveryService) -> anyhow::Result<()> {
+    // No queue_declare needed. Just subscribe and go.
+    consumer.subscribe(&[ORDER_REQUESTS_TOPIC])?;
+    info!("Delivery order consumer subscribed to topic '{ORDER_REQUESTS_TOPIC}'");
 
     tokio::spawn(async move {
-        while let Some(delivery) = consumer.next().await {
-            match delivery {
-                Ok(delivery) => {
-                    match serde_json::from_slice::<OrderMessage>(&delivery.data) {
+        loop {
+            match consumer.recv().await {
+                Ok(msg) => {
+                    let Some(payload) = msg.payload() else {
+                        warn!("Empty payload (tombstone?) on order-requests – skipping");
+                        // Commit: tombstones are intentional deletions in Kafka,
+                        // we never want to retry them.
+                        let _ = consumer.commit_message(&msg, CommitMode::Async);
+                        continue;
+                    };
+
+                    match serde_json::from_slice::<OrderMessage>(payload) {
                         Ok(order) => {
-                            // Guard: every valid order must have a non-empty order_id.
+                            // Guard: every valid order must carry a non-empty order_id.
                             if order.order_id.is_empty() {
-                                warn!("Received OrderMessage with empty order_id – discarding");
-                                let _ = delivery
-                                    .nack(BasicNackOptions {
-                                        requeue: false,
-                                        ..Default::default()
-                                    })
-                                    .await;
+                                warn!("OrderMessage with empty order_id – skipping (poison pill)");
+                                // Commit to skip: this message would fail on every retry.
+                                // Equivalent to nack(requeue: false).
+                                let _ = consumer.commit_message(&msg, CommitMode::Async);
                                 continue;
                             }
 
-                            info!(order_id = order.order_id, "Order received by Delivery Service");
+                            info!(
+                                order_id = order.order_id,
+                                "Order received by Delivery Service"
+                            );
 
-                            if let Err(e) = svc.schedule(order).await {
-                                // Transient error (e.g. broker unavailable) – requeue for retry.
-                                error!("Failed to schedule delivery: {e}");
-                                let _ = delivery
-                                    .nack(BasicNackOptions {
-                                        requeue: true,
-                                        ..Default::default()
-                                    })
-                                    .await;
-                                continue;
+                            match svc.schedule(order).await {
+                                Ok(_) => {
+                                    // ✅ Success → commit.
+                                    // Equivalent to basic_ack.
+                                    if let Err(e) = consumer.commit_message(&msg, CommitMode::Async)
+                                    {
+                                        error!("Failed to commit offset: {e}");
+                                    }
+                                }
+                                Err(e) => {
+                                    // ❌ Transient error (e.g. Kafka broker unreachable) → no commit.
+                                    // Kafka will re-deliver this message after a consumer restart
+                                    // or a rebalance. Equivalent to nack(requeue: true).
+                                    error!(
+                                        "Failed to schedule delivery: {e}. Offset NOT committed."
+                                    );
+                                }
                             }
                         }
-
                         Err(e) => {
-                            // Malformed message – nack without requeue to avoid poison-pill loops.
-                            error!("Failed to deserialise OrderMessage: {e}");
-                            let _ = delivery
-                                .nack(BasicNackOptions {
-                                    requeue: false,
-                                    ..Default::default()
-                                })
-                                .await;
-                            continue;
+                            // ☠️ Malformed JSON → commit to skip forever.
+                            // Equivalent to nack(requeue: false).
+                            error!("Failed to deserialise OrderMessage: {e}. Skipping.");
+                            let _ = consumer.commit_message(&msg, CommitMode::Async);
                         }
                     }
-
-                    let _ = delivery.ack(BasicAckOptions::default()).await;
                 }
-
-                Err(e) => error!("AMQP delivery error: {e}"),
+                Err(e) => error!("Kafka receive error: {e}"),
             }
         }
-
-        error!("Delivery order consumer stopped – channel closed");
     });
 
     Ok(())
