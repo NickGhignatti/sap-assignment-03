@@ -22,7 +22,7 @@ pub type InFlightMap = Arc<Mutex<HashMap<String, DroneEntry>>>;
 #[derive(Clone)]
 pub struct DroneService {
     pub store: DroneEventStore,
-    producer: FutureProducer, // ← replaces lapin::Channel
+    producer: FutureProducer,
     in_flight: InFlightMap,
 }
 
@@ -38,10 +38,6 @@ impl DroneService {
     pub fn in_flight(&self) -> InFlightMap {
         Arc::clone(&self.in_flight)
     }
-
-    // ── Public API ────────────────────────────────────────────────────────────
-    // Everything below is identical to the AMQP version except the one
-    // publish_saga_event call, which now uses the Kafka helper at the bottom.
 
     pub async fn start_delivery(&self, order: OrderMessage, delivery_minutes: u32) -> Result<()> {
         let drone_id = Uuid::new_v4().to_string();

@@ -34,7 +34,7 @@ pub async fn start(consumer: StreamConsumer, svc: DeliveryService) -> anyhow::Re
                             if order.order_id.is_empty() {
                                 warn!("OrderMessage with empty order_id – skipping (poison pill)");
                                 // Commit to skip: this message would fail on every retry.
-                                // Equivalent to nack(requeue: false).
+                                // Equivalent to nack (requeue: false).
                                 let _ = consumer.commit_message(&msg, CommitMode::Async);
                                 continue;
                             }
@@ -46,15 +46,14 @@ pub async fn start(consumer: StreamConsumer, svc: DeliveryService) -> anyhow::Re
 
                             match svc.schedule(order).await {
                                 Ok(_) => {
-                                    // ✅ Success → commit.
-                                    // Equivalent to basic_ack.
+                                    // Success → commit.
                                     if let Err(e) = consumer.commit_message(&msg, CommitMode::Async)
                                     {
                                         error!("Failed to commit offset: {e}");
                                     }
                                 }
                                 Err(e) => {
-                                    // ❌ Transient error (e.g. Kafka broker unreachable) → no commit.
+                                    // ransient error (e.g. Kafka broker unreachable) → no commit.
                                     // Kafka will re-deliver this message after a consumer restart
                                     // or a rebalance. Equivalent to nack(requeue: true).
                                     error!(
@@ -64,7 +63,7 @@ pub async fn start(consumer: StreamConsumer, svc: DeliveryService) -> anyhow::Re
                             }
                         }
                         Err(e) => {
-                            // ☠️ Malformed JSON → commit to skip forever.
+                            // Malformed JSON → commit to skip forever.
                             // Equivalent to nack(requeue: false).
                             error!("Failed to deserialise OrderMessage: {e}. Skipping.");
                             let _ = consumer.commit_message(&msg, CommitMode::Async);

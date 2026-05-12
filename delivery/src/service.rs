@@ -36,13 +36,13 @@ impl DeliveryService {
             delivery_id, "Delivery scheduled – forwarding to Drone Service"
         );
 
-        // Step 1: forward the full order to the Drone Service.
+        // Forward the full order to the Drone Service.
         // Key = order_id ensures all messages for the same order go to the
         // same partition on drone-requests, preserving ordering.
         self.publish_to_topic(DRONE_REQUESTS_TOPIC, &order.order_id.clone(), &order)
             .await?;
 
-        // Step 2: notify the SAGA orchestrator that delivery scheduling succeeded.
+        // Notify the SAGA orchestrator that delivery scheduling succeeded.
         let event = SagaEvent::DeliveryScheduled {
             saga_id: String::new(), // orchestrator correlates by order_id
             order_id: order.order_id.clone(),

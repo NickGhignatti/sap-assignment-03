@@ -11,7 +11,6 @@ use tracing::{error, info, warn};
 /// Subscribe to the saga-events topic, then spawn a task that drives the
 /// consumer loop. The task runs until the process exits.
 pub async fn start(consumer: StreamConsumer, orchestrator: SagaOrchestrator) -> anyhow::Result<()> {
-    // subscribe() replaces queue_declare + queue_bind.
     // No wildcards needed: we get every message on the topic and filter
     // in application code (orchestrator.handle_saga_event already ignores
     // events it doesn't care about via the `_ => Ok(())` arm).
@@ -36,8 +35,7 @@ pub async fn start(consumer: StreamConsumer, orchestrator: SagaOrchestrator) -> 
                         Ok(event) => {
                             match orchestrator.handle_saga_event(event).await {
                                 Ok(_) => {
-                                    // ✅ Processing succeeded → commit the offset.
-                                    // This is the equivalent of basic_ack.
+                                    // Processing succeeded → commit the offset.
                                     // CommitMode::Async: fire-and-forget commit (higher throughput).
                                     // Use CommitMode::Sync if you need the strongest guarantee.
                                     if let Err(e) = consumer.commit_message(&msg, CommitMode::Async)
@@ -46,7 +44,7 @@ pub async fn start(consumer: StreamConsumer, orchestrator: SagaOrchestrator) -> 
                                     }
                                 }
                                 Err(e) => {
-                                    // ❌ Processing failed → do NOT commit.
+                                    // Processing failed → do NOT commit.
                                     // Kafka will re-deliver this message on the next poll
                                     // (after a consumer restart or rebalance).
                                     // This is the equivalent of basic_nack { requeue: true }.
@@ -55,7 +53,7 @@ pub async fn start(consumer: StreamConsumer, orchestrator: SagaOrchestrator) -> 
                             }
                         }
                         Err(e) => {
-                            // ☠️ Poison pill: malformed JSON that will never parse.
+                            // Poison pill: malformed JSON that will never parse.
                             // Commit to skip it — retrying would loop forever.
                             // This is the equivalent of basic_nack { requeue: false }.
                             error!(

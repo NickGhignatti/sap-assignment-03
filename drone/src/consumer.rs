@@ -37,14 +37,14 @@ pub async fn start_order_consumer(
 
                             match svc.start_delivery(order, minutes).await {
                                 Ok(_) => {
-                                    // ✅ Success → commit (equivalent to basic_ack).
+                                    // ✅ Success → commit.
                                     if let Err(e) = consumer.commit_message(&msg, CommitMode::Async)
                                     {
                                         error!("Failed to commit offset: {e}");
                                     }
                                 }
                                 Err(e) => {
-                                    // ❌ Transient error → no commit (equivalent to nack requeue:true).
+                                    // ❌ Transient error → no commit.
                                     error!(
                                         "Failed to start drone delivery: {e}. Offset NOT committed."
                                     );
@@ -52,7 +52,7 @@ pub async fn start_order_consumer(
                             }
                         }
                         Err(e) => {
-                            // ☠️ Poison pill → commit to skip (equivalent to nack requeue:false).
+                            // ☠️ Poison pill → commit to skip.
                             error!("Failed to deserialise OrderMessage: {e}. Skipping.");
                             let _ = consumer.commit_message(&msg, CommitMode::Async);
                         }
@@ -68,7 +68,6 @@ pub async fn start_order_consumer(
 
 /// Subscribes to `saga-events`, spawns the consumer loop, returns immediately.
 ///
-/// ⚠️  Key difference from AMQP:
 /// In AMQP the routing key `saga.compensate.drone` meant only CompensateDrone
 /// events arrived on this queue. Here we receive ALL saga-events and filter
 /// in application code. Non-drone events are committed immediately (skip).

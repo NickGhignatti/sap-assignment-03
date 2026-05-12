@@ -31,12 +31,12 @@ pub struct SagaMetrics {
     pub compensated: AtomicU64,
 }
 
-// FutureProducer is Arc-backed internally, so Clone is cheap (same as Channel was).
+// FutureProducer is Arc-backed internally, so Clone is cheap.
 #[derive(Clone)]
 pub struct SagaOrchestrator {
     repo: SagaRepository,
     metrics: Arc<SagaMetrics>,
-    producer: FutureProducer, // ← replaces lapin::Channel
+    producer: FutureProducer,
 }
 
 impl SagaOrchestrator {

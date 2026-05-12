@@ -32,7 +32,6 @@ async fn main() -> Result<()> {
     let db = mongo.database("order_service");
     let repo = SagaRepository::new(&db);
 
-    // ── Kafka ─────────────────────────────────────────────────────────────────
     // A single broker address (or comma-separated list for a cluster).
     // Kafka clients auto-discover the full cluster topology from this seed.
     let brokers = env::var("KAFKA_BROKERS").unwrap_or_else(|_| "localhost:9092".to_string());
