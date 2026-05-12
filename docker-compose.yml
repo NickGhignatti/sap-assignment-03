@@ -1,5 +1,5 @@
 services:
-  # ── Infrastructure ───────────────────────────────────────────────────────────
+  # ── Infrastructure ────────────────────────────────────────────────────────────
 
   mongodb:
     image: mongo:7-jammy
@@ -22,35 +22,110 @@ services:
     networks:
       - droneflow
 
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: droneflow-rabbitmq
+  kafka:
+    image: bitnami/kafka:3.8
+    container_name: droneflow-kafka
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      # ── KRaft mode (no Zookeeper) ───────────────────────────────────────────
+      # This node acts as both broker (handles produce/consume) and controller
+      # (handles cluster metadata). Fine for dev; in production you'd split these
+      # across dedicated nodes.
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+
+      # ── Listeners ──────────────────────────────────────────────────────────
+      # Three listener names, three ports:
+      #   PLAINTEXT  :9092  → used by other Docker containers (kafka:9092)
+      #   CONTROLLER :9093  → internal KRaft metadata channel (not exposed)
+      #   EXTERNAL   :9094  → exposed to your host machine (localhost:9094)
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+
+      # ── Topic settings ──────────────────────────────────────────────────────
+      # Auto-creation is convenient for development (topics appear on first use).
+      # In production, set this to false and pre-create topics explicitly so you
+      # control partition count, replication factor, and retention policy.
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+
+      # Default replication factor of 1 is correct for a single-node setup.
+      # A cluster would need at least 3 for meaningful fault tolerance.
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=1
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+
     ports:
-      - "5672:5672" # AMQP
-      - "15672:15672" # Management UI
+      - "9094:9094"
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test:
+        [
+          "CMD",
+          "kafka-topics.sh",
+          "--bootstrap-server",
+          "localhost:9092",
+          "--list",
+        ]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
       start_period: 30s
+    volumes:
+      - kafka_data:/bitnami/kafka
     networks:
       - droneflow
 
-  # ── Application services ─────────────────────────────────────────────────────
+  # Optional but highly recommended: a web UI to browse topics, messages,
+  # consumer groups and their lag — the equivalent of RabbitMQ's management UI.
+  # Access it at http://localhost:8090
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: droneflow-kafka-ui
+    restart: unless-stopped
+    environment:
+      KAFKA_CLUSTERS_0_NAME: droneflow
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "8090:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - droneflow
+
+  # ── (Optional) Topic initializer ─────────────────────────────────────────────
+  # Uncomment this block if you want explicit topic creation instead of
+  # relying on auto-create. Useful for setting a non-default partition count.
+  # (e.g. 3 partitions on saga-events means up to 3 parallel order-service
+  # replicas can consume without stepping on each other.)
+  #
+  # kafka-init:
+  #   image: bitnami/kafka:3.8
+  #   container_name: droneflow-kafka-init
+  #   depends_on:
+  #     kafka:
+  #       condition: service_healthy
+  #   entrypoint: ["/bin/sh", "-c"]
+  #   command: |
+  #     "kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic saga-events      --partitions 3 --replication-factor 1
+  #      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic order-requests  --partitions 3 --replication-factor 1
+  #      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic drone-requests  --partitions 3 --replication-factor 1"
+  #   networks:
+  #     - droneflow
+
+  # ── Application services ──────────────────────────────────────────────────────
 
   order:
     build:
-      context: ./order
+      context: .
+      dockerfile: order/Dockerfile
     container_name: droneflow-order
     restart: unless-stopped
     environment:
       MONGODB_URI: mongodb://root:root@mongodb:27017/order_service?authSource=admin
-      AMQP_URI: amqp://guest:guest@rabbitmq:5672/%2f
+      KAFKA_BROKERS: kafka:9092
       PORT: "8080"
       RUST_LOG: "info"
     ports:
@@ -58,33 +133,35 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
-      rabbitmq:
+      kafka:
         condition: service_healthy
     networks:
       - droneflow
 
   delivery:
     build:
-      context: ./delivery
+      context: .
+      dockerfile: delivery/Dockerfile
     container_name: droneflow-delivery
     restart: unless-stopped
     environment:
-      AMQP_URI: amqp://guest:guest@rabbitmq:5672/%2f
+      KAFKA_BROKERS: kafka:9092
       RUST_LOG: "info"
     depends_on:
-      rabbitmq:
+      kafka:
         condition: service_healthy
     networks:
       - droneflow
 
   drone:
     build:
-      context: ./drone
+      context: .
+      dockerfile: drone/Dockerfile
     container_name: droneflow-drone
     restart: unless-stopped
     environment:
       MONGODB_URI: mongodb://root:root@mongodb:27017/drone_service?authSource=admin
-      AMQP_URI: amqp://guest:guest@rabbitmq:5672/%2f
+      KAFKA_BROKERS: kafka:9092
       PORT: "8082"
       RUST_LOG: "info"
     ports:
@@ -92,18 +169,20 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
-      rabbitmq:
+      kafka:
         condition: service_healthy
     networks:
       - droneflow
 
-# ── Volumes ───────────────────────────────────────────────────────────────────
+# ── Volumes ────────────────────────────────────────────────────────────────────
 
 volumes:
   mongodb_data:
     driver: local
+  kafka_data:
+    driver: local
 
-# ── Networks ──────────────────────────────────────────────────────────────────
+# ── Networks ───────────────────────────────────────────────────────────────────
 
 networks:
   droneflow:

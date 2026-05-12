@@ -1,60 +1,33 @@
-//! Two AMQP consumers in one module:
-//!
-//!  - `start_order_consumer`        – listens on `drone_queue` for new orders
-//!                                    (replaces Java `DroneMessageConsumer`)
-//!  - `start_compensation_consumer` – listens on `drone_compensation_queue`
-//!                                    for SAGA rollback signals
-//!                                    (replaces Java `DroneCompensationListener`)
-use crate::service::DroneService;
+use crate::service::{DroneService, SAGA_EVENTS_TOPIC};
 use common::{OrderMessage, SagaEvent};
-use lapin::{
-    Channel,
-    options::{
-        BasicAckOptions, BasicConsumeOptions, BasicNackOptions, QueueBindOptions,
-        QueueDeclareOptions,
-    },
-    types::FieldTable,
-};
 use rand::Rng;
+use rdkafka::{
+    consumer::{CommitMode, Consumer, StreamConsumer},
+    message::Message,
+};
 use tracing::{error, info, warn};
 
-const DRONE_QUEUE: &str = "drone_queue";
-const DRONE_COMPENSATION_QUEUE: &str = "drone_compensation_queue";
-const SAGA_EVENTS_EXCHANGE: &str = "saga_events_exchange";
+pub const DRONE_REQUESTS_TOPIC: &str = "drone-requests";
 
-/// Declare `drone_queue`, then spawn a background task that consumes orders
-/// and calls `DroneService::start_delivery` for each valid one.
-pub async fn start_order_consumer(channel: Channel, svc: DroneService) -> anyhow::Result<()> {
-    use futures::StreamExt;
-
-    channel
-        .queue_declare(
-            DRONE_QUEUE,
-            QueueDeclareOptions {
-                durable: true,
-                ..Default::default()
-            },
-            FieldTable::default(),
-        )
-        .await?;
-
-    let mut consumer = channel
-        .basic_consume(
-            DRONE_QUEUE,
-            // Unique tag – avoids conflicts when multiple instances run in parallel.
-            &format!("drone-service-orders-{}", uuid::Uuid::new_v4()),
-            BasicConsumeOptions::default(),
-            FieldTable::default(),
-        )
-        .await?;
-
-    info!("Drone order consumer started");
+/// Subscribes to `drone-requests`, spawns the consumer loop, returns immediately.
+pub async fn start_order_consumer(
+    consumer: StreamConsumer,
+    svc: DroneService,
+) -> anyhow::Result<()> {
+    consumer.subscribe(&[DRONE_REQUESTS_TOPIC])?;
+    info!("Drone order consumer subscribed to '{DRONE_REQUESTS_TOPIC}'");
 
     tokio::spawn(async move {
-        while let Some(delivery) = consumer.next().await {
-            match delivery {
-                Ok(delivery) => {
-                    match serde_json::from_slice::<OrderMessage>(&delivery.data) {
+        loop {
+            match consumer.recv().await {
+                Ok(msg) => {
+                    let Some(payload) = msg.payload() else {
+                        warn!("Empty payload on drone-requests – skipping tombstone");
+                        let _ = consumer.commit_message(&msg, CommitMode::Async);
+                        continue;
+                    };
+
+                    match serde_json::from_slice::<OrderMessage>(payload) {
                         Ok(order) => {
                             info!(order_id = order.order_id, "Order received by Drone Service");
 
@@ -62,127 +35,95 @@ pub async fn start_order_consumer(channel: Channel, svc: DroneService) -> anyhow
                             let minutes = rand::thread_rng()
                                 .gen_range(1..=order.max_delivery_time_minutes.max(1) as u32);
 
-                            if let Err(e) = svc.start_delivery(order, minutes).await {
-                                // Transient error – requeue so the order is not lost.
-                                error!("Failed to start drone delivery: {e}");
-                                let _ = delivery
-                                    .nack(BasicNackOptions {
-                                        requeue: true,
-                                        ..Default::default()
-                                    })
-                                    .await;
-                                continue;
+                            match svc.start_delivery(order, minutes).await {
+                                Ok(_) => {
+                                    // ✅ Success → commit (equivalent to basic_ack).
+                                    if let Err(e) = consumer.commit_message(&msg, CommitMode::Async)
+                                    {
+                                        error!("Failed to commit offset: {e}");
+                                    }
+                                }
+                                Err(e) => {
+                                    // ❌ Transient error → no commit (equivalent to nack requeue:true).
+                                    error!(
+                                        "Failed to start drone delivery: {e}. Offset NOT committed."
+                                    );
+                                }
                             }
                         }
-
                         Err(e) => {
-                            // Malformed message – discard to avoid poison-pill loops.
-                            error!("Failed to deserialise OrderMessage: {e}");
-                            let _ = delivery
-                                .nack(BasicNackOptions {
-                                    requeue: false,
-                                    ..Default::default()
-                                })
-                                .await;
-                            continue;
+                            // ☠️ Poison pill → commit to skip (equivalent to nack requeue:false).
+                            error!("Failed to deserialise OrderMessage: {e}. Skipping.");
+                            let _ = consumer.commit_message(&msg, CommitMode::Async);
                         }
                     }
-
-                    let _ = delivery.ack(BasicAckOptions::default()).await;
                 }
-
-                Err(e) => error!("AMQP delivery error: {e}"),
+                Err(e) => error!("Kafka receive error (orders): {e}"),
             }
         }
-
-        error!("Drone order consumer stopped – channel closed");
     });
 
     Ok(())
 }
 
-/// Declare `drone_compensation_queue`, bind it to the SAGA exchange on
-/// `saga.compensate.drone`, then spawn a task that calls `DroneService::compensate`
-/// for every `CompensateDrone` event received.
+/// Subscribes to `saga-events`, spawns the consumer loop, returns immediately.
+///
+/// ⚠️  Key difference from AMQP:
+/// In AMQP the routing key `saga.compensate.drone` meant only CompensateDrone
+/// events arrived on this queue. Here we receive ALL saga-events and filter
+/// in application code. Non-drone events are committed immediately (skip).
 pub async fn start_compensation_consumer(
-    channel: Channel,
+    consumer: StreamConsumer,
     svc: DroneService,
 ) -> anyhow::Result<()> {
-    use futures::StreamExt;
-
-    channel
-        .queue_declare(
-            DRONE_COMPENSATION_QUEUE,
-            QueueDeclareOptions {
-                durable: true,
-                ..Default::default()
-            },
-            FieldTable::default(),
-        )
-        .await?;
-
-    // Bind to the topic exchange so we only receive drone compensation events.
-    channel
-        .queue_bind(
-            DRONE_COMPENSATION_QUEUE,
-            SAGA_EVENTS_EXCHANGE,
-            "saga.compensate.drone",
-            QueueBindOptions::default(),
-            FieldTable::default(),
-        )
-        .await?;
-
-    let mut consumer = channel
-        .basic_consume(
-            DRONE_COMPENSATION_QUEUE,
-            &format!("drone-service-compensation-{}", uuid::Uuid::new_v4()),
-            BasicConsumeOptions::default(),
-            FieldTable::default(),
-        )
-        .await?;
-
-    info!("Drone compensation consumer started");
+    consumer.subscribe(&[SAGA_EVENTS_TOPIC])?;
+    info!("Drone compensation consumer subscribed to '{SAGA_EVENTS_TOPIC}'");
 
     tokio::spawn(async move {
-        while let Some(delivery) = consumer.next().await {
-            match delivery {
-                Ok(delivery) => {
-                    match serde_json::from_slice::<SagaEvent>(&delivery.data) {
+        loop {
+            match consumer.recv().await {
+                Ok(msg) => {
+                    let Some(payload) = msg.payload() else {
+                        let _ = consumer.commit_message(&msg, CommitMode::Async);
+                        continue;
+                    };
+
+                    match serde_json::from_slice::<SagaEvent>(payload) {
                         Ok(SagaEvent::CompensateDrone {
                             drone_id,
                             saga_id,
                             reason,
                             ..
                         }) => {
+                            // This is the only event we act on.
                             warn!(drone_id, saga_id, reason, "Drone compensation requested");
                             svc.compensate(&drone_id);
                             info!(drone_id, "Drone compensation complete");
-                        }
 
-                        Ok(other) => {
-                            // Should never happen given the routing key binding,
-                            // but log and discard rather than crash.
-                            warn!(
-                                "Unexpected event on compensation queue: {:?}",
-                                other
-                            );
+                            // Compensation is synchronous (no async work in compensate()),
+                            // so we always commit — retrying a compensation would be
+                            // idempotent anyway but unnecessary.
+                            if let Err(e) = consumer.commit_message(&msg, CommitMode::Async) {
+                                error!("Failed to commit compensation offset: {e}");
+                            }
                         }
-
+                        Ok(_other) => {
+                            // Any other SagaEvent (OrderCompleted, DeliveryScheduled, etc.)
+                            // is not for us. Commit immediately to advance the offset.
+                            // This is the Kafka equivalent of "routing key didn't match" —
+                            // the broker used to do this for us; now we do it ourselves.
+                            let _ = consumer.commit_message(&msg, CommitMode::Async);
+                        }
                         Err(e) => {
-                            error!("Failed to deserialise compensation event: {e}");
+                            // Malformed JSON → commit and skip.
+                            error!("Failed to deserialise SagaEvent: {e}. Skipping.");
+                            let _ = consumer.commit_message(&msg, CommitMode::Async);
                         }
                     }
-
-                    // Always ack: compensation is best-effort and retrying a
-                    // malformed message would not help.
-                    let _ = delivery.ack(BasicAckOptions::default()).await;
                 }
-
-                Err(e) => error!("AMQP compensation delivery error: {e}"),
+                Err(e) => error!("Kafka receive error (compensation): {e}"),
             }
         }
-
-        error!("Drone compensation consumer stopped – channel closed");
     });
 
     Ok(())
