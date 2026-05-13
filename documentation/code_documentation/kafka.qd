@@ -1,0 +1,202 @@
+.docname {Code Docs}
+.include {docs}
+
+> [NOTE!]
+> Sostituzione di RabbitMQ/AMQP con Apache Kafka su tutti e tre i microservizi.
+> L'unica cosa riscritta è stata il transport layer.
+
+## 1. Cosa è cambiato
+
+| Layer | v1 (AMQP) | v2 (Kafka) | Modificato? |
+|---|---|---|---|
+| Crate di trasporto | `lapin 2` | `rdkafka 0.37` | ✅ |
+| Broker | RabbitMQ 3 | Kafka 3.8 (KRaft, no Zookeeper) | ✅ |
+| Topologia messaggi | Exchange topic + routing keys | Topic flat + message key | ✅ |
+| Modello consumer | Push (broker chiama il servizio) | Pull (`consumer.recv().await`) | ✅ |
+| Acknowledgement | `basic_ack` / `basic_nack` | `commit_message` / no-commit | ✅ |
+| Business logic | Saga orchestration, compensazione | Invariata | ⬛ |
+| Modelli dati | `SagaEvent`, `DroneEvent`, `OrderMessage` | Invariati | ⬛ |
+| Persistenza MongoDB | Stato saga, event sourcing | Invariata | ⬛ |
+| API HTTP | `POST /order`, endpoint stato drone | Invariate | ⬛ |
+
+---
+
+## 2. Componenti del sistema
+
+.mermaid
+    graph TB
+        Client(["👤 Client HTTP"])
+
+        subgraph Services["Microservizi"]
+            Order["Order Service\n:8080\n(Orchestratore SAGA)"]
+            Delivery["Delivery Service\n(Kafka Consumer)"]
+            Drone["Drone Service\n:8082\n(Event Sourcing)"]
+        end
+
+        subgraph Infra["Infrastruttura"]
+            K[["Apache Kafka\n:9092 (interno)\n:9094 (host)"]]
+            KUI["Kafka UI\n:8090"]
+            MDB_O[("MongoDB\norder_service")]
+            MDB_D[("MongoDB\ndrone_service")]
+        end
+
+        Client -->|"POST /\nGET /{id}/saga-status"| Order
+        Client -->|"GET /order/{id}/status\nGET /drone/{id}/events"| Drone
+
+        Order -->|"produce: order-requests"| K
+        Order -->|"produce: saga-events"| K
+        K -->|"consume: saga-events\ngroup: order-service"| Order
+
+        K -->|"consume: order-requests\ngroup: delivery-service"| Delivery
+        Delivery -->|"produce: drone-requests"| K
+        Delivery -->|"produce: saga-events"| K
+
+        K -->|"consume: drone-requests\ngroup: drone-service-orders"| Drone
+        K -->|"consume: saga-events\ngroup: drone-service-compensation"| Drone
+        Drone -->|"produce: saga-events"| K
+
+        Order --- MDB_O
+        Drone --- MDB_D
+        KUI -.->|"monitor"| K
+
+---
+
+## 3. Topologia Kafka — Topic e Consumer Groups
+
+### Topic
+
+| Topic | Produttori | Consumatori | Tipo messaggio | Chiave partizione |
+|---|---|---|---|---|
+| `saga-events` | order, delivery, drone | order, drone | `SagaEvent` (JSON) | `order_id` |
+| `order-requests` | order | delivery | `OrderMessage` (JSON) | `order_id` |
+| `drone-requests` | delivery | drone | `OrderMessage` (JSON) | `order_id` |
+
+### Consumer Groups
+
+| Group ID | Servizio | Topic sottoscritto | Ruolo |
+|---|---|---|---|
+| `order-service` | order | `saga-events` | Avanza la SAGA su ogni step event |
+| `delivery-service` | delivery | `order-requests` | Schedula delivery, inoltra a drone |
+| `drone-service-orders` | drone | `drone-requests` | Assegna drone, avvia timer consegna |
+| `drone-service-compensation` | drone | `saga-events` | Gestisce eventi `COMPENSATE_DRONE` |
+
+.mermaid
+    graph LR
+        subgraph Topics["Topic Kafka"]
+            SE["saga-events"]
+            OR["order-requests"]
+            DR["drone-requests"]
+        end
+
+        subgraph Groups["Consumer Groups"]
+            G1["order-service"]
+            G2["delivery-service"]
+            G3["drone-service-orders"]
+            G4["drone-service-compensation"]
+        end
+
+        SE -->|"subscribe"| G1
+        SE -->|"subscribe"| G4
+        OR -->|"subscribe"| G2
+        DR -->|"subscribe"| G3
+
+> **Consumer group semantics:** tutte le repliche dello stesso servizio condividono un `group.id`.
+> Kafka distribuisce le partizioni tra di loro automaticamente (load balancing).
+> Servizi con `group.id` diverso ricevono ciascuno una copia indipendente dello stream (fan-out).
+
+## 4. Flusso completo — Happy Path
+
+.mermaid
+    sequenceDiagram
+        actor Client
+        participant O as Order Service
+        participant MDB_O as MongoDB (order)
+        participant K as Kafka
+        participant D as Delivery Service
+        participant DR as Drone Service
+        participant MDB_D as MongoDB (drone)
+
+        Client->>O: POST / {ordine}
+        O->>O: genera order_id + saga_id
+        O->>MDB_O: save SagaState (STARTED)
+        O->>O: valida ordine (Step 1)
+        O->>MDB_O: save SagaState (IN_PROGRESS, step: DeliveryScheduling)
+        O->>K: produce → order-requests (OrderMessage, key=order_id)
+        O-->>Client: 201 {order_id, saga_id}
+
+        K->>D: consume order-requests (group: delivery-service)
+        D->>D: genera delivery_id
+        D->>K: produce → drone-requests (OrderMessage, key=order_id)
+        D->>K: produce → saga-events (DeliveryScheduled, key=order_id)
+
+        K->>O: consume saga-events (group: order-service)
+        O->>O: match DeliveryScheduled
+        O->>MDB_O: save SagaState (step: DroneAssignment)
+        O->>K: commit offset
+
+        K->>DR: consume drone-requests (group: drone-service-orders)
+        DR->>MDB_D: save DroneEvent::Created (v0)
+        DR->>K: produce → saga-events (DroneAssigned, key=order_id)
+        DR->>MDB_D: save DroneEvent::Dispatched (v1)
+        DR->>DR: aggiunge a in_flight map
+        DR->>K: commit offset
+
+        K->>O: consume saga-events (group: order-service)
+        O->>O: match DroneAssigned
+        O->>MDB_O: save SagaState (COMPLETED)
+        O->>K: produce → saga-events (OrderCompleted, key=order_id)
+        O->>K: commit offset
+
+        Note over DR: scheduler ogni 10s
+        DR->>DR: settle_arrived()
+        DR->>MDB_D: save DroneEvent::Delivered (v2)
+        DR->>MDB_D: save DroneEvent::Returned (v3)
+        DR->>DR: rimuove da in_flight map
+
+---
+
+## 5. Flusso completo — Compensazione (fallimento Step 3)
+
+.mermaid
+    sequenceDiagram
+        participant O as Order Service
+        participant MDB_O as MongoDB (order)
+        participant K as Kafka
+        participant DR as Drone Service
+
+        Note over K,O: DroneAssignmentFailed ricevuto (group: order-service)
+        K->>O: consume saga-events
+        O->>O: match DroneAssignmentFailed
+        O->>MDB_O: save SagaState (FAILED)
+        O->>MDB_O: save SagaState (COMPENSATING)
+        O->>K: commit offset
+
+        Note over O: steps_to_compensate() = [DroneAssignment, DeliveryScheduling, OrderValidation]
+
+        O->>K: produce → saga-events (CompensateDrone, key=order_id)
+        O->>K: produce → saga-events (CompensateDelivery, key=order_id)
+        O->>K: produce → saga-events (CompensateOrder, key=order_id)
+
+        K->>DR: consume saga-events (group: drone-service-compensation)
+        DR->>DR: match CompensateDrone
+        DR->>DR: compensate(drone_id) — rimuove da in_flight
+        DR->>K: commit offset
+
+        Note over DR,K: altri eventi (CompensateDelivery, CompensateOrder)\nricevuti dallo stesso consumer → match _ → commit immediato (skip)
+
+        O->>MDB_O: save SagaState (COMPENSATED)
+        O->>K: produce → saga-events (OrderCancelled, key=order_id)
+
+---
+
+## 6. Infrastruttura — Note sui listener Kafka
+
+Kafka gira in **KRaft mode** (nessun Zookeeper). Il broker espone due listener:
+
+| Listener | Indirizzo | Usato da |
+|---|---|---|
+| `PLAINTEXT` | `kafka:9092` | Container Docker (comunicazione inter-servizio) |
+| `EXTERNAL` | `localhost:9094` | Macchina host (CLI Kafka, IDE, Kafka UI) |
+
+La variabile d'ambiente per i servizi è `KAFKA_BROKERS=kafka:9092`.
+Per accedere dall'host usare `localhost:9094`.
