@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="_1-cosa-è-cambiato" data-depth="2"><a href="#_1-cosa-è-cambiato">1. Cosa è cambiato</a></li><li data-target-id="_2-componenti-del-sistema" data-depth="2"><a href="#_2-componenti-del-sistema">2. Componenti del sistema</a></li><li data-target-id="_3-topologia-kafka--topic-e-consumer-groups" data-depth="2"><a href="#_3-topologia-kafka--topic-e-consumer-groups">3. Topologia Kafka — Topic e Consumer Groups</a><ol><li data-target-id="topic" data-depth="3"><a href="#topic">Topic</a></li><li data-target-id="consumer-groups" data-depth="3"><a href="#consumer-groups">Consumer Groups</a></li></ol></li><li data-target-id="_4-flusso-completo--happy-path" data-depth="2"><a href="#_4-flusso-completo--happy-path">4. Flusso completo — Happy Path</a></li><li data-target-id="_5-flusso-completo--compensazione-fallimento-step-3" data-depth="2"><a href="#_5-flusso-completo--compensazione-fallimento-step-3">5. Flusso completo — Compensazione (fallimento Step 3)</a></li><li data-target-id="_6-infrastruttura--note-sui-listener-kafka" data-depth="2"><a href="#_6-infrastruttura--note-sui-listener-kafka">6. Infrastruttura — Note sui listener Kafka</a></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="come-funziona" data-decorative="">Come funziona</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common</a></li><li><a href="../order">Order</a></li><li><a href="../delivery">Delivery</a></li><li><a href="../drone">Drone</a></li></ul><h2 id="aggiornamenti" data-decorative="">Aggiornamenti</h2><ul><li><a href="../kafka" aria-current="page">Integrazione con Kafka</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="_1-cosa-è-cambiato" data-depth="2"><a href="#_1-cosa-è-cambiato">1. Cosa è cambiato</a></li><li data-target-id="_2-componenti-del-sistema" data-depth="2"><a href="#_2-componenti-del-sistema">2. Componenti del sistema</a></li><li data-target-id="_3-topologia-kafka--topic-e-consumer-groups" data-depth="2"><a href="#_3-topologia-kafka--topic-e-consumer-groups">3. Topologia Kafka — Topic e Consumer Groups</a><ol><li data-target-id="topic" data-depth="3"><a href="#topic">Topic</a></li><li data-target-id="consumer-groups" data-depth="3"><a href="#consumer-groups">Consumer Groups</a></li></ol></li><li data-target-id="_4-flusso-completo--happy-path" data-depth="2"><a href="#_4-flusso-completo--happy-path">4. Flusso completo — Happy Path</a></li><li data-target-id="_5-flusso-completo--compensazione-fallimento-step-3" data-depth="2"><a href="#_5-flusso-completo--compensazione-fallimento-step-3">5. Flusso completo — Compensazione (fallimento Step 3)</a></li><li data-target-id="_6-infrastruttura--note-sui-listener-kafka" data-depth="2"><a href="#_6-infrastruttura--note-sui-listener-kafka">6. Infrastruttura — Note sui listener Kafka</a></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><blockquote><p>[NOTE!]
+Sostituzione di RabbitMQ/AMQP con Apache Kafka su tutti e tre i microservizi.
+L&rsquo;unica cosa riscritta è stata il transport layer.</p></blockquote><h2 id="_1-cosa-è-cambiato">1. Cosa è cambiato</h2><table><thead><tr><th>Layer</th><th>v1 (AMQP)</th><th>v2 (Kafka)</th><th>Modificato?</th></tr></thead><tbody><tr><td>Crate di trasporto</td><td><span class="codespan-content"><code>lapin 2</code></span></td><td><span class="codespan-content"><code>rdkafka 0.37</code></span></td><td>✅</td></tr><tr><td>Broker</td><td>RabbitMQ 3</td><td>Kafka 3.8 (KRaft, no Zookeeper)</td><td>✅</td></tr><tr><td>Topologia messaggi</td><td>Exchange topic + routing keys</td><td>Topic flat + message key</td><td>✅</td></tr><tr><td>Modello consumer</td><td>Push (broker chiama il servizio)</td><td>Pull (<span class="codespan-content"><code>consumer.recv().await</code></span>)</td><td>✅</td></tr><tr><td>Acknowledgement</td><td><span class="codespan-content"><code>basic_ack</code></span> / <span class="codespan-content"><code>basic_nack</code></span></td><td><span class="codespan-content"><code>commit_message</code></span> / no-commit</td><td>✅</td></tr><tr><td>Business logic</td><td>Saga orchestration, compensazione</td><td>Invariata</td><td>⬛</td></tr><tr><td>Modelli dati</td><td><span class="codespan-content"><code>SagaEvent</code></span>, <span class="codespan-content"><code>DroneEvent</code></span>, <span class="codespan-content"><code>OrderMessage</code></span></td><td>Invariati</td><td>⬛</td></tr><tr><td>Persistenza MongoDB</td><td>Stato saga, event sourcing</td><td>Invariata</td><td>⬛</td></tr><tr><td>API HTTP</td><td><span class="codespan-content"><code>POST /order</code></span>, endpoint stato drone</td><td>Invariate</td><td>⬛</td></tr></tbody></table><hr /><h2 id="_2-componenti-del-sistema">2. Componenti del sistema</h2><figure><pre class="mermaid">graph TB
+    Client([&quot;👤 Client HTTP&quot;])
+
+    subgraph Services[&quot;Microservizi&quot;]
+        Order[&quot;Order Service\n:8080\n(Orchestratore SAGA)&quot;]
+        Delivery[&quot;Delivery Service\n(Kafka Consumer)&quot;]
+        Drone[&quot;Drone Service\n:8082\n(Event Sourcing)&quot;]
+    end
+
+    subgraph Infra[&quot;Infrastruttura&quot;]
+        K[[&quot;Apache Kafka\n:9092 (interno)\n:9094 (host)&quot;]]
+        KUI[&quot;Kafka UI\n:8090&quot;]
+        MDB_O[(&quot;MongoDB\norder_service&quot;)]
+        MDB_D[(&quot;MongoDB\ndrone_service&quot;)]
+    end
+
+    Client --&gt;|&quot;POST /\nGET /{id}/saga-status&quot;| Order
+    Client --&gt;|&quot;GET /order/{id}/status\nGET /drone/{id}/events&quot;| Drone
+
+    Order --&gt;|&quot;produce: order-requests&quot;| K
+    Order --&gt;|&quot;produce: saga-events&quot;| K
+    K --&gt;|&quot;consume: saga-events\ngroup: order-service&quot;| Order
+
+    K --&gt;|&quot;consume: order-requests\ngroup: delivery-service&quot;| Delivery
+    Delivery --&gt;|&quot;produce: drone-requests&quot;| K
+    Delivery --&gt;|&quot;produce: saga-events&quot;| K
+
+    K --&gt;|&quot;consume: drone-requests\ngroup: drone-service-orders&quot;| Drone
+    K --&gt;|&quot;consume: saga-events\ngroup: drone-service-compensation&quot;| Drone
+    Drone --&gt;|&quot;produce: saga-events&quot;| K
+
+    Order --- MDB_O
+    Drone --- MDB_D
+    KUI -.-&gt;|&quot;monitor&quot;| K</pre></figure><hr /><h2 id="_3-topologia-kafka--topic-e-consumer-groups">3. Topologia Kafka — Topic e Consumer Groups</h2><h3 id="topic">Topic</h3><table><thead><tr><th>Topic</th><th>Produttori</th><th>Consumatori</th><th>Tipo messaggio</th><th>Chiave partizione</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>saga-events</code></span></td><td>order, delivery, drone</td><td>order, drone</td><td><span class="codespan-content"><code>SagaEvent</code></span> (JSON)</td><td><span class="codespan-content"><code>order_id</code></span></td></tr><tr><td><span class="codespan-content"><code>order-requests</code></span></td><td>order</td><td>delivery</td><td><span class="codespan-content"><code>OrderMessage</code></span> (JSON)</td><td><span class="codespan-content"><code>order_id</code></span></td></tr><tr><td><span class="codespan-content"><code>drone-requests</code></span></td><td>delivery</td><td>drone</td><td><span class="codespan-content"><code>OrderMessage</code></span> (JSON)</td><td><span class="codespan-content"><code>order_id</code></span></td></tr></tbody></table><h3 id="consumer-groups">Consumer Groups</h3><table><thead><tr><th>Group ID</th><th>Servizio</th><th>Topic sottoscritto</th><th>Ruolo</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>order-service</code></span></td><td>order</td><td><span class="codespan-content"><code>saga-events</code></span></td><td>Avanza la SAGA su ogni step event</td></tr><tr><td><span class="codespan-content"><code>delivery-service</code></span></td><td>delivery</td><td><span class="codespan-content"><code>order-requests</code></span></td><td>Schedula delivery, inoltra a drone</td></tr><tr><td><span class="codespan-content"><code>drone-service-orders</code></span></td><td>drone</td><td><span class="codespan-content"><code>drone-requests</code></span></td><td>Assegna drone, avvia timer consegna</td></tr><tr><td><span class="codespan-content"><code>drone-service-compensation</code></span></td><td>drone</td><td><span class="codespan-content"><code>saga-events</code></span></td><td>Gestisce eventi <span class="codespan-content"><code>COMPENSATE_DRONE</code></span></td></tr></tbody></table><figure><pre class="mermaid">graph LR
+    subgraph Topics[&quot;Topic Kafka&quot;]
+        SE[&quot;saga-events&quot;]
+        OR[&quot;order-requests&quot;]
+        DR[&quot;drone-requests&quot;]
+    end
+
+    subgraph Groups[&quot;Consumer Groups&quot;]
+        G1[&quot;order-service&quot;]
+        G2[&quot;delivery-service&quot;]
+        G3[&quot;drone-service-orders&quot;]
+        G4[&quot;drone-service-compensation&quot;]
+    end
+
+    SE --&gt;|&quot;subscribe&quot;| G1
+    SE --&gt;|&quot;subscribe&quot;| G4
+    OR --&gt;|&quot;subscribe&quot;| G2
+    DR --&gt;|&quot;subscribe&quot;| G3</pre></figure><blockquote><p><strong>Consumer group semantics:</strong> tutte le repliche dello stesso servizio condividono un <span class="codespan-content"><code>group.id</code></span>.
+Kafka distribuisce le partizioni tra di loro automaticamente (load balancing).
+Servizi con <span class="codespan-content"><code>group.id</code></span> diverso ricevono ciascuno una copia indipendente dello stream (fan-out).</p></blockquote><h2 id="_4-flusso-completo--happy-path">4. Flusso completo — Happy Path</h2><figure><pre class="mermaid">sequenceDiagram
+    actor Client
+    participant O as Order Service
+    participant MDB_O as MongoDB (order)
+    participant K as Kafka
+    participant D as Delivery Service
+    participant DR as Drone Service
+    participant MDB_D as MongoDB (drone)
+
+    Client-&gt;&gt;O: POST / {ordine}
+    O-&gt;&gt;O: genera order_id + saga_id
+    O-&gt;&gt;MDB_O: save SagaState (STARTED)
+    O-&gt;&gt;O: valida ordine (Step 1)
+    O-&gt;&gt;MDB_O: save SagaState (IN_PROGRESS, step: DeliveryScheduling)
+    O-&gt;&gt;K: produce &rarr; order-requests (OrderMessage, key=order_id)
+    O--&gt;&gt;Client: 201 {order_id, saga_id}
+
+    K-&gt;&gt;D: consume order-requests (group: delivery-service)
+    D-&gt;&gt;D: genera delivery_id
+    D-&gt;&gt;K: produce &rarr; drone-requests (OrderMessage, key=order_id)
+    D-&gt;&gt;K: produce &rarr; saga-events (DeliveryScheduled, key=order_id)
+
+    K-&gt;&gt;O: consume saga-events (group: order-service)
+    O-&gt;&gt;O: match DeliveryScheduled
+    O-&gt;&gt;MDB_O: save SagaState (step: DroneAssignment)
+    O-&gt;&gt;K: commit offset
+
+    K-&gt;&gt;DR: consume drone-requests (group: drone-service-orders)
+    DR-&gt;&gt;MDB_D: save DroneEvent::Created (v0)
+    DR-&gt;&gt;K: produce &rarr; saga-events (DroneAssigned, key=order_id)
+    DR-&gt;&gt;MDB_D: save DroneEvent::Dispatched (v1)
+    DR-&gt;&gt;DR: aggiunge a in_flight map
+    DR-&gt;&gt;K: commit offset
+
+    K-&gt;&gt;O: consume saga-events (group: order-service)
+    O-&gt;&gt;O: match DroneAssigned
+    O-&gt;&gt;MDB_O: save SagaState (COMPLETED)
+    O-&gt;&gt;K: produce &rarr; saga-events (OrderCompleted, key=order_id)
+    O-&gt;&gt;K: commit offset
+
+    Note over DR: scheduler ogni 10s
+    DR-&gt;&gt;DR: settle_arrived()
+    DR-&gt;&gt;MDB_D: save DroneEvent::Delivered (v2)
+    DR-&gt;&gt;MDB_D: save DroneEvent::Returned (v3)
+    DR-&gt;&gt;DR: rimuove da in_flight map</pre></figure><hr /><h2 id="_5-flusso-completo--compensazione-fallimento-step-3">5. Flusso completo — Compensazione (fallimento Step 3)</h2><figure><pre class="mermaid">sequenceDiagram
+    participant O as Order Service
+    participant MDB_O as MongoDB (order)
+    participant K as Kafka
+    participant DR as Drone Service
+
+    Note over K,O: DroneAssignmentFailed ricevuto (group: order-service)
+    K-&gt;&gt;O: consume saga-events
+    O-&gt;&gt;O: match DroneAssignmentFailed
+    O-&gt;&gt;MDB_O: save SagaState (FAILED)
+    O-&gt;&gt;MDB_O: save SagaState (COMPENSATING)
+    O-&gt;&gt;K: commit offset
+
+    Note over O: steps_to_compensate() = [DroneAssignment, DeliveryScheduling, OrderValidation]
+
+    O-&gt;&gt;K: produce &rarr; saga-events (CompensateDrone, key=order_id)
+    O-&gt;&gt;K: produce &rarr; saga-events (CompensateDelivery, key=order_id)
+    O-&gt;&gt;K: produce &rarr; saga-events (CompensateOrder, key=order_id)
+
+    K-&gt;&gt;DR: consume saga-events (group: drone-service-compensation)
+    DR-&gt;&gt;DR: match CompensateDrone
+    DR-&gt;&gt;DR: compensate(drone_id) &mdash; rimuove da in_flight
+    DR-&gt;&gt;K: commit offset
+
+    Note over DR,K: altri eventi (CompensateDelivery, CompensateOrder)\nricevuti dallo stesso consumer &rarr; match _ &rarr; commit immediato (skip)
+
+    O-&gt;&gt;MDB_O: save SagaState (COMPENSATED)
+    O-&gt;&gt;K: produce &rarr; saga-events (OrderCancelled, key=order_id)</pre></figure><hr /><h2 id="_6-infrastruttura--note-sui-listener-kafka">6. Infrastruttura — Note sui listener Kafka</h2><p>Kafka gira in <strong>KRaft mode</strong> (nessun Zookeeper). Il broker espone due listener:</p><table><thead><tr><th>Listener</th><th>Indirizzo</th><th>Usato da</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>PLAINTEXT</code></span></td><td><span class="codespan-content"><code>kafka:9092</code></span></td><td>Container Docker (comunicazione inter-servizio)</td></tr><tr><td><span class="codespan-content"><code>EXTERNAL</code></span></td><td><span class="codespan-content"><code>localhost:9094</code></span></td><td>Macchina host (CLI Kafka, IDE, Kafka UI)</td></tr></tbody></table><p>La variabile d&rsquo;ambiente per i servizi è <span class="codespan-content"><code>KAFKA_BROKERS=kafka:9092</code></span>.
+Per accedere dall&rsquo;host usare <span class="codespan-content"><code>localhost:9094</code></span>.</p>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

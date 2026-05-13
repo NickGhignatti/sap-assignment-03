@@ -1,0 +1,9 @@
+###! Come funziona
+- [Architettura](architettura.qd)
+- [Common](common.qd)
+- [Order](order.qd)
+- [Delivery](delivery.qd)
+- [Drone](drone.qd)
+
+##! Aggiornamenti
+- [Integrazione con Kafka](kafka.qd)

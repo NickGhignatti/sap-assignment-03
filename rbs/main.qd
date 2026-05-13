@@ -1,0 +1,150 @@
+.docname {pos}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Requirements Breakdown Structure (RBS)
+
+> Decomposizione gerarchica di tutti i requisiti del progetto, dal goal di servizio
+> fino alle singole funzionalità attese dall'utente e dall'operatore.
+
+---
+
+| Campo           | Valore                                             |
+|-----------------|----------------------------------------------------|
+| **Progetto**    | DroneFlow — Servizio di Consegna Pacchi con Droni  |
+| **Project No.** | SAP-03                                             |
+| **Redatto da**  | Ghignatti Nicolò                                   |
+| **Versione**    | 1.0 — Aprile 2026                                  |
+
+---
+
+## Struttura gerarchica
+
+```
+[0] DroneFlow — Servizio di Consegna Pacchi con Droni
+│
+├── [1] Richiesta di consegna
+│   ├── [1.1] Creazione della richiesta
+│   │   ├── [1.1.1] L'utente specifica l'indirizzo di partenza
+│   │   ├── [1.1.2] L'utente specifica l'indirizzo di destinazione
+│   │   ├── [1.1.3] L'utente specifica il peso del pacco
+│   │   ├── [1.1.4] L'utente specifica data e ora desiderata di ritiro
+│   │   └── [1.1.5] L'utente specifica il tempo massimo di consegna in minuti
+│   ├── [1.2] Risposta alla richiesta
+│   │   ├── [1.2.1] Il sistema restituisce un identificativo univoco di tracciamento
+│   │   └── [1.2.2] Il sistema conferma la presa in carico della richiesta
+│   └── [1.3] Rifiuto della richiesta non valida
+│       ├── [1.3.1] Il sistema rifiuta richieste con peso non valido (zero o negativo)
+│       ├── [1.3.2] Il sistema rifiuta richieste con indirizzi mancanti o vuoti
+│       ├── [1.3.3] Il sistema rifiuta richieste con finestra temporale non coerente
+│       └── [1.3.4] Il sistema comunica all'utente il motivo del rifiuto
+│
+├── [2] Pianificazione e assegnazione
+│   ├── [2.1] Pianificazione della consegna
+│   │   └── [2.1.1] Il piano riporta un identificativo della consegna programmata
+│   ├── [2.2] Assegnazione del drone
+│   │   ├── [2.2.1] Il sistema seleziona automaticamente un drone disponibile
+│   │   ├── [2.2.2] Il drone assegnato è compatibile con il peso del pacco
+│   │   └── [2.2.3] Il drone viene inviato all'indirizzo di partenza
+│   └── [2.3] Indisponibilità di droni
+│       ├── [2.3.1] Il sistema rileva l'assenza di droni disponibili
+│       └── [2.3.2] La richiesta viene annullata con notifica all'utente
+│
+├── [3] Tracciamento della consegna
+│   ├── [3.1] Consultazione dello stato
+│   │   ├── [3.1.1] L'utente può consultare lo stato usando l'identificativo ricevuto
+│   │   ├── [3.1.2] Lo stato riflette la fase corrente della consegna
+│   │   └── [3.1.3] Gli stati possibili sono: In attesa, In viaggio, Consegnato, Annullato
+│   ├── [3.2] Informazioni sul progresso
+│   │   ├── [3.2.1] Il sistema fornisce il tempo rimanente stimato alla consegna
+│   │   └── [3.2.2] Le informazioni sono aggiornate durante tutto il tragitto
+│   └── [3.3] Conferma di consegna
+│       ├── [3.3.1] Al completamento della consegna lo stato diventa "Consegnato"
+│       └── [3.3.2] Lo stato finale è visibile e permanente dopo il completamento
+│
+├── [4] Gestione dei fallimenti
+│   ├── [4.1] Rilevamento del problema
+│   │   ├── [4.1.1] Il sistema rileva fallimenti in qualsiasi fase del processo
+│   │   └── [4.1.2] Il sistema identifica la fase in cui si è verificato il problema
+│   ├── [4.2] Annullamento delle operazioni parziali
+│   │   ├── [4.2.1] Il drone eventualmente assegnato viene liberato
+│   │   ├── [4.2.2] Il piano di consegna viene cancellato
+│   │   └── [4.2.3] Nessuna risorsa rimane bloccata dopo un fallimento
+│   └── [4.3] Comunicazione del fallimento all'utente
+│       ├── [4.3.1] Lo stato della consegna viene aggiornato ad "Annullato"
+│       └── [4.3.2] Il motivo dell'annullamento è leggibile dall'utente
+│
+├── [5] Storico delle consegne
+│   ├── [5.1] Registrazione degli eventi
+│   │   ├── [5.1.1] Ogni cambio di stato produce un evento con timestamp
+│   │   ├── [5.1.2] Gli eventi sono immutabili: non possono essere modificati a posteriori
+│   │   └── [5.1.3] Gli eventi sono ordinati cronologicamente
+│   ├── [5.2] Consultazione dello storico
+│   │   ├── [5.2.1] Lo storico è consultabile per identificativo dell'ordine
+│   │   ├── [5.2.2] Lo storico è consultabile per identificativo del drone
+│   │   └── [5.2.3] Ogni voce dello storico riporta tipo di evento e timestamp
+│   └── [5.3] Ricostruzione dello stato
+│       ├── [5.3.1] È possibile ricostruire lo stato di una consegna in qualsiasi momento storico
+│       └── [5.3.2] Lo stato ricostruito da storico è coerente con quello osservato in tempo reale
+│
+└── [6] Qualità del servizio e documentazione
+    ├── [6.1] Affidabilità
+    │   ├── [6.1.1] Il servizio gestisce più richieste simultaneamente senza degrado
+    │   ├── [6.1.2] Un errore in una consegna non influenza le altre consegne in corso
+    │   └── [6.1.3] Nessuna richiesta rimane in stato indefinito ("bloccata")
+    ├── [6.2] Scalabilità
+    │   └── [6.2.1] I componenti del sistema possono essere scalati indipendentemente
+    │              per gestire picchi di domanda
+    └── [6.3] Documentazione di progetto
+        ├── [6.3.1] POS — Project Overview Statement
+        ├── [6.3.2] PDS — Project Definition Statement
+        ├── [6.3.3] Project Charter
+        ├── [6.3.4] Business Case
+        ├── [6.3.5] SOW — Statement of Work
+        ├── [6.3.6] RBS — Requirements Breakdown Structure
+        └── [6.3.7] WBS — Work Breakdown Structure
+```
+
+---
+
+## Tabella riepilogativa (foglie della RBS)
+
+| ID       | Requisito                                                                     | Priorità MoSCoW | Attore principale    |
+|----------|-------------------------------------------------------------------------------|-----------------|----------------------|
+| 1.1.1–5  | Dati inseribili dall'utente per la richiesta                                  | Must            | Utente               |
+| 1.2.1    | Identificativo univoco di tracciamento restituito                             | Must            | Sistema              |
+| 1.2.2    | Conferma presa in carico                                                      | Must            | Sistema              |
+| 1.3.1–3  | Rifiuto automatico di richieste non valide                                    | Must            | Sistema              |
+| 1.3.4    | Comunicazione motivo rifiuto all'utente                                       | Must            | Sistema → Utente     |
+| 2.1.1    | Il piano riporta un identificativo della consegna programmata                 | Must            | Sistema              |
+| 2.2.1–3  | Selezione e assegnazione automatica drone disponibile                         | Must            | Sistema              |
+| 2.3.1–2  | Rilevamento indisponibilità e annullamento con notifica                       | Must            | Sistema → Utente     |
+| 3.1.1–3  | Consultazione stato con identificativo ricevuto                               | Must            | Utente               |
+| 3.2.1–2  | Tempo rimanente stimato e aggiornato                                          | Should          | Sistema → Utente     |
+| 3.3.1–2  | Conferma finale e stato permanente dopo completamento                         | Must            | Sistema              |
+| 4.1.1–2  | Rilevamento fallimento in qualsiasi fase                                      | Must            | Sistema              |
+| 4.2.1–3  | Annullamento operazioni parziali e liberazione risorse                        | Must            | Sistema              |
+| 4.3.1–2  | Stato "Annullato" con motivo leggibile                                        | Must            | Sistema → Utente     |
+| 5.1.1–3  | Registrazione eventi immutabili con timestamp ordinati                        | Must            | Sistema              |
+| 5.2.1–3  | Consultazione storico per ordine e per drone                                  | Should          | Utente / Operatore   |
+| 5.3.1–2  | Ricostruzione stato da storico, coerente con tempo reale                      | Should          | Operatore            |
+| 6.1.1–3  | Affidabilità: no degrado, no propagazione errori, no stati bloccati           | Must            | Sistema              |
+| 6.2.1    | Scalabilità orizzontale dei componenti                                        | Could           | Sistema              |
+| 6.3.1–7  | 7 documenti PM completi, in italiano, coerenti                                | Must            | Project Manager      |
+
+---
+
+## Nota sui vincoli tecnici
+
+I requisiti della RBS descrivono **cosa il servizio deve fare** dal punto di vista
+dell'utente e dell'operatore. Le scelte tecnologiche adottate per soddisfarli — architettura
+a microservizi, pattern SAGA, Event Sourcing, RabbitMQ, MongoDB, Rust — non sono requisiti
+del servizio, ma **vincoli tecnici di implementazione** necessari a garantire le proprietà
+di affidabilità, scalabilità e tracciabilità richieste.

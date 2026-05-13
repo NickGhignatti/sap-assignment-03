@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="droneflow--architettura-del-sistema" data-depth="1"><a href="#droneflow--architettura-del-sistema">DroneFlow — Architettura del Sistema</a><ol><li data-target-id="_1-panoramica" data-depth="2"><a href="#_1-panoramica">1. Panoramica</a></li><li data-target-id="_2-componenti-del-sistema" data-depth="2"><a href="#_2-componenti-del-sistema">2. Componenti del sistema</a></li><li data-target-id="_3-topologia-amqp" data-depth="2"><a href="#_3-topologia-amqp">3. Topologia AMQP</a><ol><li data-target-id="routing-keys-usate" data-depth="3"><a href="#routing-keys-usate">Routing keys usate</a></li></ol></li><li data-target-id="_4-flusso-completo--happy-path" data-depth="2"><a href="#_4-flusso-completo--happy-path">4. Flusso completo — Happy Path</a></li><li data-target-id="_5-flusso-completo--compensazione-fallimento-step-3" data-depth="2"><a href="#_5-flusso-completo--compensazione-fallimento-step-3">5. Flusso completo — Compensazione (fallimento Step 3)</a></li><li data-target-id="_6-struttura-del-workspace-rust" data-depth="2"><a href="#_6-struttura-del-workspace-rust">6. Struttura del workspace Rust</a></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="come-funziona" data-decorative="">Come funziona</h3><ul><li><a href="../architettura" aria-current="page">Architettura</a></li><li><a href="../common">Common</a></li><li><a href="../order">Order</a></li><li><a href="../delivery">Delivery</a></li><li><a href="../drone">Drone</a></li></ul><h2 id="aggiornamenti" data-decorative="">Aggiornamenti</h2><ul><li><a href="../kafka">Integrazione con Kafka</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="droneflow--architettura-del-sistema" data-depth="1"><a href="#droneflow--architettura-del-sistema">DroneFlow — Architettura del Sistema</a><ol><li data-target-id="_1-panoramica" data-depth="2"><a href="#_1-panoramica">1. Panoramica</a></li><li data-target-id="_2-componenti-del-sistema" data-depth="2"><a href="#_2-componenti-del-sistema">2. Componenti del sistema</a></li><li data-target-id="_3-topologia-amqp" data-depth="2"><a href="#_3-topologia-amqp">3. Topologia AMQP</a><ol><li data-target-id="routing-keys-usate" data-depth="3"><a href="#routing-keys-usate">Routing keys usate</a></li></ol></li><li data-target-id="_4-flusso-completo--happy-path" data-depth="2"><a href="#_4-flusso-completo--happy-path">4. Flusso completo — Happy Path</a></li><li data-target-id="_5-flusso-completo--compensazione-fallimento-step-3" data-depth="2"><a href="#_5-flusso-completo--compensazione-fallimento-step-3">5. Flusso completo — Compensazione (fallimento Step 3)</a></li><li data-target-id="_6-struttura-del-workspace-rust" data-depth="2"><a href="#_6-struttura-del-workspace-rust">6. Struttura del workspace Rust</a></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><h1 class="page-break" id="droneflow--architettura-del-sistema">DroneFlow — Architettura del Sistema</h1><h2 id="_1-panoramica">1. Panoramica</h2><p>DroneFlow è una piattaforma a <strong>microservizi event-driven</strong> che gestisce l&rsquo;intero ciclo di vita di una consegna con droni. Tre servizi indipendenti comunicano esclusivamente tramite messaggi AMQP su RabbitMQ; nessuna chiamata REST diretta esiste tra i backend.</p><hr /><h2 id="_2-componenti-del-sistema">2. Componenti del sistema</h2><figure><pre class="mermaid">graph TB
+    Client([&quot;👤 Client HTTP&quot;])
+
+    subgraph Services[&quot;Microservizi&quot;]
+        Order[&quot;Order Service\n:8080\n(Orchestratore SAGA)&quot;]
+        Delivery[&quot;Delivery Service\n(Consumer AMQP)&quot;]
+        Drone[&quot;Drone Service\n:8082\n(Event Sourcing)&quot;]
+    end
+
+    subgraph Infra[&quot;Infrastruttura&quot;]
+        RMQ[[&quot;RabbitMQ\n:5672 / :15672&quot;]]
+        MDB_O[(&quot;MongoDB\norder_service&quot;)]
+        MDB_D[(&quot;MongoDB\ndrone_service&quot;)]
+    end
+
+    Client --&gt;|&quot;POST /\nGET /{id}/saga-status&quot;| Order
+    Client --&gt;|&quot;GET /order/{id}/status\nGET /drone/{id}/events&quot;| Drone
+
+    Order --&gt;|&quot;order_queue&quot;| RMQ
+    Order --&gt;|&quot;saga_events_exchange&quot;| RMQ
+    RMQ --&gt;|&quot;saga_events_queue&quot;| Order
+
+    RMQ --&gt;|&quot;order_queue&quot;| Delivery
+    Delivery --&gt;|&quot;drone_queue&quot;| RMQ
+    Delivery --&gt;|&quot;saga_events_exchange&quot;| RMQ
+
+    RMQ --&gt;|&quot;drone_queue&quot;| Drone
+    RMQ --&gt;|&quot;drone_compensation_queue&quot;| Drone
+    Drone --&gt;|&quot;saga_events_exchange&quot;| RMQ
+
+    Order --- MDB_O
+    Drone --- MDB_D</pre></figure><hr /><h2 id="_3-topologia-amqp">3. Topologia AMQP</h2><figure><pre class="mermaid">graph LR
+    subgraph Exchanges
+        DEF[&quot;(default exchange)\nrouting key = queue name&quot;]
+        SEX[&quot;saga_events_exchange\ntype: topic&quot;]
+    end
+
+    subgraph Queues
+        OQ[&quot;order_queue&quot;]
+        DRQ[&quot;drone_queue&quot;]
+        SEQ[&quot;saga_events_queue\nbinding: saga.*&quot;]
+        DCQ[&quot;drone_compensation_queue\nbinding: saga.compensate.drone&quot;]
+    end
+
+    DEF --&gt;|&quot;order_queue&quot;| OQ
+    DEF --&gt;|&quot;drone_queue&quot;| DRQ
+    SEX --&gt;|&quot;saga.*&quot;| SEQ
+    SEX --&gt;|&quot;saga.compensate.drone&quot;| DCQ
+
+    OQ --&gt;|consumed by| Delivery
+    DRQ --&gt;|consumed by| Drone
+    SEQ --&gt;|consumed by| Order
+    DCQ --&gt;|consumed by| Drone</pre></figure><h3 id="routing-keys-usate">Routing keys usate</h3><table><thead><tr><th>Routing Key</th><th>Pubblicato da</th><th>Consumato da</th><th>Scopo</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>saga.started</code></span></td><td>Order</td><td>—</td><td>Audit/monitoring</td></tr><tr><td><span class="codespan-content"><code>saga.validated</code></span></td><td>Order</td><td>—</td><td>Audit/monitoring</td></tr><tr><td><span class="codespan-content"><code>saga.delivery_scheduled</code></span></td><td>Delivery</td><td>Order</td><td>Step 2 completato</td></tr><tr><td><span class="codespan-content"><code>saga.drone_assigned</code></span></td><td>Drone</td><td>Order</td><td>Step 3 completato</td></tr><tr><td><span class="codespan-content"><code>saga.completed</code></span></td><td>Order</td><td>—</td><td>SAGA terminata con successo</td></tr><tr><td><span class="codespan-content"><code>saga.validation_failed</code></span></td><td>Order</td><td>—</td><td>Step 1 fallito</td></tr><tr><td><span class="codespan-content"><code>saga.compensate.drone</code></span></td><td>Order</td><td>Drone</td><td>Compensazione Step 3</td></tr><tr><td><span class="codespan-content"><code>saga.compensate_delivery</code></span></td><td>Order</td><td>—</td><td>Compensazione Step 2</td></tr><tr><td><span class="codespan-content"><code>saga.compensate_order</code></span></td><td>Order</td><td>—</td><td>Compensazione Step 1</td></tr><tr><td><span class="codespan-content"><code>saga.cancelled</code></span></td><td>Order</td><td>—</td><td>Ordine annullato</td></tr></tbody></table><hr /><h2 id="_4-flusso-completo--happy-path">4. Flusso completo — Happy Path</h2><figure><pre class="mermaid">sequenceDiagram
+    actor Client
+    participant O as Order Service
+    participant MDB_O as MongoDB (order)
+    participant RMQ as RabbitMQ
+    participant D as Delivery Service
+    participant DR as Drone Service
+    participant MDB_D as MongoDB (drone)
+
+    Client-&gt;&gt;O: POST / {ordine}
+    O-&gt;&gt;O: genera order_id + saga_id
+    O-&gt;&gt;MDB_O: save SagaState (STARTED)
+    O-&gt;&gt;O: valida ordine (Step 1)
+    O-&gt;&gt;MDB_O: save SagaState (IN_PROGRESS, step: DeliveryScheduling)
+    O-&gt;&gt;RMQ: publish &rarr; order_queue (OrderMessage)
+    O--&gt;&gt;Client: 201 {order_id, saga_id}
+
+    RMQ-&gt;&gt;D: consume order_queue
+    D-&gt;&gt;D: genera delivery_id
+    D-&gt;&gt;RMQ: publish &rarr; drone_queue (OrderMessage)
+    D-&gt;&gt;RMQ: publish &rarr; saga.delivery_scheduled
+
+    RMQ-&gt;&gt;O: consume saga_events_queue (DeliveryScheduled)
+    O-&gt;&gt;MDB_O: save SagaState (step: DroneAssignment)
+
+    RMQ-&gt;&gt;DR: consume drone_queue
+    DR-&gt;&gt;MDB_D: save DroneEvent::Created (v0)
+    DR-&gt;&gt;RMQ: publish &rarr; saga.drone_assigned
+    DR-&gt;&gt;MDB_D: save DroneEvent::Dispatched (v1)
+    DR-&gt;&gt;DR: aggiunge a in_flight map
+
+    RMQ-&gt;&gt;O: consume saga_events_queue (DroneAssigned)
+    O-&gt;&gt;MDB_O: save SagaState (COMPLETED)
+    O-&gt;&gt;RMQ: publish &rarr; saga.completed
+
+    Note over DR: scheduler ogni 10s
+    DR-&gt;&gt;DR: settle_arrived()
+    DR-&gt;&gt;MDB_D: save DroneEvent::Delivered (v2)
+    DR-&gt;&gt;MDB_D: save DroneEvent::Returned (v3)
+    DR-&gt;&gt;DR: rimuove da in_flight map</pre></figure><hr /><h2 id="_5-flusso-completo--compensazione-fallimento-step-3">5. Flusso completo — Compensazione (fallimento Step 3)</h2><figure><pre class="mermaid">sequenceDiagram
+    participant O as Order Service
+    participant MDB_O as MongoDB (order)
+    participant RMQ as RabbitMQ
+    participant DR as Drone Service
+
+    Note over RMQ,O: DroneAssignmentFailed ricevuto
+    RMQ-&gt;&gt;O: consume saga_events_queue
+    O-&gt;&gt;MDB_O: save SagaState (FAILED)
+    O-&gt;&gt;MDB_O: save SagaState (COMPENSATING)
+
+    Note over O: steps_to_compensate() = [DroneAssignment, DeliveryScheduling, OrderValidation]
+
+    O-&gt;&gt;RMQ: publish &rarr; saga.compensate.drone
+    RMQ-&gt;&gt;DR: consume drone_compensation_queue
+    DR-&gt;&gt;DR: compensate(drone_id) &mdash; rimuove da in_flight
+
+    O-&gt;&gt;RMQ: publish &rarr; saga.compensate_delivery
+    O-&gt;&gt;RMQ: publish &rarr; saga.compensate_order
+    O-&gt;&gt;MDB_O: save SagaState (COMPENSATED)
+    O-&gt;&gt;RMQ: publish &rarr; saga.cancelled</pre></figure><hr /><h2 id="_6-struttura-del-workspace-rust">6. Struttura del workspace Rust</h2><pre><code>workspace/
+├── Cargo.toml              &larr; workspace root [members = [...]]
+├── Cargo.lock
+├── common/                 &larr; libreria condivisa (no binary)
+│   └── src/
+│       ├── lib.rs          &larr; pub mod events; pub mod messages;
+│       ├── events.rs       &larr; SagaEvent, DroneEvent
+│       └── messages.rs     &larr; OrderMessage
+├── order/
+│   └── src/
+│       ├── main.rs         &larr; wiring
+│       ├── api.rs          &larr; HTTP handlers (Axum)
+│       ├── service.rs      &larr; OrderService + DTOs
+│       ├── orchestrator.rs &larr; SagaOrchestrator
+│       ├── saga.rs         &larr; SagaState, SagaStatus, SagaStep
+│       ├── repository.rs   &larr; SagaRepository (MongoDB)
+│       └── consumer.rs     &larr; AMQP consumer task
+├── delivery/
+│   └── src/
+│       ├── main.rs
+│       ├── service.rs      &larr; DeliveryService
+│       └── consumer.rs     &larr; AMQP consumer task
+└── drone/
+    └── src/
+        ├── main.rs
+        ├── api.rs          &larr; HTTP handlers (Axum)
+        ├── service.rs      &larr; DroneService
+        ├── model.rs        &larr; DroneEntry, DroneState
+        ├── store.rs        &larr; DroneEventStore (MongoDB)
+        └── consumer.rs     &larr; AMQP consumer tasks (x2)</code></pre>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

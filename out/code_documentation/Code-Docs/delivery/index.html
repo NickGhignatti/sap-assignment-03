@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="delivery-service--documentazione-tecnica" data-depth="1"><a href="#delivery-service--documentazione-tecnica">Delivery Service — Documentazione Tecnica</a><ol><li data-target-id="_1-responsabilità" data-depth="2"><a href="#_1-responsabilità">1. Responsabilità</a></li><li data-target-id="_2-architettura-interna" data-depth="2"><a href="#_2-architettura-interna">2. Architettura interna</a></li><li data-target-id="_3-flusso-interno--deliveryserviceschedule" data-depth="2"><a href="#_3-flusso-interno--deliveryserviceschedule">3. Flusso interno — DeliveryService::schedule()</a><ol><li data-target-id="perché-il-sagaid-è-vuoto-in-deliveryscheduled" data-depth="3"><a href="#perché-il-sagaid-è-vuoto-in-deliveryscheduled">Perché il saga_id è vuoto in DeliveryScheduled?</a></li></ol></li><li data-target-id="_4-diagramma-di-sequenza" data-depth="2"><a href="#_4-diagramma-di-sequenza">4. Diagramma di sequenza</a></li><li data-target-id="_5-amqp--strategia-acknack" data-depth="2"><a href="#_5-amqp--strategia-acknack">5. AMQP — Strategia ack/nack</a></li><li data-target-id="_6-rete-di-petri--ciclo-di-vita-del-messaggio-nel-delivery-service" data-depth="2"><a href="#_6-rete-di-petri--ciclo-di-vita-del-messaggio-nel-delivery-service">6. Rete di Petri — Ciclo di vita del messaggio nel Delivery Service</a></li><li data-target-id="_7-consumer-tag-univoco" data-depth="2"><a href="#_7-consumer-tag-univoco">7. Consumer tag univoco</a></li><li data-target-id="_8-topologia-amqp-dichiarata-allrsquoavvio" data-depth="2"><a href="#_8-topologia-amqp-dichiarata-allrsquoavvio">8. Topologia AMQP dichiarata all&rsquo;avvio</a></li><li data-target-id="_9-graceful-shutdown" data-depth="2"><a href="#_9-graceful-shutdown">9. Graceful shutdown</a></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="come-funziona" data-decorative="">Come funziona</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common</a></li><li><a href="../order">Order</a></li><li><a href="../delivery" aria-current="page">Delivery</a></li><li><a href="../drone">Drone</a></li></ul><h2 id="aggiornamenti" data-decorative="">Aggiornamenti</h2><ul><li><a href="../kafka">Integrazione con Kafka</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="delivery-service--documentazione-tecnica" data-depth="1"><a href="#delivery-service--documentazione-tecnica">Delivery Service — Documentazione Tecnica</a><ol><li data-target-id="_1-responsabilità" data-depth="2"><a href="#_1-responsabilità">1. Responsabilità</a></li><li data-target-id="_2-architettura-interna" data-depth="2"><a href="#_2-architettura-interna">2. Architettura interna</a></li><li data-target-id="_3-flusso-interno--deliveryserviceschedule" data-depth="2"><a href="#_3-flusso-interno--deliveryserviceschedule">3. Flusso interno — DeliveryService::schedule()</a><ol><li data-target-id="perché-il-sagaid-è-vuoto-in-deliveryscheduled" data-depth="3"><a href="#perché-il-sagaid-è-vuoto-in-deliveryscheduled">Perché il saga_id è vuoto in DeliveryScheduled?</a></li></ol></li><li data-target-id="_4-diagramma-di-sequenza" data-depth="2"><a href="#_4-diagramma-di-sequenza">4. Diagramma di sequenza</a></li><li data-target-id="_5-amqp--strategia-acknack" data-depth="2"><a href="#_5-amqp--strategia-acknack">5. AMQP — Strategia ack/nack</a></li><li data-target-id="_6-rete-di-petri--ciclo-di-vita-del-messaggio-nel-delivery-service" data-depth="2"><a href="#_6-rete-di-petri--ciclo-di-vita-del-messaggio-nel-delivery-service">6. Rete di Petri — Ciclo di vita del messaggio nel Delivery Service</a></li><li data-target-id="_7-consumer-tag-univoco" data-depth="2"><a href="#_7-consumer-tag-univoco">7. Consumer tag univoco</a></li><li data-target-id="_8-topologia-amqp-dichiarata-allrsquoavvio" data-depth="2"><a href="#_8-topologia-amqp-dichiarata-allrsquoavvio">8. Topologia AMQP dichiarata all&rsquo;avvio</a></li><li data-target-id="_9-graceful-shutdown" data-depth="2"><a href="#_9-graceful-shutdown">9. Graceful shutdown</a></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><h1 class="page-break" id="delivery-service--documentazione-tecnica">Delivery Service — Documentazione Tecnica</h1><h2 id="_1-responsabilità">1. Responsabilità</h2><p>Il Delivery Service è il <strong>servizio di coordinamento intermedio</strong> della pipeline. Non ha un&rsquo;interfaccia HTTP esposta verso l&rsquo;esterno: la sua unica interfaccia è AMQP. Riceve ordini validati dall&rsquo;Order Service, li assegna a un piano di consegna (generando un <span class="codespan-content"><code>delivery_id</code></span>) e li inoltra al Drone Service, notificando contestualmente l&rsquo;orchestratore SAGA.</p><hr /><h2 id="_2-architettura-interna">2. Architettura interna</h2><figure><pre class="mermaid">graph LR
+    RMQ_IN[[&quot;RabbitMQ\norder_queue&quot;]]
+    CONS[&quot;consumer.rs\nAMQP Consumer Task&quot;]
+    SVC[&quot;service.rs\nDeliveryService&quot;]
+    RMQ_OUT_D[[&quot;RabbitMQ\ndrone_queue&quot;]]
+    RMQ_OUT_S[[&quot;RabbitMQ\nsaga_events_exchange&quot;]]
+
+    RMQ_IN --&gt;|&quot;OrderMessage&quot;| CONS
+    CONS --&gt; SVC
+    SVC --&gt;|&quot;OrderMessage&quot;| RMQ_OUT_D
+    SVC --&gt;|&quot;DeliveryScheduled&quot;| RMQ_OUT_S</pre></figure><p>Il servizio non ha database: è <strong>stateless</strong>. L&rsquo;unico stato è il <span class="codespan-content"><code>delivery_id</code></span> generato per ogni ordine, che viene incluso nel messaggio AMQP e non necessita di persistenza locale.</p><hr /><h2 id="_3-flusso-interno--deliveryserviceschedule">3. Flusso interno — <span class="codespan-content"><code>DeliveryService::schedule()</code></span></h2><figure><pre class="mermaid">flowchart TD
+    A[&quot;OrderMessage ricevuto&quot;]
+    B[&quot;delivery_id = Uuid::new_v4()&quot;]
+    C[&quot;publish_to_queue\ndrone_queue\nOrderMessage&quot;]
+    D[&quot;publish_event\nsaga_events_exchange\nsaga.delivery_scheduled\nDeliveryScheduled&quot;]
+    E[&quot;Ok(())&quot;]
+
+    A --&gt; B --&gt; C --&gt; D --&gt; E</pre></figure><h3 id="perché-il-sagaid-è-vuoto-in-deliveryscheduled">Perché il <span class="codespan-content"><code>saga_id</code></span> è vuoto in <span class="codespan-content"><code>DeliveryScheduled</code></span>?</h3><pre><code class="language-rust">SagaEvent::DeliveryScheduled {
+    saga_id: String::new(),  // intenzionalmente vuoto
+    order_id: order.order_id.clone(),
+    delivery_id,
+    timestamp: Utc::now(),
+}</code></pre><p>Il Delivery Service non conosce il <span class="codespan-content"><code>saga_id</code></span> (non lo riceve nell&rsquo;<span class="codespan-content"><code>OrderMessage</code></span>). L&rsquo;orchestratore Order, al momento di processare il <span class="codespan-content"><code>DeliveryScheduled</code></span>, lo ignora e recupera la SAGA tramite <span class="codespan-content"><code>find_by_order_id(order_id)</code></span>, che è la sua chiave di correlazione naturale.</p><hr /><h2 id="_4-diagramma-di-sequenza">4. Diagramma di sequenza</h2><figure><pre class="mermaid">sequenceDiagram
+    participant RMQ as RabbitMQ
+    participant CONS as consumer.rs
+    participant SVC as service.rs
+
+    RMQ-&gt;&gt;CONS: delivery da order_queue (OrderMessage)
+    CONS-&gt;&gt;CONS: deserializza OrderMessage
+
+    alt order_id vuoto
+        CONS-&gt;&gt;RMQ: nack(requeue=false) &mdash; scarta
+    else errore transiente in schedule()
+        CONS-&gt;&gt;SVC: schedule(order)
+        SVC--&gt;&gt;CONS: Err(e)
+        CONS-&gt;&gt;RMQ: nack(requeue=true) &mdash; riprova
+    else successo
+        CONS-&gt;&gt;SVC: schedule(order)
+        SVC-&gt;&gt;SVC: delivery_id = Uuid::new_v4()
+        SVC-&gt;&gt;RMQ: publish drone_queue (OrderMessage)
+        SVC-&gt;&gt;RMQ: publish saga.delivery_scheduled (DeliveryScheduled)
+        SVC--&gt;&gt;CONS: Ok(())
+        CONS-&gt;&gt;RMQ: ack
+    end</pre></figure><hr /><h2 id="_5-amqp--strategia-acknack">5. AMQP — Strategia ack/nack</h2><table><thead><tr><th>Caso</th><th>Comportamento</th><th>Motivazione</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>order_id</code></span> vuoto</td><td><span class="codespan-content"><code>nack(requeue=false)</code></span></td><td>Il messaggio non diventerà mai valido</td></tr><tr><td>Deserializzazione fallita</td><td><span class="codespan-content"><code>nack(requeue=false)</code></span></td><td>Messaggio malformato — scartare evita loop</td></tr><tr><td>Errore in <span class="codespan-content"><code>schedule()</code></span> (transiente)</td><td><span class="codespan-content"><code>nack(requeue=true)</code></span></td><td>Es. broker irraggiungibile — ritentare ha senso</td></tr><tr><td>Successo</td><td><span class="codespan-content"><code>ack</code></span></td><td>Messaggio processato correttamente</td></tr></tbody></table><hr /><h2 id="_6-rete-di-petri--ciclo-di-vita-del-messaggio-nel-delivery-service">6. Rete di Petri — Ciclo di vita del messaggio nel Delivery Service</h2><figure><pre class="mermaid">flowchart LR
+    P0((&quot;● p0\nMessaggio\nin coda&quot;))
+    T0[&quot;t0: consume\norder_queue&quot;]
+    P1((&quot;p1\nMessaggio\nletto&quot;))
+    T_VAL[&quot;t_val: valida\norder_id&quot;]
+    P2((&quot;p2\nOrdine\nvalido&quot;))
+    P_INV((&quot;p_inv\nOrdine\nnon valido&quot;))
+    T_PUB1[&quot;t_pub1: publish\ndrone_queue&quot;]
+    P3((&quot;p3\ndrone_queue\naggiornata&quot;))
+    T_PUB2[&quot;t_pub2: publish\nDeliveryScheduled&quot;]
+    P4((&quot;p4\nSAGA\nnotificata&quot;))
+    T_ACK[&quot;t_ack: ack&quot;]
+    T_NACK[&quot;t_nack: nack\nno-requeue&quot;]
+    P_END((&quot;p_end\nDone&quot;))
+
+    P0 --&gt; T0 --&gt; P1
+    P1 --&gt; T_VAL
+    T_VAL --&gt;|&quot;valido&quot;| P2
+    T_VAL --&gt;|&quot;non valido&quot;| P_INV
+    P_INV --&gt; T_NACK --&gt; P_END
+    P2 --&gt; T_PUB1 --&gt; P3
+    P3 --&gt; T_PUB2 --&gt; P4
+    P4 --&gt; T_ACK --&gt; P_END</pre></figure><hr /><h2 id="_7-consumer-tag-univoco">7. Consumer tag univoco</h2><pre><code class="language-rust">&amp;format!(&quot;delivery-service-{}&quot;, uuid::Uuid::new_v4())</code></pre><p>In RabbitMQ ogni consumer su una coda deve avere un tag univoco. Usare un UUID generato al runtime evita conflitti quando più istanze del Delivery Service girano in parallelo (scaling orizzontale). Al contrario, un tag fisso causerebbe un errore <span class="codespan-content"><code>PRECONDITION_FAILED</code></span> dal broker.</p><hr /><h2 id="_8-topologia-amqp-dichiarata-allrsquoavvio">8. Topologia AMQP dichiarata all&rsquo;avvio</h2><p><span class="codespan-content"><code>main.rs</code></span> dichiara due risorse in modo idempotente prima di avviare il consumer:</p><table><thead><tr><th>Risorsa</th><th>Tipo</th><th>Perché la dichiara il Delivery Service</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>saga_events_exchange</code></span></td><td>Topic exchange, durable</td><td>Deve pubblicarci <span class="codespan-content"><code>DeliveryScheduled</code></span></td></tr><tr><td><span class="codespan-content"><code>drone_queue</code></span></td><td>Queue, durable</td><td>Deve pubblicarci gli ordini per il Drone Service</td></tr></tbody></table><p>La dichiarazione idempotente (stessi parametri) non crea un duplicato se la risorsa esiste già — la usa e basta. Questo rende il Delivery Service autonomo: parte anche se gli altri servizi non sono ancora online.</p><hr /><h2 id="_9-graceful-shutdown">9. Graceful shutdown</h2><pre><code class="language-rust">tokio::signal::ctrl_c().await?;</code></pre><p>Il Delivery Service non ha un server HTTP da spegnere. Il <span class="codespan-content"><code>ctrl_c()</code></span> aspetta <span class="codespan-content"><code>SIGINT</code></span> e permette al processo di terminare in modo pulito, dando tempo al consumer loop di completare l&rsquo;eventuale messaggio in processing prima di uscire.</p>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

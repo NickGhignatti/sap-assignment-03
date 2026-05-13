@@ -1,0 +1,215 @@
+.docname {pos}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Statement of Work (SOW)
+
+> Descrive cosa il progetto produrrà: i deliverable attesi, le funzionalità del servizio
+> e i criteri di accettazione. Allinea committente e team sul *cosa*, non sul *come*.
+
+---
+
+| Campo           | Valore                                             |
+|-----------------|----------------------------------------------------|
+| **Progetto**    | DroneFlow — Servizio di Consegna Pacchi con Droni  |
+| **Project No.** | SAP-03                                             |
+| **Redatto da**  | Ghignatti Nicolò                                   |
+| **Versione**    | 1.0 — Aprile 2026                                  |
+
+---
+
+## 1. Bisogno di business
+
+Un utente vuole spedire un pacco da un indirizzo a un altro, scegliendo quando farlo e
+con la garanzia che la consegna avvenga entro un tempo massimo da lui stabilito. Vuole
+poter seguire la posizione del pacco in tempo reale e ricevere conferma quando il pacco
+è stato consegnato.
+
+Il servizio DroneFlow soddisfa questo bisogno attraverso una piattaforma online completamente
+automatizzata: dall'accettazione della richiesta all'assegnazione del drone, fino alla
+conferma finale, tutto avviene senza intervento umano.
+
+---
+
+## 2. Descrizione del servizio (Product Scope)
+
+DroneFlow è un **servizio di consegna pacchi tramite droni** accessibile tramite API.
+Il servizio gestisce l'intero ciclo di vita di una consegna, suddiviso nelle seguenti fasi:
+
+```
+[Utente]
+   │
+   │  Richiede consegna (peso, origine, destinazione, orario, tempo massimo)
+   ▼
+[Validazione]
+   │  Il sistema verifica che la richiesta sia accettabile
+   ▼
+[Pianificazione]
+   │  Il sistema pianifica la consegna e prepara le risorse necessarie
+   ▼
+[Assegnazione Drone]
+   │  Un drone disponibile viene assegnato alla missione
+   ▼
+[Consegna in corso]
+   │  Il drone trasporta il pacco; l'utente può tracciarne lo stato
+   ▼
+[Conferma]
+   │  Il drone consegna il pacco e rientra; l'utente riceve conferma
+   ▼
+[Storico]
+   Tutti gli eventi della consegna sono registrati e consultabili
+```
+
+In caso di impossibilità a completare la consegna in qualsiasi fase, il sistema:
+- Annulla tutte le operazioni parzialmente eseguite.
+- Libera le risorse occupate (es. drone assegnato).
+- Informa l'utente con un messaggio di annullamento esplicito.
+
+---
+
+## 3. Deliverable
+
+### D1 — Funzionalità di richiesta consegna
+
+**Cosa fornisce**: la capacità per un utente di inviare una richiesta di consegna al sistema.
+
+**Funzionalità incluse**:
+- Ricezione di una richiesta con i seguenti dati: identificativo cliente, indirizzo di
+  partenza, indirizzo di destinazione, peso del pacco, data/ora desiderata di ritiro,
+  tempo massimo di consegna in minuti.
+- Risposta immediata al cliente con un **identificativo univoco** dell'ordine, utilizzabile
+  per il tracciamento, e la conferma che la richiesta è stata presa in carico.
+
+**Criteri di accettazione**:
+- Una richiesta con tutti i dati validi riceve conferma con identificativo di tracciamento.
+- Una richiesta con dati non validi (peso negativo, indirizzi mancanti) riceve un
+  messaggio di errore chiaro e non genera nessuna operazione nel sistema.
+
+---
+
+### D2 — Funzionalità di validazione e pianificazione
+
+**Cosa fornisce**: la verifica automatica della fattibilità della richiesta e la pianificazione
+della consegna.
+
+**Funzionalità incluse**:
+- Verifica che il peso del pacco sia compatibile con la capacità operativa dei droni.
+- Verifica che gli indirizzi siano specificati e validi.
+- Verifica che la finestra temporale richiesta sia coerente.
+- Generazione di un **piano di consegna** (identificativo della consegna programmata).
+
+**Criteri di accettazione**:
+- Richieste valide producono sempre un piano di consegna in modo automatico.
+- Richieste non valide vengono rifiutate prima di qualsiasi allocazione di risorse.
+
+---
+
+### D3 — Funzionalità di assegnazione drone
+
+**Cosa fornisce**: l'assegnazione automatica di un drone disponibile alla missione di
+consegna pianificata.
+
+**Funzionalità incluse**:
+- Selezione di un drone libero compatibile con il peso del pacco.
+- Avvio della missione di consegna del drone selezionato.
+- Registrazione dell'evento di assegnazione nello storico della consegna.
+
+**Criteri di accettazione**:
+- Ogni richiesta pianificata riceve l'assegnazione di un drone in modo automatico.
+- Se nessun drone è disponibile, la richiesta viene annullata con notifica all'utente.
+- L'evento di assegnazione è visibile nello storico della consegna.
+
+---
+
+### D4 — Funzionalità di tracciamento in tempo reale
+
+**Cosa fornisce**: la capacità per l'utente di seguire lo stato della propria consegna
+durante tutto il ciclo.
+
+**Funzionalità incluse**:
+- Consultazione dello stato corrente della consegna tramite l'identificativo ricevuto al momento della richiesta.
+  Stati possibili: *In attesa*, *In viaggio*, *Consegnato*, *Annullato*.
+- Visualizzazione del tempo rimanente stimato per il completamento della consegna.
+
+**Criteri di accettazione**:
+- Lo stato è sempre aggiornato e consultabile durante tutta la durata della consegna.
+- Dopo il completamento o l'annullamento, lo stato finale è visibile e permanente.
+
+---
+
+### D5 — Funzionalità di gestione dei fallimenti
+
+**Cosa fornisce**: la garanzia che, in caso di problema in qualsiasi fase del processo,
+il sistema si comporti in modo controllato e prevedibile.
+
+**Funzionalità incluse**:
+- Rilevamento automatico del fallimento in qualsiasi fase (validazione, pianificazione,
+  assegnazione drone).
+- Annullamento delle operazioni già completate (il drone eventualmente assegnato viene
+  liberato; il piano di consegna viene cancellato).
+- Aggiornamento dello stato della consegna ad *Annullato* con indicazione del motivo.
+- Nessuno stato "bloccato" rimane nel sistema dopo un fallimento.
+
+**Criteri di accettazione**:
+- Con fallimento simulato in fase di assegnazione drone: stato finale = *Annullato*,
+  drone liberato, motivo dell'annullamento leggibile dall'utente.
+- Con fallimento simulato in fase di pianificazione: stato finale = *Annullato*, nessuna
+  risorsa occupata.
+
+---
+
+### D6 — Storico delle consegne
+
+**Cosa fornisce**: la registrazione permanente e immutabile di ogni evento relativo a
+una consegna, consultabile a posteriori.
+
+**Funzionalità incluse**:
+- Registrazione di ogni cambio di stato: drone assegnato, partenza, arrivo, rientro.
+- Ogni evento riporta il timestamp esatto in cui si è verificato.
+- Lo storico è consultabile per identificativo del drone o per identificativo dell'ordine.
+- È possibile ricostruire lo stato di un drone in qualsiasi momento storico a partire
+  dalla sequenza degli eventi registrati.
+
+**Criteri di accettazione**:
+- Dopo una consegna completata, lo storico contiene almeno 4 eventi ordinati:
+  assegnazione, partenza, arrivo, rientro.
+- La ricostruzione dello stato da storico è coerente con lo stato osservato in tempo reale.
+
+---
+
+### D7 — Documentazione di Project Management
+
+**Cosa fornisce**: la documentazione PM completa del progetto.
+
+**Contenuto**: POS, PDS, Project Charter, Business Case, SOW, RBS, WBS — tutti in italiano,
+coerenti con la proposal di progetto originale.
+
+---
+
+## 4. Allineamento strategico
+
+| Obiettivo del corso                              | Come DroneFlow lo realizza                                          |
+|--------------------------------------------------|---------------------------------------------------------------------|
+| Applicazione del project management              | 7 documenti PM prodotti e coerenti con la proposta di progetto      |
+| Progettazione di un servizio reale               | Servizio con utente, ciclo di vita, tracciabilità, gestione errori  |
+| Gestione della complessità distribuita           | Coordinamento automatico di più componenti con garanzie di coerenza |
+
+---
+
+## 5. Criteri di accettazione complessivi del SOW
+
+Il SOW si considera soddisfatto quando:
+
+- [ ] Una richiesta valida viene accettata, pianificata e assegnata a un drone in modo automatico.
+- [ ] Il tracciamento restituisce lo stato aggiornato durante tutta la consegna.
+- [ ] Un fallimento simulato produce l'annullamento ordinato con stato coerente.
+- [ ] Lo storico eventi di una consegna completata contiene tutti gli eventi attesi.
+- [ ] La ricostruzione dello stato da storico è coerente con l'osservazione in tempo reale.
+- [ ] I 7 documenti PM sono presenti, in italiano, e coerenti tra loro.

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="drone-service--documentazione-tecnica" data-depth="1"><a href="#drone-service--documentazione-tecnica">Drone Service — Documentazione Tecnica</a><ol><li data-target-id="_1-responsabilità" data-depth="2"><a href="#_1-responsabilità">1. Responsabilità</a></li><li data-target-id="_2-architettura-interna" data-depth="2"><a href="#_2-architettura-interna">2. Architettura interna</a></li><li data-target-id="_3-modello-dati" data-depth="2"><a href="#_3-modello-dati">3. Modello dati</a><ol><li data-target-id="droneentry-in-memory" data-depth="3"><a href="#droneentry-in-memory">DroneEntry (in-memory)</a></li><li data-target-id="droneevent-persistito-su-mongodb" data-depth="3"><a href="#droneevent-persistito-su-mongodb">DroneEvent (persistito su MongoDB)</a></li></ol></li><li data-target-id="_4-macchina-a-stati--dronestate" data-depth="2"><a href="#_4-macchina-a-stati--dronestate">4. Macchina a stati — DroneState</a></li><li data-target-id="_5-event-sourcing--sequenza-completa-degli-eventi" data-depth="2"><a href="#_5-event-sourcing--sequenza-completa-degli-eventi">5. Event Sourcing — Sequenza completa degli eventi</a><ol><li data-target-id="invariante-garantita-da-rebuilddrone" data-depth="3"><a href="#invariante-garantita-da-rebuilddrone">Invariante garantita da rebuild_drone()</a></li></ol></li><li data-target-id="_6-rete-di-petri--ciclo-di-vita-di-un-drone" data-depth="2"><a href="#_6-rete-di-petri--ciclo-di-vita-di-un-drone">6. Rete di Petri — Ciclo di vita di un drone</a></li><li data-target-id="_7-diagramma-di-sequenza--consegna-completa" data-depth="2"><a href="#_7-diagramma-di-sequenza--consegna-completa">7. Diagramma di sequenza — Consegna completa</a></li><li data-target-id="_8-diagramma-di-sequenza--compensazione" data-depth="2"><a href="#_8-diagramma-di-sequenza--compensazione">8. Diagramma di sequenza — Compensazione</a></li><li data-target-id="_9-inflightmap--gestione-della-concorrenza" data-depth="2"><a href="#_9-inflightmap--gestione-della-concorrenza">9. InFlightMap — Gestione della concorrenza</a></li><li data-target-id="_10-scheduler--sostituto-di-scheduled" data-depth="2"><a href="#_10-scheduler--sostituto-di-scheduled">10. Scheduler — Sostituto di @Scheduled</a></li><li data-target-id="_11-api-reference" data-depth="2"><a href="#_11-api-reference">11. API Reference</a><ol><li data-target-id="get-orderorderidstatus" data-depth="3"><a href="#get-orderorderidstatus">GET /order/{orderId}/status</a></li><li data-target-id="get-dronedroneidevents" data-depth="3"><a href="#get-dronedroneidevents">GET /drone/{droneId}/events</a></li><li data-target-id="get-orderorderidevents" data-depth="3"><a href="#get-orderorderidevents">GET /order/{orderId}/events</a></li><li data-target-id="get-dronedroneidrebuild" data-depth="3"><a href="#get-dronedroneidrebuild">GET /drone/{droneId}/rebuild</a></li><li data-target-id="get-health" data-depth="3"><a href="#get-health">GET /health</a></li></ol></li><li data-target-id="_12-graceful-shutdown" data-depth="2"><a href="#_12-graceful-shutdown">12. Graceful shutdown</a></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="come-funziona" data-decorative="">Come funziona</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common</a></li><li><a href="../order">Order</a></li><li><a href="../delivery">Delivery</a></li><li><a href="../drone" aria-current="page">Drone</a></li></ul><h2 id="aggiornamenti" data-decorative="">Aggiornamenti</h2><ul><li><a href="../kafka">Integrazione con Kafka</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="drone-service--documentazione-tecnica" data-depth="1"><a href="#drone-service--documentazione-tecnica">Drone Service — Documentazione Tecnica</a><ol><li data-target-id="_1-responsabilità" data-depth="2"><a href="#_1-responsabilità">1. Responsabilità</a></li><li data-target-id="_2-architettura-interna" data-depth="2"><a href="#_2-architettura-interna">2. Architettura interna</a></li><li data-target-id="_3-modello-dati" data-depth="2"><a href="#_3-modello-dati">3. Modello dati</a><ol><li data-target-id="droneentry-in-memory" data-depth="3"><a href="#droneentry-in-memory">DroneEntry (in-memory)</a></li><li data-target-id="droneevent-persistito-su-mongodb" data-depth="3"><a href="#droneevent-persistito-su-mongodb">DroneEvent (persistito su MongoDB)</a></li></ol></li><li data-target-id="_4-macchina-a-stati--dronestate" data-depth="2"><a href="#_4-macchina-a-stati--dronestate">4. Macchina a stati — DroneState</a></li><li data-target-id="_5-event-sourcing--sequenza-completa-degli-eventi" data-depth="2"><a href="#_5-event-sourcing--sequenza-completa-degli-eventi">5. Event Sourcing — Sequenza completa degli eventi</a><ol><li data-target-id="invariante-garantita-da-rebuilddrone" data-depth="3"><a href="#invariante-garantita-da-rebuilddrone">Invariante garantita da rebuild_drone()</a></li></ol></li><li data-target-id="_6-rete-di-petri--ciclo-di-vita-di-un-drone" data-depth="2"><a href="#_6-rete-di-petri--ciclo-di-vita-di-un-drone">6. Rete di Petri — Ciclo di vita di un drone</a></li><li data-target-id="_7-diagramma-di-sequenza--consegna-completa" data-depth="2"><a href="#_7-diagramma-di-sequenza--consegna-completa">7. Diagramma di sequenza — Consegna completa</a></li><li data-target-id="_8-diagramma-di-sequenza--compensazione" data-depth="2"><a href="#_8-diagramma-di-sequenza--compensazione">8. Diagramma di sequenza — Compensazione</a></li><li data-target-id="_9-inflightmap--gestione-della-concorrenza" data-depth="2"><a href="#_9-inflightmap--gestione-della-concorrenza">9. InFlightMap — Gestione della concorrenza</a></li><li data-target-id="_10-scheduler--sostituto-di-scheduled" data-depth="2"><a href="#_10-scheduler--sostituto-di-scheduled">10. Scheduler — Sostituto di @Scheduled</a></li><li data-target-id="_11-api-reference" data-depth="2"><a href="#_11-api-reference">11. API Reference</a><ol><li data-target-id="get-orderorderidstatus" data-depth="3"><a href="#get-orderorderidstatus">GET /order/{orderId}/status</a></li><li data-target-id="get-dronedroneidevents" data-depth="3"><a href="#get-dronedroneidevents">GET /drone/{droneId}/events</a></li><li data-target-id="get-orderorderidevents" data-depth="3"><a href="#get-orderorderidevents">GET /order/{orderId}/events</a></li><li data-target-id="get-dronedroneidrebuild" data-depth="3"><a href="#get-dronedroneidrebuild">GET /drone/{droneId}/rebuild</a></li><li data-target-id="get-health" data-depth="3"><a href="#get-health">GET /health</a></li></ol></li><li data-target-id="_12-graceful-shutdown" data-depth="2"><a href="#_12-graceful-shutdown">12. Graceful shutdown</a></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><h1 class="page-break" id="drone-service--documentazione-tecnica">Drone Service — Documentazione Tecnica</h1><h2 id="_1-responsabilità">1. Responsabilità</h2><p>Il Drone Service è il componente più complesso del sistema. Ha quattro responsabilità distinte:</p><ol><li><strong>Gestione droni</strong> — riceve ordini e avvia la consegna assegnando un drone.</li><li><strong>Event Sourcing</strong> — persiste ogni cambio di stato del drone come evento immutabile su MongoDB; lo stato corrente è sempre ricostruibile dalla sequenza degli eventi.</li><li><strong>Scheduler</strong> — un task periodico (ogni 10 s) controlla se i droni in volo hanno raggiunto la destinazione e aggiorna l&rsquo;event store di conseguenza.</li><li><strong>Compensazione</strong> — riceve eventi <span class="codespan-content"><code>CompensateDrone</code></span> dalla SAGA e rimuove il drone dalla mappa in-flight.</li></ol><hr /><h2 id="_2-architettura-interna">2. Architettura interna</h2><figure><pre class="mermaid">graph TD
+    RMQ_IN1[[&quot;RabbitMQ\ndrone_queue&quot;]]
+    RMQ_IN2[[&quot;RabbitMQ\ndrone_compensation_queue&quot;]]
+    CONS_O[&quot;consumer.rs\nstart_order_consumer&quot;]
+    CONS_C[&quot;consumer.rs\nstart_compensation_consumer&quot;]
+    SVC[&quot;service.rs\nDroneService&quot;]
+    STORE[&quot;store.rs\nDroneEventStore&quot;]
+    MODEL[&quot;model.rs\nDroneEntry / DroneState&quot;]
+    MDB[(&quot;MongoDB\ndrone_events&quot;)]
+    RMQ_OUT[[&quot;RabbitMQ\nsaga_events_exchange&quot;]]
+    API[&quot;api.rs\nAxum handlers&quot;]
+    SCHED[&quot;main.rs\nScheduler Task\n(ogni 10s)&quot;]
+    HTTP[&quot;HTTP Client&quot;]
+
+    RMQ_IN1 --&gt;|&quot;OrderMessage&quot;| CONS_O
+    RMQ_IN2 --&gt;|&quot;CompensateDrone&quot;| CONS_C
+    CONS_O --&gt; SVC
+    CONS_C --&gt; SVC
+    SVC --&gt; STORE
+    SVC --&gt; MODEL
+    SVC --&gt;|&quot;DroneAssigned&quot;| RMQ_OUT
+    STORE &lt;--&gt; MDB
+    SCHED --&gt;|&quot;settle_arrived()&quot;| SVC
+    HTTP --&gt; API
+    API --&gt; SVC
+    API --&gt; STORE</pre></figure><hr /><h2 id="_3-modello-dati">3. Modello dati</h2><h3 id="droneentry-in-memory"><span class="codespan-content"><code>DroneEntry</code></span> (in-memory)</h3><pre><code>┌────────────────────────────────────┐
+│            DroneEntry              │
+│         [solo in memoria]          │
+├────────────────────────────────────┤
+│ drone_id        : String           │
+│ order           : OrderMessage     │
+│ state           : DroneState       │
+│ dispatch_time   : Option&lt;Utc&gt;      │
+│ delivery_time   : Option&lt;Utc&gt;      │
+│ expected_arrival: Option&lt;Utc&gt;      │
+└────────────────────────────────────┘</code></pre><h3 id="droneevent-persistito-su-mongodb"><span class="codespan-content"><code>DroneEvent</code></span> (persistito su MongoDB)</h3><pre><code>┌─────────────────────────────────────┐
+│  drone_events collection            │
+│  (ogni documento = un evento)       │
+├──────────────┬──────────────────────┤
+│ type         │ &quot;DRONE_CREATED&quot;      │
+│ drone_id     │ UUID                 │
+│ order_id     │ UUID                 │
+│ version      │ 0, 1, 2, 3 ...       │
+│ timestamp    │ DateTime&lt;Utc&gt;        │
+│ [+ campi specifici per variante]    │
+└─────────────────────────────────────┘</code></pre><hr /><h2 id="_4-macchina-a-stati--dronestate">4. Macchina a stati — <span class="codespan-content"><code>DroneState</code></span></h2><figure><pre class="mermaid">stateDiagram-v2
+    [*] --&gt; Sleeping : DroneEntry - new()
+
+    Sleeping --&gt; InTransit : start() - Dispatched event salvato
+    InTransit --&gt; Returning : end() - Delivered event salvato
+
+    note right of InTransit
+        expected_arrival e impostato
+        Lo scheduler controlla ogni 10s
+    end note</pre></figure><hr /><h2 id="_5-event-sourcing--sequenza-completa-degli-eventi">5. Event Sourcing — Sequenza completa degli eventi</h2><p>Per ogni drone, la sequenza di eventi su MongoDB è sempre questa:</p><pre><code>version=0  DRONE_CREATED    { drone_id, order_id, customer_id, from, to, weight, ... }
+version=1  DRONE_DISPATCHED { drone_id, order_id, dispatch_time }
+version=2  DRONE_DELIVERED  { drone_id, order_id, delivery_time }
+version=3  DRONE_RETURNED   { drone_id, order_id, return_time }</code></pre><h3 id="invariante-garantita-da-rebuilddrone">Invariante garantita da <span class="codespan-content"><code>rebuild_drone()</code></span></h3><pre><code>stato_ricostruito_da_eventi == stato_osservato_in_flight_map</code></pre><p>La funzione applica gli eventi in ordine di <span class="codespan-content"><code>version</code></span> partendo sempre da <span class="codespan-content"><code>Created</code></span>:</p><figure><pre class="mermaid">flowchart LR
+    E0[&quot;DroneEvent\nCreated (v=0)&quot;]
+    E1[&quot;DroneEvent\nDispatched (v=1)&quot;]
+    E2[&quot;DroneEvent\nDelivered (v=2)&quot;]
+    E3[&quot;DroneEvent\nReturned (v=3)&quot;]
+    S0[&quot;DroneEntry\nSleeping&quot;]
+    S1[&quot;DroneEntry\nInTransit&quot;]
+    S2[&quot;DroneEntry\nReturning&quot;]
+    S3[&quot;DroneEntry\nReturning\n(consegna completa)&quot;]
+
+    E0 --&gt;|&quot;new()&quot;| S0
+    S0 --&gt; E1
+    E1 --&gt;|&quot;start()&quot;| S1
+    S1 --&gt; E2
+    E2 --&gt;|&quot;end()&quot;| S2
+    S2 --&gt; E3
+    E3 --&gt;|&quot;no state change&quot;| S3</pre></figure><hr /><h2 id="_6-rete-di-petri--ciclo-di-vita-di-un-drone">6. Rete di Petri — Ciclo di vita di un drone</h2><figure><pre class="mermaid">flowchart TD
+    P0((&quot;● p0\nOrdine\nricevuto&quot;))
+    T0[&quot;t0: consuma\ndrone_queue&quot;]
+    P1((&quot;p1\nOrdine\ndeserializzato&quot;))
+    T1[&quot;t1: start_delivery()&quot;]
+    P2((&quot;p2\nDRONE_CREATED\nsalvato&quot;))
+    T2[&quot;t2: pubblica\nDroneAssigned&quot;]
+    P3((&quot;p3\nSAGA\nnotificata&quot;))
+    T3[&quot;t3: salva\nDRONE_DISPATCHED&quot;]
+    P4((&quot;p4\nDrone\nin volo&quot;))
+    T_SCHED[&quot;t_sched: scheduler\ndetecta arrivo&quot;]
+    T_COMP[&quot;t_comp: CompensateDrone\nricevuto&quot;]
+    P5((&quot;p5\nDRONE_DELIVERED\nsalvato&quot;))
+    T4[&quot;t4: salva\nDRONE_RETURNED&quot;]
+    P6((&quot;p6\nDrone\nrientrato&quot;))
+    P_COMP((&quot;p_comp\nDrone\nrimosso&quot;))
+    T_ACK[&quot;t_ack: rimuovi\nda in_flight&quot;]
+    P_END((&quot;p_end\nDone&quot;))
+
+    P0 --&gt; T0 --&gt; P1 --&gt; T1 --&gt; P2 --&gt; T2 --&gt; P3 --&gt; T3 --&gt; P4
+    P4 --&gt;|&quot;ETA scaduta&quot;| T_SCHED --&gt; P5 --&gt; T4 --&gt; P6 --&gt; T_ACK --&gt; P_END
+    P4 --&gt;|&quot;SAGA fallisce&quot;| T_COMP --&gt; P_COMP --&gt; P_END</pre></figure><hr /><h2 id="_7-diagramma-di-sequenza--consegna-completa">7. Diagramma di sequenza — Consegna completa</h2><figure><pre class="mermaid">sequenceDiagram
+    participant RMQ as RabbitMQ
+    participant CONS as consumer.rs
+    participant SVC as service.rs
+    participant STORE as store.rs
+    participant MDB as MongoDB
+
+    RMQ-&gt;&gt;CONS: OrderMessage (drone_queue)
+    CONS-&gt;&gt;SVC: start_delivery(order, minutes)
+
+    SVC-&gt;&gt;STORE: count_events_for_drone(drone_id) &rarr; 0
+    STORE-&gt;&gt;MDB: count_documents
+    SVC-&gt;&gt;STORE: save_event(Created, version=0)
+    STORE-&gt;&gt;MDB: insert_one
+
+    SVC-&gt;&gt;RMQ: publish saga.drone_assigned
+
+    SVC-&gt;&gt;STORE: count_events_for_drone(drone_id) &rarr; 1
+    SVC-&gt;&gt;STORE: save_event(Dispatched, version=1)
+    STORE-&gt;&gt;MDB: insert_one
+
+    SVC-&gt;&gt;SVC: in_flight map - insert(order_id, entry)
+    SVC--&gt;&gt;CONS: Ok(())
+    CONS-&gt;&gt;RMQ: ack
+
+    Note over SVC: dopo delivery_minutes minuti...
+
+    SVC-&gt;&gt;SVC: settle_arrived() [scheduler task]
+    SVC-&gt;&gt;SVC: in_flight map - raccogli arrivati - rilascia lock
+    SVC-&gt;&gt;STORE: save_event(Delivered, version=2)
+    STORE-&gt;&gt;MDB: insert_one
+    SVC-&gt;&gt;STORE: save_event(Returned, version=3)
+    STORE-&gt;&gt;MDB: insert_one
+    SVC-&gt;&gt;SVC: in_flight map - remove(order_id)</pre></figure><hr /><h2 id="_8-diagramma-di-sequenza--compensazione">8. Diagramma di sequenza — Compensazione</h2><figure><pre class="mermaid">sequenceDiagram
+    participant RMQ as RabbitMQ
+    participant CONS as consumer.rs (comp)
+    participant SVC as service.rs
+
+    RMQ-&gt;&gt;CONS: CompensateDrone {drone_id, saga_id, reason}
+    CONS-&gt;&gt;CONS: match SagaEvent - CompensateDrone
+    CONS-&gt;&gt;SVC: compensate(drone_id)
+    SVC-&gt;&gt;SVC: in_flight map - retain entries where drone_id differs
+    SVC--&gt;&gt;CONS: (sync return)
+    CONS-&gt;&gt;RMQ: ack
+    Note over CONS: sempre ack su compensazione - un retry non aiuterebbe</pre></figure><hr /><h2 id="_9-inflightmap--gestione-della-concorrenza">9. <span class="codespan-content"><code>InFlightMap</code></span> — Gestione della concorrenza</h2><pre><code class="language-rust">pub type InFlightMap = Arc&lt;Mutex&lt;HashMap&lt;String, DroneEntry&gt;&gt;&gt;;</code></pre><p>Tre task concorrenti accedono alla stessa mappa:</p><table><thead><tr><th>Task</th><th>Operazione</th><th>Frequenza</th></tr></thead><tbody><tr><td>Consumer ordini</td><td><span class="codespan-content"><code>insert(order_id, entry)</code></span></td><td>Ad ogni ordine ricevuto</td></tr><tr><td>Scheduler</td><td><span class="codespan-content"><code>collect arrivati</code></span> + <span class="codespan-content"><code>remove(order_id)</code></span></td><td>Ogni 10 secondi</td></tr><tr><td>Consumer compensazione</td><td><span class="codespan-content"><code>retain(...)</code></span> rimuove per drone_id</td><td>Al ricevimento di CompensateDrone</td></tr><tr><td>Handler HTTP</td><td><span class="codespan-content"><code>lock().get(order_id)</code></span></td><td>Ad ogni chiamata GET</td></tr></tbody></table><p><strong>Regola fondamentale</strong>: il lock non viene mai mantenuto attraverso un <span class="codespan-content"><code>await</code></span>. In <span class="codespan-content"><code>settle_arrived()</code></span> questo è esplicito:</p><pre><code class="language-rust">// 1. Acquisisci lock, raccogli dati, rilascia subito
+let arrived: Vec&lt;DroneEntry&gt; = {
+    let map = self.in_flight.lock().unwrap();
+    map.values().filter(...).cloned().collect()
+};   // &larr; lock rilasciato qui
+
+// 2. Operazioni async senza lock
+for entry in arrived {
+    self.store.save_event(...).await?;  // nessun lock attivo
+    self.in_flight.lock().unwrap().remove(...);  // ri-acquisisce solo alla fine
+}</code></pre><hr /><h2 id="_10-scheduler--sostituto-di-scheduled">10. Scheduler — Sostituto di <span class="codespan-content"><code>@Scheduled</code></span></h2><p>In Java Spring, <span class="codespan-content"><code>@Scheduled(fixedDelay = 10000)</code></span> creava un thread dedicato. In Rust il task periodico è un <span class="codespan-content"><code>tokio::spawn</code></span> con <span class="codespan-content"><code>tokio::time::interval</code></span>:</p><pre><code class="language-rust">tokio::spawn(async move {
+    let mut interval = tokio::time::interval(Duration::from_secs(10));
+    loop {
+        interval.tick().await;       // aspetta 10s senza bloccare il thread
+        scheduler_svc.settle_arrived().await?;
+    }
+});</code></pre><p><span class="codespan-content"><code>interval.tick()</code></span> è non-bloccante: cede il controllo al runtime Tokio durante l&rsquo;attesa, che può usare il thread per altri task.</p><hr /><h2 id="_11-api-reference">11. API Reference</h2><h3 id="get-orderorderidstatus"><span class="codespan-content"><code>GET /order/{orderId}/status</code></span></h3><p>Stato in-flight del drone assegnato all&rsquo;ordine.</p><p><strong>Response <span class="codespan-content"><code>200</code></span>:</strong></p><pre><code>Drone a1b2-... InTransit from 'Via Roma 1' to 'Via Dante 5' &mdash; 42s elapsed</code></pre><p><strong>Response <span class="codespan-content"><code>404</code></span>:</strong> ordine non trovato nella mappa in-flight (non ancora partito o già completato).</p><hr /><h3 id="get-dronedroneidevents"><span class="codespan-content"><code>GET /drone/{droneId}/events</code></span></h3><p>Storico completo degli eventi di un drone (Event Sourcing log).</p><p><strong>Response <span class="codespan-content"><code>200</code></span>:</strong></p><pre><code class="language-json">[
+  { &quot;event_type&quot;: &quot;DRONE_CREATED&quot;,    &quot;timestamp&quot;: &quot;2026-04-10T14:00:00Z&quot;, &quot;version&quot;: 0 },
+  { &quot;event_type&quot;: &quot;DRONE_DISPATCHED&quot;, &quot;timestamp&quot;: &quot;2026-04-10T14:00:01Z&quot;, &quot;version&quot;: 1 },
+  { &quot;event_type&quot;: &quot;DRONE_DELIVERED&quot;,  &quot;timestamp&quot;: &quot;2026-04-10T14:25:01Z&quot;, &quot;version&quot;: 2 },
+  { &quot;event_type&quot;: &quot;DRONE_RETURNED&quot;,   &quot;timestamp&quot;: &quot;2026-04-10T14:25:01Z&quot;, &quot;version&quot;: 3 }
+]</code></pre><hr /><h3 id="get-orderorderidevents"><span class="codespan-content"><code>GET /order/{orderId}/events</code></span></h3><p>Tutti gli eventi associati a un ordine specifico.</p><hr /><h3 id="get-dronedroneidrebuild"><span class="codespan-content"><code>GET /drone/{droneId}/rebuild</code></span></h3><p>Ricostruisce lo stato del drone applicando il suo event log in ordine.
+Utile per verificare la coerenza dell&rsquo;Event Sourcing.</p><p><strong>Response <span class="codespan-content"><code>200</code></span>:</strong></p><pre><code>Drone a1b2-... Returning from 'Via Roma 1' to 'Via Dante 5' &mdash; 1502s elapsed</code></pre><hr /><h3 id="get-health"><span class="codespan-content"><code>GET /health</code></span></h3><p><strong>Response <span class="codespan-content"><code>200</code></span>:</strong> <span class="codespan-content"><code>Drone Service is running</code></span></p><hr /><h2 id="_12-graceful-shutdown">12. Graceful shutdown</h2><pre><code class="language-rust">axum::serve(listener, app)
+    .with_graceful_shutdown(async {
+        tokio::signal::ctrl_c().await.expect(&quot;...&quot;);
+    })
+    .await?;</code></pre><p>A differenza dell&rsquo;Order Service, il Drone Service usa <span class="codespan-content"><code>with_graceful_shutdown</code></span> su Axum, che aspetta il completamento delle richieste HTTP in corso prima di chiudere il server. I consumer AMQP e lo scheduler vengono interrotti quando il processo termina.</p>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

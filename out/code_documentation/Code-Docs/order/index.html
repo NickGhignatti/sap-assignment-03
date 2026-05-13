@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="order-service--documentazione-tecnica" data-depth="1"><a href="#order-service--documentazione-tecnica">Order Service — Documentazione Tecnica</a><ol><li data-target-id="_1-responsabilità" data-depth="2"><a href="#_1-responsabilità">1. Responsabilità</a></li><li data-target-id="_2-architettura-interna" data-depth="2"><a href="#_2-architettura-interna">2. Architettura interna</a></li><li data-target-id="_3-modello-dati--sagastate" data-depth="2"><a href="#_3-modello-dati--sagastate">3. Modello dati — SagaState</a></li><li data-target-id="_4-macchina-a-stati--sagastatus" data-depth="2"><a href="#_4-macchina-a-stati--sagastatus">4. Macchina a stati — SagaStatus</a></li><li data-target-id="_5-macchina-a-stati--sagastep" data-depth="2"><a href="#_5-macchina-a-stati--sagastep">5. Macchina a stati — SagaStep</a><ol><li data-target-id="stepstocompensate" data-depth="3"><a href="#stepstocompensate">steps_to_compensate()</a></li></ol></li><li data-target-id="_6-rete-di-petri--ciclo-di-vita-della-saga" data-depth="2"><a href="#_6-rete-di-petri--ciclo-di-vita-della-saga">6. Rete di Petri — Ciclo di vita della SAGA</a></li><li data-target-id="_7-diagramma-di-sequenza--happy-path" data-depth="2"><a href="#_7-diagramma-di-sequenza--happy-path">7. Diagramma di sequenza — Happy Path</a></li><li data-target-id="_8-diagramma-di-sequenza--compensazione" data-depth="2"><a href="#_8-diagramma-di-sequenza--compensazione">8. Diagramma di sequenza — Compensazione</a></li><li data-target-id="_9-amqp--gestione-acknack-nel-consumer" data-depth="2"><a href="#_9-amqp--gestione-acknack-nel-consumer">9. AMQP — Gestione ack/nack nel consumer</a></li><li data-target-id="_10-canali-amqp-separati" data-depth="2"><a href="#_10-canali-amqp-separati">10. Canali AMQP separati</a></li><li data-target-id="_11-api-reference" data-depth="2"><a href="#_11-api-reference">11. API Reference</a><ol><li data-target-id="post-" data-depth="3"><a href="#post-">POST /</a></li><li data-target-id="get-orderidsaga-status" data-depth="3"><a href="#get-orderidsaga-status">GET /{orderId}/saga-status</a></li><li data-target-id="get-health" data-depth="3"><a href="#get-health">GET /health</a></li></ol></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="come-funziona" data-decorative="">Come funziona</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common</a></li><li><a href="../order" aria-current="page">Order</a></li><li><a href="../delivery">Delivery</a></li><li><a href="../drone">Drone</a></li></ul><h2 id="aggiornamenti" data-decorative="">Aggiornamenti</h2><ul><li><a href="../kafka">Integrazione con Kafka</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="order-service--documentazione-tecnica" data-depth="1"><a href="#order-service--documentazione-tecnica">Order Service — Documentazione Tecnica</a><ol><li data-target-id="_1-responsabilità" data-depth="2"><a href="#_1-responsabilità">1. Responsabilità</a></li><li data-target-id="_2-architettura-interna" data-depth="2"><a href="#_2-architettura-interna">2. Architettura interna</a></li><li data-target-id="_3-modello-dati--sagastate" data-depth="2"><a href="#_3-modello-dati--sagastate">3. Modello dati — SagaState</a></li><li data-target-id="_4-macchina-a-stati--sagastatus" data-depth="2"><a href="#_4-macchina-a-stati--sagastatus">4. Macchina a stati — SagaStatus</a></li><li data-target-id="_5-macchina-a-stati--sagastep" data-depth="2"><a href="#_5-macchina-a-stati--sagastep">5. Macchina a stati — SagaStep</a><ol><li data-target-id="stepstocompensate" data-depth="3"><a href="#stepstocompensate">steps_to_compensate()</a></li></ol></li><li data-target-id="_6-rete-di-petri--ciclo-di-vita-della-saga" data-depth="2"><a href="#_6-rete-di-petri--ciclo-di-vita-della-saga">6. Rete di Petri — Ciclo di vita della SAGA</a></li><li data-target-id="_7-diagramma-di-sequenza--happy-path" data-depth="2"><a href="#_7-diagramma-di-sequenza--happy-path">7. Diagramma di sequenza — Happy Path</a></li><li data-target-id="_8-diagramma-di-sequenza--compensazione" data-depth="2"><a href="#_8-diagramma-di-sequenza--compensazione">8. Diagramma di sequenza — Compensazione</a></li><li data-target-id="_9-amqp--gestione-acknack-nel-consumer" data-depth="2"><a href="#_9-amqp--gestione-acknack-nel-consumer">9. AMQP — Gestione ack/nack nel consumer</a></li><li data-target-id="_10-canali-amqp-separati" data-depth="2"><a href="#_10-canali-amqp-separati">10. Canali AMQP separati</a></li><li data-target-id="_11-api-reference" data-depth="2"><a href="#_11-api-reference">11. API Reference</a><ol><li data-target-id="post-" data-depth="3"><a href="#post-">POST /</a></li><li data-target-id="get-orderidsaga-status" data-depth="3"><a href="#get-orderidsaga-status">GET /{orderId}/saga-status</a></li><li data-target-id="get-health" data-depth="3"><a href="#get-health">GET /health</a></li></ol></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><h1 class="page-break" id="order-service--documentazione-tecnica">Order Service — Documentazione Tecnica</h1><h2 id="_1-responsabilità">1. Responsabilità</h2><p>Il servizio Order è il <strong>punto di ingresso</strong> del sistema e l&rsquo;<strong>orchestratore della SAGA</strong>. Ha due compiti distinti:</p><ol><li>Ricevere richieste HTTP dall&rsquo;utente e avviare il processo di consegna.</li><li>Coordinare i tre step della SAGA reagendo agli eventi AMQP pubblicati dagli altri servizi.</li></ol><hr /><h2 id="_2-architettura-interna">2. Architettura interna</h2><figure><pre class="mermaid">graph TD
+    HTTP[&quot;HTTP Client&quot;]
+    API[&quot;api.rs\nAxum handlers&quot;]
+    SVC[&quot;service.rs\nOrderService&quot;]
+    ORCH[&quot;orchestrator.rs\nSagaOrchestrator&quot;]
+    REPO[&quot;repository.rs\nSagaRepository&quot;]
+    CONS[&quot;consumer.rs\nAMQP Consumer Task&quot;]
+    MDB[(&quot;MongoDB\norder_sagas&quot;)]
+    RMQ[[&quot;RabbitMQ&quot;]]
+
+    HTTP --&gt;|&quot;POST /\nGET /{id}/saga-status&quot;| API
+    API --&gt; SVC
+    SVC --&gt; ORCH
+    ORCH --&gt; REPO
+    REPO &lt;--&gt; MDB
+    ORCH --&gt;|publish| RMQ
+    RMQ --&gt;|consume| CONS
+    CONS --&gt; ORCH</pre></figure><hr /><h2 id="_3-modello-dati--sagastate">3. Modello dati — <span class="codespan-content"><code>SagaState</code></span></h2><pre><code>┌──────────────────────────────────────────┐
+│               SagaState                  │
+├──────────────────────────────────────────┤
+│ _id (saga_id)     : String               │  &larr; chiave MongoDB
+│ order_id          : String               │
+│ status            : SagaStatus           │
+│ current_step      : SagaStep             │
+│ completed_steps   : Vec&lt;SagaStep&gt;        │
+│ failure_reason    : Option&lt;String&gt;       │
+│ start_time        : DateTime&lt;Utc&gt;        │
+│ end_time          : Option&lt;DateTime&lt;Utc&gt;&gt;│
+├──────────────────────────────────────────┤
+│ customer_id       : String               │  &larr; dati ordine
+│ from_address      : String               │     copiati qui per
+│ to_address        : String               │     facilitare la
+│ package_weight    : f64                  │     compensazione
+│ requested_delivery_time: DateTime&lt;Utc&gt;   │     senza query extra
+│ max_delivery_time_minutes: i32           │
+├──────────────────────────────────────────┤
+│ delivery_id       : Option&lt;String&gt;       │  &larr; popolato a Step 2
+│ drone_id          : Option&lt;String&gt;       │  &larr; popolato a Step 3
+└──────────────────────────────────────────┘</code></pre><hr /><h2 id="_4-macchina-a-stati--sagastatus">4. Macchina a stati — <span class="codespan-content"><code>SagaStatus</code></span></h2><figure><pre class="mermaid">stateDiagram-v2
+    [*] --&gt; Started : start_order_saga()
+
+    Started --&gt; InProgress : mark_step_completed(OrderValidation)
+    Started --&gt; Failed : mark_failed() [peso &le; 0 o indirizzi vuoti]
+
+    InProgress --&gt; InProgress : mark_step_completed(DeliveryScheduling)
+    InProgress --&gt; Failed : mark_failed() [DeliverySchedulingFailed]
+    InProgress --&gt; Failed : mark_failed() [DroneAssignmentFailed]
+    InProgress --&gt; Completed : mark_step_completed(DroneAssignment)
+
+    Failed --&gt; Compensating : start_compensation()
+    Compensating --&gt; Compensated : mark_compensated()
+    Compensated --&gt; [*]
+    Completed --&gt; [*]</pre></figure><hr /><h2 id="_5-macchina-a-stati--sagastep">5. Macchina a stati — <span class="codespan-content"><code>SagaStep</code></span></h2><p>Gli step sono ordinati tramite <span class="codespan-content"><code>Ord</code></span> derivato. Questo permette a <span class="codespan-content"><code>steps_to_compensate()</code></span> di invertirli con un semplice <span class="codespan-content"><code>sort().reverse()</code></span>.</p><figure><pre class="mermaid">stateDiagram-v2
+    [*] --&gt; OrderValidation : nuovo ordine
+    OrderValidation --&gt; DeliveryScheduling : step 1 OK
+    DeliveryScheduling --&gt; DroneAssignment : step 2 OK
+    DroneAssignment --&gt; Completed : step 3 OK</pre></figure><h3 id="stepstocompensate"><span class="codespan-content"><code>steps_to_compensate()</code></span></h3><pre><code class="language-rust">// Se completed_steps = [OrderValidation, DeliveryScheduling]
+// &rarr; sort()    = [OrderValidation, DeliveryScheduling]
+// &rarr; reverse() = [DeliveryScheduling, OrderValidation]
+// Compensazione: prima annulla Delivery, poi Order</code></pre><hr /><h2 id="_6-rete-di-petri--ciclo-di-vita-della-saga">6. Rete di Petri — Ciclo di vita della SAGA</h2><p>Notazione: <strong>○</strong> = posto (stato), <strong>▬</strong> = transizione (evento), <strong>●</strong> = token (stato corrente)</p><figure><pre class="mermaid">flowchart LR
+    P0((&quot;● p0\nOrdine\nricevuto&quot;))
+    T0[&quot;t0: valida\nordine&quot;]
+    P1((&quot;p1\nOrdine\nvalidato&quot;))
+    P_ERR1((&quot;p_err1\nErrore\nvalidazione&quot;))
+    T1[&quot;t1: invia a\nDelivery&quot;]
+    P2((&quot;p2\nIn attesa\nDeliveryScheduled&quot;))
+    T2[&quot;t2: DeliveryScheduled\nricevuto&quot;]
+    P3((&quot;p3\nDelivery\nschedulata&quot;))
+    P_ERR2((&quot;p_err2\nErrore\nscheduling&quot;))
+    T3[&quot;t3: DroneAssigned\nricevuto&quot;]
+    P4((&quot;p4\nSAGA\ncompletata&quot;))
+    P_ERR3((&quot;p_err3\nErrore\nassegnazione&quot;))
+    T_COMP[&quot;t_comp:\ncompensa&quot;]
+    P_COMP((&quot;p_comp\nCompensato&quot;))
+
+    P0 --&gt; T0
+    T0 --&gt;|&quot;peso &gt; 0\nindirizzi OK&quot;| P1
+    T0 --&gt;|&quot;dati non\nvalidi&quot;| P_ERR1
+    P1 --&gt; T1
+    T1 --&gt; P2
+    P2 --&gt;|&quot;saga.delivery_scheduled&quot;| T2
+    P2 --&gt;|&quot;saga.delivery_scheduling_failed&quot;| P_ERR2
+    T2 --&gt; P3
+    P3 --&gt;|&quot;saga.drone_assigned&quot;| T3
+    P3 --&gt;|&quot;saga.drone_assignment_failed&quot;| P_ERR3
+    T3 --&gt; P4
+    P_ERR2 --&gt; T_COMP
+    P_ERR3 --&gt; T_COMP
+    T_COMP --&gt; P_COMP</pre></figure><hr /><h2 id="_7-diagramma-di-sequenza--happy-path">7. Diagramma di sequenza — Happy Path</h2><figure><pre class="mermaid">sequenceDiagram
+    actor Client
+    participant API as api.rs
+    participant SVC as service.rs
+    participant ORCH as orchestrator.rs
+    participant REPO as repository.rs
+    participant RMQ as RabbitMQ
+    participant CONS as consumer.rs
+
+    Client-&gt;&gt;API: POST / {customer_id, from, to, weight, time, max_minutes}
+    API-&gt;&gt;SVC: create_order(...)
+    SVC-&gt;&gt;SVC: order_id = Uuid::new_v4()
+    SVC-&gt;&gt;ORCH: start_order_saga(order_id, ...)
+    ORCH-&gt;&gt;ORCH: saga_id = Uuid::new_v4()
+    ORCH-&gt;&gt;ORCH: SagaState::new(STARTED, step=OrderValidation)
+    ORCH-&gt;&gt;REPO: save(saga) [upsert]
+    ORCH-&gt;&gt;ORCH: validate_order()
+    Note over ORCH: Controlli sincroni: peso &gt; 0, indirizzi non vuoti
+    ORCH-&gt;&gt;REPO: save(saga) [step=DeliveryScheduling, IN_PROGRESS]
+    ORCH-&gt;&gt;RMQ: publish order_queue (OrderMessage)
+    ORCH--&gt;&gt;SVC: Ok(saga_id)
+    SVC--&gt;&gt;API: Ok(OrderResponse)
+    API--&gt;&gt;Client: 201 {order_id, saga_id, status: &quot;SAGA_STARTED&quot;}
+
+    Note over CONS,RMQ: Asincrono &ndash; dopo la risposta HTTP
+    RMQ--&gt;&gt;CONS: DeliveryScheduled event
+    CONS-&gt;&gt;ORCH: handle_saga_event(DeliveryScheduled)
+    ORCH-&gt;&gt;REPO: find_by_order_id &rarr; saga
+    ORCH-&gt;&gt;REPO: save(saga) [delivery_id set, step=DroneAssignment]
+
+    RMQ--&gt;&gt;CONS: DroneAssigned event
+    CONS-&gt;&gt;ORCH: handle_saga_event(DroneAssigned)
+    ORCH-&gt;&gt;REPO: find_by_order_id &rarr; saga
+    ORCH-&gt;&gt;REPO: save(saga) [drone_id set, step=Completed, COMPLETED]
+    ORCH-&gt;&gt;RMQ: publish saga.completed</pre></figure><hr /><h2 id="_8-diagramma-di-sequenza--compensazione">8. Diagramma di sequenza — Compensazione</h2><figure><pre class="mermaid">sequenceDiagram
+    Note over CONS: DroneAssignmentFailed ricevuto (step 3)
+    CONS-&gt;&gt;ORCH: handle_saga_event(DroneAssignmentFailed)
+    ORCH-&gt;&gt;REPO: find_by_order_id &rarr; saga
+    ORCH-&gt;&gt;REPO: save(saga) [FAILED]
+    ORCH-&gt;&gt;REPO: save(saga) [COMPENSATING]
+
+    Note over ORCH: steps_to_compensate() = [DroneAssignment, DeliveryScheduling, OrderValidation]
+
+    ORCH-&gt;&gt;RMQ: publish saga.compensate.drone (CompensateDrone)
+    ORCH-&gt;&gt;RMQ: publish saga.compensate_delivery (CompensateDelivery)
+    ORCH-&gt;&gt;RMQ: publish saga.compensate_order (CompensateOrder)
+
+    Note over ORCH: Solo dopo tutti i publish con successo (?)
+    ORCH-&gt;&gt;REPO: save(saga) [COMPENSATED]
+    ORCH-&gt;&gt;RMQ: publish saga.cancelled (OrderCancelled)</pre></figure><hr /><h2 id="_9-amqp--gestione-acknack-nel-consumer">9. AMQP — Gestione ack/nack nel consumer</h2><figure><pre class="mermaid">flowchart TD
+    A[&quot;Messaggio ricevuto\nda saga_events_queue&quot;]
+    B{Deserializzazione\nSagaEvent}
+    C[&quot;handle_saga_event()&quot;]
+    D{Esito}
+    E[&quot;delivery.ack()&quot;]
+    F[&quot;delivery.nack(requeue=false)\n+ continue&quot;]
+    G[&quot;delivery.nack(requeue=false)\n+ continue&quot;]
+
+    A --&gt; B
+    B --&gt;|&quot;Ok(event)&quot;| C
+    B --&gt;|&quot;Err: malformato&quot;| G
+    C --&gt; D
+    D --&gt;|&quot;Ok(())&quot;| E
+    D --&gt;|&quot;Err: errore handler&quot;| F
+
+    style G fill:#fdd
+    style F fill:#fdd
+    style E fill:#dfd</pre></figure><p><strong>Perché <span class="codespan-content"><code>requeue: false</code></span> su entrambi gli errori?</strong>
+Un messaggio malformato non diventerà mai valido riprocessandolo. Un errore nell&rsquo;handler (es. MongoDB non raggiungibile) è invece transiente: in questo caso si potrebbe volere <span class="codespan-content"><code>requeue: true</code></span>, ma si rischia un loop di retry su bug del codice. La scelta conservativa è <span class="codespan-content"><code>requeue: false</code></span> + log dell&rsquo;errore.</p><hr /><h2 id="_10-canali-amqp-separati">10. Canali AMQP separati</h2><pre><code>main.rs
+├── publish_channel  &rarr;  SagaOrchestrator (pubblica eventi e messaggi)
+└── consume_channel  &rarr;  consumer::start()  (consuma saga_events_queue)</code></pre><p>Tenere publish e consume su canali separati evita che la back-pressure del consumer (es. messaggi in accumulo) blocchi la capacità di pubblicare. In <span class="codespan-content"><code>lapin</code></span>, un <span class="codespan-content"><code>Channel</code></span> è una sessione AMQP 0-9-1 multiplexata sulla stessa connessione TCP.</p><hr /><h2 id="_11-api-reference">11. API Reference</h2><h3 id="post-"><span class="codespan-content"><code>POST /</code></span></h3><p>Crea un nuovo ordine e avvia la SAGA.</p><p><strong>Request body:</strong></p><pre><code class="language-json">{
+  &quot;customer_id&quot;: &quot;cust-123&quot;,
+  &quot;from_address&quot;: &quot;Via Roma 1, Milano&quot;,
+  &quot;to_address&quot;: &quot;Via Dante 5, Milano&quot;,
+  &quot;package_weight&quot;: 2.5,
+  &quot;requested_delivery_time&quot;: &quot;2026-04-10T14:00:00Z&quot;,
+  &quot;max_delivery_time_minutes&quot;: 30
+}</code></pre><p><span class="codespan-content"><code>requested_delivery_time</code></span> è opzionale: default <span class="codespan-content"><code>now + 2h</code></span>.</p><p><strong>Response <span class="codespan-content"><code>201</code></span>:</strong></p><pre><code class="language-json">{
+  &quot;order_id&quot;: &quot;550e8400-...&quot;,
+  &quot;saga_id&quot;:  &quot;f47ac10b-...&quot;,
+  &quot;status&quot;:   &quot;SAGA_STARTED&quot;
+}</code></pre><hr /><h3 id="get-orderidsaga-status"><span class="codespan-content"><code>GET /{orderId}/saga-status</code></span></h3><p>Restituisce lo stato corrente della SAGA per un ordine.</p><p><strong>Response <span class="codespan-content"><code>200</code></span>:</strong></p><pre><code class="language-json">{
+  &quot;saga_id&quot;:         &quot;f47ac10b-...&quot;,
+  &quot;order_id&quot;:        &quot;550e8400-...&quot;,
+  &quot;status&quot;:          &quot;COMPLETED&quot;,
+  &quot;current_step&quot;:    &quot;Completed&quot;,
+  &quot;completed_steps&quot;: [&quot;OrderValidation&quot;, &quot;DeliveryScheduling&quot;, &quot;DroneAssignment&quot;],
+  &quot;failure_reason&quot;:  null,
+  &quot;start_time&quot;:      &quot;2026-04-10T14:00:00Z&quot;,
+  &quot;end_time&quot;:        &quot;2026-04-10T14:01:05Z&quot;
+}</code></pre><hr /><h3 id="get-health"><span class="codespan-content"><code>GET /health</code></span></h3><p><strong>Response <span class="codespan-content"><code>200</code></span>:</strong> <span class="codespan-content"><code>Order Service is running</code></span></p>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

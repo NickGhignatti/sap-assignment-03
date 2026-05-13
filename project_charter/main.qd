@@ -1,0 +1,157 @@
+.docname {pos}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Project Charter
+
+> Documento formale che autorizza l'esistenza del progetto e conferisce al Project Manager
+> l'autorità di allocare le risorse necessarie.
+
+---
+
+| Campo                       | Valore                                             |
+|-----------------------------|----------------------------------------------------|
+| **Nome progetto**           | DroneFlow — Servizio di Consegna Pacchi con Droni  |
+| **Project No.**             | SAP-02                                             |
+| **Project Manager**         | (studente)                                         |
+| **Sponsor / Committente**   | Corso di Project Management — Università di Bologna|
+| **Data di emissione**       | Aprile 2026                                        |
+| **Data di fine prevista**   | Giugno 2026                                        |
+| **Budget stimato**          | € 0 (progetto accademico)                          |
+
+---
+
+## 1. Giustificazione del progetto
+
+Il progetto nasce dall'esigenza di dimostrare la realizzabilità di un servizio di consegna
+autonomo basato su droni. L'utente finale deve poter richiedere la spedizione di un pacco
+da un punto A a un punto B, in un orario definito e con una garanzia sul tempo massimo di
+consegna, e monitorarne l'avanzamento in tempo reale — senza bisogno di intermediari umani.
+
+Il progetto ha valore accademico in quanto dimostra l'applicazione integrata di principi
+di project management e di progettazione software a un caso d'uso reale e rilevante per
+il mercato della logistica.
+
+---
+
+## 2. Obiettivi misurabili e criteri di successo
+
+Il progetto è considerato un successo se, alla data di consegna:
+
+1. Un utente può effettuare una richiesta di consegna tramite il sistema e ricevere
+   conferma della presa in carico con un identificativo di tracciamento.
+2. La richiesta viene elaborata automaticamente — dalla validazione all'assegnazione del
+   drone — senza alcun intervento manuale.
+3. Lo stato della consegna (in attesa, in viaggio, consegnato) è consultabile in tempo
+   reale tramite l'identificativo ricevuto.
+4. In caso di richiesta non soddisfabile, l'utente riceve un messaggio di annullamento
+   chiaro e il sistema torna in uno stato coerente.
+5. Ogni consegna produce uno storico permanente di eventi consultabile.
+6. La documentazione di project management è completa, in italiano, e coerente con la
+   proposta di progetto originale.
+
+---
+
+## 3. Requisiti di alto livello
+
+| ID   | Requisito                                                                                  | Priorità |
+|------|--------------------------------------------------------------------------------------------|----------|
+| R-01 | L'utente può richiedere la consegna di un pacco specificando origine, destinazione, peso, orario e tempo massimo | Must |
+| R-02 | Il sistema valida automaticamente la richiesta prima di accettarla                         | Must     |
+| R-03 | Ogni richiesta valida viene assegnata automaticamente a un drone disponibile               | Must     |
+| R-04 | L'utente può seguire lo stato della consegna in tempo reale                                | Must     |
+| R-05 | Il sistema gestisce i fallimenti annullando le operazioni parziali in modo ordinato        | Must     |
+| R-06 | Lo storico completo di ogni consegna è persistito e consultabile                           | Must     |
+| R-07 | Il sistema è in grado di gestire più richieste simultaneamente senza degrado               | Should   |
+| R-08 | L'utente riceve notifica al completamento della consegna                                   | Should   |
+| R-09 | Gli operatori del servizio possono consultare lo stato di tutte le consegne attive         | Could    |
+
+---
+
+## 4. Confini del progetto
+
+### Incluso (In Scope)
+- Interfaccia per la creazione di richieste di consegna (API).
+- Validazione automatica delle richieste (peso, indirizzi, finestra temporale).
+- Assegnazione automatica del drone disponibile.
+- Tracciamento in tempo reale dello stato della consegna.
+- Gestione automatica dei fallimenti con annullamento ordinato delle operazioni.
+- Storico permanente degli eventi di ogni consegna.
+- Documentazione PM (7 documenti).
+
+### Escluso (Out of Scope)
+- Gestione dei pagamenti e fatturazione.
+- Autenticazione e profilazione degli utenti.
+- Interfaccia grafica web o mobile (solo API nel prototipo).
+- Integrazione con hardware droni fisici (droni simulati nel prototipo).
+- Pianificazione percorso ottimale (routing geografico reale).
+- Gestione di condizioni atmosferiche o ostacoli fisici.
+- Notifiche push / SMS / email all'utente.
+- Deploy su infrastruttura cloud pubblica.
+
+---
+
+## 5. Rischi di alto livello
+
+| ID   | Rischio                                                        | Probabilità | Impatto |
+|------|----------------------------------------------------------------|-------------|---------|
+| RK-1 | Nessun drone disponibile per soddisfare la richiesta           | Media       | Medio   |
+| RK-2 | Dati di richiesta errati o incompleti inviati dall'utente      | Alta        | Basso   |
+| RK-3 | Perdita di comunicazione con un drone in volo                  | Bassa       | Alto    |
+| RK-4 | Scope creep durante lo sviluppo                                | Media       | Alto    |
+| RK-5 | Complessità tecnica sottostimata (coordinamento servizi distribuiti) | Media  | Medio   |
+
+---
+
+## 6. Milestone di progetto
+
+| Milestone                                                    | Data stimata  |
+|--------------------------------------------------------------|---------------|
+| M1 — Requisiti di servizio definiti e approvati              | Settimana 1   |
+| M2 — Architettura di sistema decisa (vincoli tecnici)        | Settimana 2   |
+| M3 — Ricezione e validazione richiesta funzionante           | Settimana 4   |
+| M4 — Assegnazione automatica drone funzionante               | Settimana 6   |
+| M5 — Tracciamento stato consegna funzionante                 | Settimana 8   |
+| M6 — Gestione fallimenti e annullamento ordinato             | Settimana 9   |
+| M7 — Storico consegne consultabile                           | Settimana 10  |
+| M8 — Test end-to-end (happy path + fallimento)               | Settimana 11  |
+| M9 — Documentazione PM completa                              | Settimana 11  |
+| M10 — Revisione finale e consegna                            | Settimana 12  |
+
+---
+
+## 7. Budget
+
+| Voce                       | Costo stimato                   |
+|----------------------------|---------------------------------|
+| Ore di sviluppo            | ~120 ore (stima)                |
+| Infrastruttura             | € 0 (ambiente locale)           |
+| Licenze software           | € 0 (tutto open source)         |
+| **Totale**                 | **€ 0 — progetto accademico**   |
+
+---
+
+## 8. Stakeholder
+
+| Stakeholder              | Ruolo                             | Interesse principale        |
+|--------------------------|-----------------------------------|-----------------------------|
+| Docente del corso        | Committente / Sponsor             | Valutazione accademica      |
+| Studente / Team          | Project Manager + Developer       | Apprendimento e voto        |
+| Commissione d'esame      | Revisione finale                  | Qualità dell'artefatto      |
+| Utente finale (ipotetico)| Beneficiario del servizio         | Semplicità e affidabilità   |
+
+---
+
+## 9. Autorizzazione
+
+| Ruolo              | Nome                | Data      | Firma |
+|--------------------|---------------------|-----------|-------|
+| Sponsor / Docente  | Marco A. Boschetti  | _________ | _____ |
+| Project Manager    | Nicolò Ghignatti    | _________ | _____ |
