@@ -23,7 +23,7 @@ services:
       - droneflow
 
   kafka:
-    image: bitnami/kafka:3.8
+    image: confluentinc/cp-kafka:latest
     container_name: droneflow-kafka
     restart: unless-stopped
     environment:

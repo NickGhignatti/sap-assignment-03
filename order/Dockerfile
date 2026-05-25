@@ -2,6 +2,15 @@
 # cargo-chef pre-computes the dependency graph so the "cook" layer is cached
 # independently of the application source code.
 FROM rust:slim-bookworm AS chef
+# librdkafka (via rdkafka's `cmake-build` feature) is compiled from C/C++ source
+# during `cargo chef cook`, so cmake + a full C/C++ toolchain (build-essential
+# provides gcc, g++, and make) must be available here. libcurl headers are
+# required even with -DWITH_CURL=0 because librdkafka 2.12.1 #include's
+# <curl/curl.h> unconditionally in rdkafka_conf.c.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+         cmake build-essential libcurl4-openssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 RUN cargo install cargo-chef --locked
 WORKDIR /app
 
