@@ -1,9 +1,9 @@
 //! Axum HTTP handlers for the Drone Service.
 //!
-//! All state access goes through `DroneService` – handlers are stateless.
+//! All state access goes through `DroneEventStore` – handlers are stateless.
 //! Endpoints use path parameters instead of request bodies on GET requests,
 //! which is more idiomatic REST than the original Java `@RequestBody` approach.
-use crate::service::DroneService;
+use crate::store::DroneEventStore;
 use axum::{
     Json,
     extract::{Path, State},
@@ -13,7 +13,7 @@ use axum::{
 use serde::Serialize;
 use std::sync::Arc;
 
-pub type AppState = Arc<DroneService>;
+pub type AppState = Arc<DroneEventStore>;
 
 /// Summary of a single event returned by the history endpoints.
 #[derive(Debug, Serialize)]
@@ -26,35 +26,49 @@ pub struct EventSummary {
 // GET /order/{orderId}/status
 // Returns the current in-flight status of the drone assigned to the given order.
 pub async fn get_order_status(
-    State(svc): State<AppState>,
+    State(store): State<AppState>,
     Path(order_id): Path<String>,
 ) -> impl IntoResponse {
-    // Bind the result of in_flight() to a variable so it isn't a temporary
-    let in_flight_container = svc.in_flight();
-    let map = in_flight_container.lock().unwrap();
-    match map.get(&order_id) {
-        Some(entry) => (StatusCode::OK, entry.to_string()).into_response(),
-        None => StatusCode::NOT_FOUND.into_response(),
+    match store.get_events_for_order(&order_id).await {
+        Ok(events) if !events.is_empty() => {
+            let latest = events.last().unwrap();
+            (
+                StatusCode::OK,
+                format!(
+                    "Latest event: {} at {}",
+                    latest.event_type(),
+                    latest.timestamp().to_rfc3339()
+                ),
+            )
+                .into_response()
+        }
+        Ok(_) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )
+            .into_response(),
     }
 }
 
 // GET /drone/{droneId}/events
 // Returns the full persisted event history for a drone (event sourcing log).
 pub async fn drone_events(
-    State(svc): State<AppState>,
+    State(store): State<AppState>,
     Path(drone_id): Path<String>,
 ) -> impl IntoResponse {
-    match svc.store.get_events_for_drone(&drone_id).await {
+    match store.get_events_for_drone(&drone_id).await {
         Ok(events) if !events.is_empty() => {
-            let summaries: Vec<EventSummary> = events
-                .iter()
-                .map(|e| EventSummary {
-                    event_type: e.event_type(),
-                    timestamp: e.timestamp().to_rfc3339(),
-                    version: e.version(),
-                })
-                .collect();
-            (StatusCode::OK, Json(summaries)).into_response()
+            let latest = events.last().unwrap();
+            (
+                StatusCode::OK,
+                format!(
+                    "Latest event: {} at {}",
+                    latest.event_type(),
+                    latest.timestamp().to_rfc3339()
+                ),
+            )
+                .into_response()
         }
         Ok(_) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => (
@@ -68,10 +82,10 @@ pub async fn drone_events(
 // GET /order/{orderId}/events
 // Returns all events associated with a specific order (across all drones).
 pub async fn order_events(
-    State(svc): State<AppState>,
+    State(store): State<AppState>,
     Path(order_id): Path<String>,
 ) -> impl IntoResponse {
-    match svc.store.get_events_for_order(&order_id).await {
+    match store.get_events_for_order(&order_id).await {
         Ok(events) if !events.is_empty() => {
             let summaries: Vec<EventSummary> = events
                 .iter()
@@ -96,10 +110,10 @@ pub async fn order_events(
 // Reconstructs the drone state from its event log (demonstrates Event Sourcing).
 // The result should always match the in-flight map entry for an active drone.
 pub async fn rebuild_drone(
-    State(svc): State<AppState>,
+    State(store): State<AppState>,
     Path(drone_id): Path<String>,
 ) -> impl IntoResponse {
-    match svc.store.rebuild_drone(&drone_id).await {
+    match store.rebuild_drone(&drone_id).await {
         Ok(Some(entry)) => (StatusCode::OK, entry.to_string()).into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => (

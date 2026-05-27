@@ -1,6 +1,7 @@
-use crate::service::{DroneService, SAGA_EVENTS_TOPIC};
+use std::sync::Arc;
+
+use crate::service::SAGA_EVENTS_TOPIC;
 use common::{OrderMessage, SagaEvent};
-use rand::Rng;
 use rdkafka::{
     consumer::{CommitMode, Consumer, StreamConsumer},
     message::Message,
@@ -12,7 +13,7 @@ pub const DRONE_REQUESTS_TOPIC: &str = "drone-requests";
 /// Subscribes to `drone-requests`, spawns the consumer loop, returns immediately.
 pub async fn start_order_consumer(
     consumer: StreamConsumer,
-    svc: DroneService,
+    fleet: Arc<tokio::sync::Mutex<crate::fleet::DroneFleet>>,
 ) -> anyhow::Result<()> {
     consumer.subscribe(&[DRONE_REQUESTS_TOPIC])?;
     info!("Drone order consumer subscribed to '{DRONE_REQUESTS_TOPIC}'");
@@ -31,11 +32,7 @@ pub async fn start_order_consumer(
                         Ok(order) => {
                             info!(order_id = order.order_id, "Order received by Drone Service");
 
-                            // Randomise delivery duration within the allowed window.
-                            let minutes = rand::thread_rng()
-                                .gen_range(1..=order.max_delivery_time_minutes.max(1) as u32);
-
-                            match svc.start_delivery(order, minutes).await {
+                            match fleet.lock().await.dispatch_order(order).await {
                                 Ok(_) => {
                                     // ✅ Success → commit.
                                     if let Err(e) = consumer.commit_message(&msg, CommitMode::Async)
@@ -73,7 +70,7 @@ pub async fn start_order_consumer(
 /// in application code. Non-drone events are committed immediately (skip).
 pub async fn start_compensation_consumer(
     consumer: StreamConsumer,
-    svc: DroneService,
+    fleet: Arc<tokio::sync::Mutex<crate::fleet::DroneFleet>>,
 ) -> anyhow::Result<()> {
     consumer.subscribe(&[SAGA_EVENTS_TOPIC])?;
     info!("Drone compensation consumer subscribed to '{SAGA_EVENTS_TOPIC}'");
@@ -96,7 +93,9 @@ pub async fn start_compensation_consumer(
                         }) => {
                             // This is the only event we act on.
                             warn!(drone_id, saga_id, reason, "Drone compensation requested");
-                            svc.compensate(&drone_id);
+                            if let Err(e) = fleet.lock().await.compensate(drone_id.clone()).await {
+                                error!("Compensation failed: {e}");
+                            }
                             info!(drone_id, "Drone compensation complete");
 
                             // Compensation is synchronous (no async work in compensate()),

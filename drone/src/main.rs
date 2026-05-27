@@ -1,5 +1,9 @@
+pub mod agent;
 pub mod api;
+pub mod beliefs;
 pub mod consumer;
+pub mod fleet;
+pub mod intentions;
 pub mod model;
 pub mod service;
 pub mod store;
@@ -10,10 +14,12 @@ use mongodb::Client;
 use rdkafka::ClientConfig;
 use rdkafka::consumer::StreamConsumer;
 use rdkafka::producer::FutureProducer;
-use service::DroneService;
 use std::{env, sync::Arc, time::Duration};
 use store::DroneEventStore;
+use tokio::sync::Mutex;
 use tracing::info;
+
+use crate::fleet::{DroneFleet, RoundRobinStrategy};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -28,7 +34,7 @@ async fn main() -> Result<()> {
         env::var("MONGODB_URI").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
     let mongo = Client::with_uri_str(&mongo_uri).await?;
     let db = mongo.database("drone_service");
-    let store = DroneEventStore::new(&db);
+    let store = Arc::new(DroneEventStore::new(&db));
 
     // ── Kafka ─────────────────────────────────────────────────────────────────
     let brokers = env::var("KAFKA_BROKERS").unwrap_or_else(|_| "localhost:9092".to_string());
@@ -62,21 +68,29 @@ async fn main() -> Result<()> {
         .set("enable.auto.commit", "false")
         .create()?;
 
-    // ── Wire up services ──────────────────────────────────────────────────────
-    // No topology declarations — topics are auto-created or pre-existing.
-    let svc = DroneService::new(store, producer);
+    // ── Wire up the agent fleet ───────────────────────────────────────────────
+    // Wrap store and producer in Arc so the fleet's agents can share them.
+    let producer = Arc::new(producer);
 
-    consumer::start_order_consumer(order_consumer, svc.clone()).await?;
-    consumer::start_compensation_consumer(comp_consumer, svc.clone()).await?;
+    // Fleet of 3 drone agents, round-robin assignment.
+    // Wrapped in Arc<Mutex> so it can be shared across async tasks safely.
+    let fleet = Arc::new(Mutex::new(DroneFleet::new(
+        3,
+        Arc::clone(&store),
+        Arc::clone(&producer),
+        Box::new(RoundRobinStrategy::new()),
+    )));
+
+    consumer::start_order_consumer(order_consumer, Arc::clone(&fleet)).await?;
+    consumer::start_compensation_consumer(comp_consumer, Arc::clone(&fleet)).await?;
 
     // ── Arrival scheduler ─────────────────────────────────────────────────────
-    // Unchanged: checks every 10s for drones that have reached their destination.
-    let scheduler_svc = svc.clone();
+    let scheduler_fleet = Arc::clone(&fleet);
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(10));
         loop {
             interval.tick().await;
-            if let Err(e) = scheduler_svc.settle_arrived().await {
+            if let Err(e) = scheduler_fleet.lock().await.check_arrivals().await {
                 tracing::error!("Arrival scheduler error: {e}");
             }
         }
@@ -89,7 +103,7 @@ async fn main() -> Result<()> {
         .route("/drone/{droneId}/rebuild", get(api::rebuild_drone))
         .route("/order/{orderId}/events", get(api::order_events))
         .route("/health", get(api::health))
-        .with_state(Arc::new(svc));
+        .with_state(Arc::clone(&store));
 
     let port = env::var("PORT").unwrap_or_else(|_| "8082".to_string());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
