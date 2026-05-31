@@ -17,7 +17,7 @@ The last assignment consist of 3 points:
 Current Job-Done timeline:
 - [x] Redesigning a service with an event driven architecture
 - [x] Adapt other services to interact with the redesigned one
-- [ ] Use Kafka
+- [x] Use Kafka
 - [ ] Define SLOs and SLIs 
 - [ ] K8s deploy implementation
-- [ ] Redesign a service as Agent-Based & prototype it
+- [x] Redesign a service as Agent-Based & prototype it
