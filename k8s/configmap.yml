@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: droneflow-config
+  namespace: droneflow
+data:
+  MONGO_URI: mongodb://mongodb:27017
+  KAFKA_BROKERS: kafka:9092
+  KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+  KAFKA_CLUSTERS_0_NAME: droneflow

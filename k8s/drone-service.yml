@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: drone-service
+  namespace: droneflow
+spec:
+  selector:
+    app: drone-service
+  ports:
+    - port: 8082
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drone-service
+  namespace: droneflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: drone-service
+  template:
+    metadata:
+      labels:
+        app: drone-service
+    spec:
+      containers:
+        - name: drone-service
+          # Beacuse I have imported it in k3d
+          image: drone-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+          envFrom:
+            - configMapRef:
+                name: droneflow-config
+            - secretRef:
+                name: droneflow-secret
