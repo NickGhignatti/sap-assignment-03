@@ -7,3 +7,5 @@
 
 ##! Aggiornamenti
 - [Integrazione con Kafka](kafka.qd)
+- [Drone ad Agenti (BDI)](agent.qd)
+- [Deployment Kubernetes](k8s.qd)

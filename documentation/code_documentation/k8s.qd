@@ -1,0 +1,171 @@
+.docname {Code Docs}
+.include {docs}
+
+> [NOTE!]
+> Deployment dell'intero sistema su **Kubernetes** (testato su **k3d**, un wrapper di k3s su Docker).
+> I manifest sostituiscono `docker-compose.yml` come ambiente di orchestrazione, mantenendo lo stesso contratto applicativo (variabili d'ambiente, porte, topic Kafka).
+
+# Deployment Kubernetes
+
+## 1. Manifest
+
+Tutti i manifest vivono nella cartella `k8s/` e sono raccolti nel namespace `droneflow`.
+
+| File | Risorse | Scopo |
+|---|---|---|
+| `namespace.yml` | `Namespace` | Isola tutte le risorse in `droneflow` |
+| `configmap.yml` | `ConfigMap` | Config non sensibile (broker Kafka, cluster Kafka UI) |
+| `secret.yml` | `Secret` | Credenziali MongoDB + URI di connessione |
+| `mongodb.yml` | `Service` (headless) + `StatefulSet` | Database persistente |
+| `kafka.yml` | `Service` (headless) + `Service` (ClusterIP) + `StatefulSet` | Broker Kafka KRaft |
+| `kafka-ui.yml` | `Deployment` + `Service` | UI di monitoraggio |
+| `order-service.yml` | `Deployment` + `Service` | Orchestratore SAGA |
+| `delivery-service.yml` | `Deployment` + `Service` | Consumer di delivery |
+| `drone-service.yml` | `Deployment` + `Service` | Flotta di agenti drone |
+| `ingress.yml` | `Ingress` (Traefik) | Punto d'ingresso HTTP esterno |
+
+---
+
+## 2. Topologia del cluster
+
+.mermaid
+    graph TB
+        subgraph ext["Esterno"]
+            U(["👤 Client"])
+        end
+
+        subgraph ns["namespace: droneflow"]
+            ING["Ingress (Traefik)\n/order → order-service\n/drone → drone-service"]
+
+            subgraph stateless["Deployment (stateless)"]
+                OS["order-service\n:8080"]
+                DS["delivery-service\n:8081"]
+                DRS["drone-service\n:8082"]
+                KUI["kafka-ui\n:8080"]
+            end
+
+            subgraph stateful["StatefulSet (stateful + PVC)"]
+                MDB[("mongodb-0\n:27017")]
+                K[["kafka-0\n:9092"]]
+            end
+
+            CM["ConfigMap\ndroneflow-config"]
+            SEC["Secret\ndroneflow-secret"]
+        end
+
+        U -->|"localhost:8080"| ING
+        ING --> OS
+        ING --> DRS
+
+        OS --- K
+        DS --- K
+        DRS --- K
+        KUI --- K
+        OS --- MDB
+        DRS --- MDB
+
+        CM -.->|"envFrom"| OS
+        CM -.->|"envFrom"| DS
+        CM -.->|"envFrom"| DRS
+        SEC -.->|"envFrom"| OS
+        SEC -.->|"envFrom"| DRS
+
+---
+
+## 3. Scelte di design
+
+### Deployment vs StatefulSet
+
+| Risorsa | Workload | Motivo |
+|---|---|---|
+| `StatefulSet` | MongoDB, Kafka | Necessitano storage persistente stabile (`volumeClaimTemplates`) e identità DNS stabile (`pod-0`) |
+| `Deployment` | order, delivery, drone, kafka-ui | Stateless: K8s può ricrearli/riprogrammarli liberamente |
+
+### Service headless per gli StatefulSet
+
+MongoDB e Kafka usano un **Service headless** (`clusterIP: None`): è il requisito di Kubernetes per dare a ogni pod di uno StatefulSet un nome DNS stabile. I client interni raggiungono comunque il broker tramite il nome breve del Service (`kafka:9092`, `mongodb:27017`).
+
+### ConfigMap vs Secret
+
+| Dato | Risorsa | Perché |
+|---|---|---|
+| `KAFKA_BROKERS`, config Kafka UI | ConfigMap | Non sensibile |
+| `MONGODB_URI` (con credenziali), `MONGO_USERNAME/PASSWORD` | Secret | Sensibile |
+
+I pod consumano entrambi con `envFrom`, che inietta tutte le chiavi come variabili d'ambiente in un colpo solo. Per questo le chiavi seguono la convenzione `UPPER_SNAKE_CASE` (nomi validi per env var).
+
+### Ingress
+
+Solo `order-service` e `drone-service` espongono HTTP, quindi solo loro sono instradati dall'Ingress. `delivery-service` è **event-driven puro** (consuma solo Kafka, nessuna route HTTP) e non compare nell'Ingress.
+
+---
+
+## 4. Note sul broker Kafka in KRaft su K8s
+
+A differenza di docker-compose, il broker espone un solo listener rilevante per il cluster:
+
+| Variabile | Valore |
+|---|---|
+| `KAFKA_ADVERTISED_LISTENERS` | `PLAINTEXT://kafka:9092` |
+| `KAFKA_CONTROLLER_QUORUM_VOTERS` | `1@localhost:9093` |
+| `KAFKA_PROCESS_ROLES` | `broker,controller` |
+| `CLUSTER_ID` | UUID base64url di **22 caratteri** (vincolo Confluent) |
+
+> ⚠️ I valori delle liste separate da virgola (`broker,controller`, listener map) **non devono contenere spazi**: Kafka li interpreta come stringhe letterali e fallisce l'avvio.
+
+L'errore `UnknownTopicOrPartition: saga-events` all'avvio è **benigno**: i consumer si sottoscrivono prima che il topic esista; con `KAFKA_AUTO_CREATE_TOPICS_ENABLE=true` il topic viene creato alla prima produzione.
+
+---
+
+## 5. Sequenza di deployment
+
+```powershell
+# 1. Creare il cluster (mappa localhost:8080 → Traefik :80)
+k3d cluster create droneflow --port "8080:80@loadbalancer"
+
+# 2. Build delle immagini dal ROOT del progetto (serve la crate `common`)
+docker build -t order-service:latest    -f .\order\Dockerfile    .
+docker build -t delivery-service:latest -f .\delivery\Dockerfile .
+docker build -t drone-service:latest    -f .\drone\Dockerfile    .
+
+# 3. Importare le immagini locali nel cluster k3d
+k3d image import order-service:latest delivery-service:latest drone-service:latest -c droneflow
+
+# 4. Applicare i manifest (namespace, config e secret per primi)
+kubectl apply -f k8s/namespace.yml
+kubectl apply -f k8s/configmap.yml
+kubectl apply -f k8s/secret.yml
+kubectl apply -f k8s/
+
+# 5. Verificare
+kubectl get pods -n droneflow
+```
+
+> Le immagini usano `imagePullPolicy: IfNotPresent` così K8s usa la versione importata in locale invece di cercarla su un registry remoto.
+
+---
+
+## 6. Lezioni di integrazione (compose → K8s)
+
+Il porting da docker-compose ha richiesto di allineare il **contratto delle variabili d'ambiente**: il valore deve corrispondere *esattamente* a ciò che l'applicazione legge.
+
+| Problema riscontrato | Causa | Fix |
+|---|---|---|
+| `POST /` va in timeout | L'app legge `MONGODB_URI`, la ConfigMap definiva `MONGO_URI` → fallback a `localhost` → il driver Mongo blocca su server-selection (~30s) | Rinominata la chiave in `MONGODB_URI` |
+| Connessione Mongo rifiutata | URI senza credenziali né `authSource=admin` | `mongodb://root:root@mongodb:27017/?authSource=admin` nel Secret |
+| Auth fallita dopo modifica password | Lo StatefulSet inizializza l'utente root solo su un **volume vuoto** | `kubectl delete pvc -l app=mongodb` per forzare la re-inizializzazione |
+
+> **Takeaway:** una chiave di ConfigMap che l'app non legge viene ignorata silenziosamente. In K8s la diagnosi parte sempre da `kubectl logs` e `kubectl describe pod`.
+
+---
+
+## 7. Script di test
+
+Due script PowerShell nella root verificano il deployment tramite `kubectl port-forward` (bypassano l'Ingress per evitare problemi di path-prefix):
+
+| Script | Scopo |
+|---|---|
+| `health-check.ps1` | Stato di pod/service/ingress + ping `/health` |
+| `test-k8s.ps1` | Flusso completo: crea ordine → verifica avanzamento SAGA → stato drone |
+
+> Nota PowerShell 5.1: i file `.ps1` devono restare in **ASCII puro**. Caratteri Unicode (es. `—`, box-drawing `─`) rompono il parser e causano errori fuorvianti (`missing terminator`, `missing '}'`).

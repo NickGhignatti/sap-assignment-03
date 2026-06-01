@@ -1,0 +1,170 @@
+.docname {Code Docs}
+.include {docs}
+
+> [NOTE!]
+> Riprogettazione del Drone Service secondo un approccio **agent-oriented** (modello BDI — Belief / Desire / Intention).
+> Il vecchio `DroneService` imperativo viene sostituito da una **flotta di agenti autonomi** (`DroneFleet`), ognuno dei quali ragiona sul proprio stato interno per decidere se accettare, rifiutare o completare una consegna.
+
+# Drone Service — Architettura ad Agenti (BDI)
+
+## 1. Cosa è cambiato
+
+| Aspetto | v2 (service imperativo) | v3 (agent-based) | Modificato? |
+|---|---|---|---|
+| Unità di esecuzione | `DroneService` singolo | `DroneFleet` di `DroneAgent` | ✅ |
+| Decisione di consegna | `if` sparsi nel service | `deliberate()` sulle belief | ✅ |
+| Stato del drone | `InFlightMap` condivisa | `DroneBeliefs` per agente | ✅ |
+| Selezione del drone | implicita (uno solo) | `AssignmentStrategy` (strategy pattern) | ✅ |
+| Esecuzione azioni | chiamate dirette | piano `Vec<DroneDesire>` eseguito da `execute()` | ✅ |
+| Event Sourcing su MongoDB | invariato | invariato | ⬛ |
+| Integrazione Kafka | invariata | invariata | ⬛ |
+| Modelli `DroneEvent` / `SagaEvent` | invariati | invariati | ⬛ |
+
+---
+
+## 2. Il modello BDI
+
+Il paradigma **BDI** (Belief–Desire–Intention) modella un agente autonomo con tre componenti:
+
+| Componente | Significato | Nel codice |
+|---|---|---|
+| **Belief** | Ciò che l'agente *crede* sul mondo e su sé stesso | `beliefs.rs` → `DroneBeliefs` |
+| **Desire / Intention** | L'obiettivo che l'agente decide di perseguire | `intentions.rs` → `DroneIntention` |
+| **Plan** | La sequenza di azioni atomiche per realizzare l'obiettivo | `intentions.rs` → `DroneDesire` + `plan_for()` |
+
+Il ciclo di vita dell'agente (definito nel trait `Agent` in `agent.rs`) è:
+
+```
+1. perceive()        → arriva un nuovo segnale (OrderMessage)
+2. update_beliefs()  → revisione della belief base
+3. deliberate()      → seleziona l'obiettivo attivo (DroneIntention)
+4. plan()            → mappa obiettivo → Vec<DroneDesire>
+5. execute()         → esegue ogni azione (Kafka publish / MongoDB write)
+```
+
+.mermaid
+    flowchart LR
+        P["perceive()\nOrderMessage"]
+        B["update_beliefs()\nDroneBeliefs"]
+        D["deliberate()\nDroneIntention"]
+        PL["plan()\nVec&lt;DroneDesire&gt;"]
+        E["execute()\nKafka + MongoDB"]
+
+        P --> B --> D --> PL --> E
+        E -.->|"belief revision\n(dispatched/returned)"| B
+
+---
+
+## 3. Belief base — `DroneBeliefs`
+
+Le belief sono lo stato interno *vivo* dell'agente (in memoria), distinto dal `DroneState` usato dall'API HTTP e dall'event store.
+
+| Campo | Tipo | Significato |
+|---|---|---|
+| `drone_id` | `Option<String>` | Identità del drone, assegnata quando accetta un ordine |
+| `is_available` | `bool` | Il drone crede di essere libero |
+| `current_order` | `Option<OrderMessage>` | L'ordine attualmente in carico |
+| `phase` | `AgentPhase` | `Idle` / `ExecutingDelivery` / `Returning` |
+| `can_carry_payload` | `bool` | Il peso rientra in `MAX_PAYLOAD_WEIGHT` (100 kg) |
+| `can_meet_deadline` | `bool` | La deadline è rispettabile |
+
+### Revisione delle belief (AGM)
+
+Ogni transizione produce una *nuova* belief base immutabile (pattern funzionale `self -> Self`):
+
+| Metodo | Trigger | Effetto |
+|---|---|---|
+| `from_order(order)` | nuovo ordine percepito | popola `current_order`, calcola `can_carry_payload` / `can_meet_deadline` |
+| `update_dispatched()` | evento `Dispatched` salvato | `phase = ExecutingDelivery`, fissa `dispatch_time` |
+| `update_returned()` | evento `Returned` salvato | reset completo → `Idle` disponibile |
+| `update_compensated()` | compensazione ricevuta | reset completo → `Idle` disponibile |
+
+---
+
+## 4. Deliberazione — dalle belief all'intenzione
+
+`deliberate()` è il cuore decisionale: legge le belief e sceglie un `DroneIntention`.
+
+.mermaid
+    flowchart TD
+        START{"current_order\npresente?"}
+        IDLE["DroneIntention::Idle"]
+        PAY{"can_carry_payload?"}
+        DL{"can_meet_deadline?"}
+        REFUSE["DroneIntention::RefuseDelivery\n(reason)"]
+        ACCEPT["DroneIntention::AcceptDelivery\n(order, drone_id)"]
+
+        START -->|"No"| IDLE
+        START -->|"Sì"| PAY
+        PAY -->|"No"| REFUSE
+        PAY -->|"Sì"| DL
+        DL -->|"No"| REFUSE
+        DL -->|"Sì"| ACCEPT
+
+> L'agente è **autonomo**: nessun componente esterno gli ordina di accettare.
+> È il drone stesso che, sulla base delle proprie belief, *decide* se la consegna è fattibile.
+
+---
+
+## 5. Intention → Plan → Desire
+
+Ogni `DroneIntention` (obiettivo di alto livello) viene tradotto da `plan_for()` in una sequenza di `DroneDesire` (azioni atomiche).
+
+| `DroneIntention` | Piano (`Vec<DroneDesire>`) |
+|---|---|
+| `AcceptDelivery` | `StoreCreatedEvent` → `PublishDroneAssigned` → `StoreDispatchedEvent` |
+| `RefuseDelivery` | `PublishSagaEvent(DroneAssignmentFailed)` |
+| `CompleteDelivery` | `StoreDeliveredEvent` → `StoreReturnedEvent` |
+| `Compensate` | `RecordCompensation` |
+| `Idle` | `[]` (nessuna azione) |
+
+`execute()` consuma il piano e, per ogni desire, effettua la scrittura su MongoDB (event sourcing) e/o la pubblicazione su Kafka (`saga-events`), aggiornando le belief quando serve (es. dopo `StoreDispatchedEvent` chiama `update_dispatched()`).
+
+---
+
+## 6. La flotta — `DroneFleet`
+
+`DroneFleet` gestisce un pool di `DroneAgent` e instrada gli ordini con una **strategia di assegnazione** intercambiabile (Strategy pattern).
+
+.mermaid
+    graph TB
+        ORDER["OrderMessage\n(da drone-requests)"]
+        FLEET["DroneFleet\ndispatch_order()"]
+        STRAT{"AssignmentStrategy\nselect()"}
+        A0["DroneAgent 0"]
+        A1["DroneAgent 1"]
+        A2["DroneAgent N"]
+
+        ORDER --> FLEET --> STRAT
+        STRAT -->|"idx"| A0
+        STRAT -.-> A1
+        STRAT -.-> A2
+
+### Strategie disponibili
+
+| Strategia | Comportamento |
+|---|---|
+| `FirstAvailableStrategy` | Sceglie il primo agente con `is_available == true` |
+| `RoundRobinStrategy` | Cicla tra gli agenti (`AtomicUsize`) per distribuire il carico |
+
+Se nessun agente è disponibile, `dispatch_order()` ritorna `Err("No available drones")`.
+
+### Metodi della flotta
+
+| Metodo | Ruolo |
+|---|---|
+| `dispatch_order(order)` | seleziona un agente, esegue il ciclo BDI completo |
+| `check_arrivals()` | per ogni agente con `has_arrived()`, esegue `CompleteDelivery` |
+| `compensate(drone_id)` | trova l'agente col `drone_id` e ne resetta le belief |
+
+---
+
+## 7. Mappatura sul flusso SAGA
+
+L'approccio ad agenti **non cambia** il protocollo Kafka: gli stessi topic e gli stessi `SagaEvent` di prima. Cambia solo *chi* prende le decisioni internamente al drone service.
+
+| Trigger esterno | Metodo flotta | Intention | Eventi prodotti |
+|---|---|---|---|
+| consume `drone-requests` | `dispatch_order` | `AcceptDelivery` / `RefuseDelivery` | `DroneAssigned` **o** `DroneAssignmentFailed` |
+| scheduler (ogni 10s) | `check_arrivals` | `CompleteDelivery` | *(solo store: Delivered, Returned)* |
+| consume `saga-events` `CompensateDrone` | `compensate` | `Compensate` | *(nessuno — reset belief)* |
