@@ -1,0 +1,143 @@
+.docname {Code Docs}
+.include {docs}
+
+> [NOTE!]
+> Definizione di **2 SLO** (Service Level Objective) con i relativi **SLI** (Service Level Indicator) per il caso di studio, ed estensione dell'implementazione per **misurarli** tramite Prometheus.
+> Le metriche sono esposte dall'Order Service su `/metrics` e raccolte da un server Prometheus interno al cluster.
+
+# SLO & SLI — Misurazione dei livelli di servizio
+
+## 1. Teoria — SLI, SLO, Error Budget
+
+| Termine | Cos'è | Esempio |
+|---|---|---|
+| **SLI** | *Indicatore*: una misura numerica raccolta | rapporto saga completate / saga totali |
+| **SLO** | *Obiettivo*: una soglia sull'SLI in una finestra temporale | "≥ 95% di saga completate su 30 giorni" |
+| **SLA** | *Accordo*: contratto con penali (non richiesto qui) | rimborso se disponibilità < 99% |
+
+Un buon SLI è quasi sempre un **rapporto `good / total`**, naturalmente compreso tra 0 e 1:
+
+$$ \text{SLI} = \frac{\text{eventi buoni}}{\text{eventi validi}} $$
+
+L'**error budget** è il complemento dell'SLO: `100% − SLO`. È la quantità di fallimento *ammessa* prima di dover intervenire. Per questo l'obiettivo non è mai il 100%: inseguirlo è infinitamente costoso e inutile.
+
+---
+
+## 2. I due SLO definiti
+
+> **SLO 1 — Affidabilità (availability-style).**
+> ≥ **95%** delle saga d'ordine si completa con successo su finestra mobile di 30 giorni.
+> **SLI:** `completed / (completed + failed + compensated)`
+> **Error budget:** 5% delle saga può fallire o essere compensata.
+
+> **SLO 2 — Latenza.**
+> ≥ **90%** delle saga si completa entro **15 secondi**.
+> **SLI:** `bucket{le="15.0"} / count`
+> **Error budget:** 10% può eccedere i 15s (copre la coda di cold-start).
+
+> La scelta di queste due coppie copre entrambi gli archetipi fondamentali di SLI: **disponibilità** (SLO 1) e **latenza** (SLO 2).
+
+---
+
+## 3. Strumentazione nel codice
+
+Le metriche vivono in `order/src/orchestrator.rs`, nella struct `SagaMetrics`, registrate in un `prometheus::Registry` creato in `main.rs`.
+
+| Metrica | Tipo Prometheus | Incrementata in |
+|---|---|---|
+| `order_saga_started_total` | Counter | `start_order_saga()` |
+| `order_saga_completed_total` | Counter | `complete_saga()` |
+| `order_saga_failed_total` | Counter | `handle_*_failure` / `on_*_failed` |
+| `order_saga_compensated_total` | Counter | `compensate_saga()` |
+| `order_saga_duration_seconds` | Histogram | `complete_saga()` (`.observe()`) |
+
+L'istogramma usa bucket espliciti che **straddleano** la soglia SLO di 15s:
+
+```
+buckets = [1.0, 2.5, 5.0, 10.0, 15.0, 30.0]
+```
+
+> Il bucket `15.0` è obbligatorio: l'SLI di latenza si legge direttamente da `bucket{le="15.0"} / count`.
+
+Un Histogram si espande in più serie temporali: una `_bucket` per soglia (cumulative, `le` = "less than or equal"), più `_sum` e `_count`. Il bucket `+Inf` coincide sempre con `_count`.
+
+---
+
+## 4. Esposizione — endpoint `/metrics`
+
+L'handler `api::metrics` raccoglie il registry e lo serializza nel formato testuale Prometheus:
+
+```rust
+let metric_families = registry.gather();
+let mut buffer = Vec::new();
+TextEncoder::new().encode(&metric_families, &mut buffer).unwrap();
+([(header::CONTENT_TYPE, "text/plain; version=0.0.4")], buffer)
+```
+
+La rotta è montata con uno stato dedicato (il `Registry`) e unita al router principale via `.merge()`, perché lo stato delle altre rotte è `Arc<OrderService>`.
+
+---
+
+## 5. Raccolta — deployment di Prometheus
+
+Prometheus gira nel cluster (`k8s/prometheus.yml`) con configurazione **statica**: ConfigMap montata come file + Deployment + Service.
+
+.mermaid
+    graph LR
+        subgraph ns["namespace: droneflow"]
+            OS["order-service:8080\n/metrics"]
+            P["prometheus:9090\n(scrape ogni 15s)"]
+            CM["ConfigMap\nprometheus-config\n(prometheus.yml)"]
+        end
+        CM -->|"volume mount\n/etc/prometheus"| P
+        P -->|"scrape"| OS
+
+La ConfigMap è montata come **volume** (non come env var): ogni chiave diventa un file. La chiave `prometheus.yml` appare quindi in `/etc/prometheus/prometheus.yml`, dove l'immagine `prom/prometheus` la legge di default.
+
+```yaml
+scrape_configs:
+  - job_name: "order-service"
+    static_configs:
+      - targets: ["order-service:8080"]   # DNS interno del Service
+```
+
+---
+
+## 6. Query PromQL degli SLI
+
+### SLI 1 — Saga success rate
+```promql
+order_saga_completed_total
+  / (order_saga_completed_total + order_saga_failed_total + order_saga_compensated_total)
+```
+
+### SLI 2 — Frazione di saga sotto i 15s
+```promql
+order_saga_duration_seconds_bucket{le="15.0"}
+  / ignoring(le) order_saga_duration_seconds_count
+```
+
+### Latenza p95 (diagnostica)
+```promql
+histogram_quantile(0.95, rate(order_saga_duration_seconds_bucket[5m]))
+```
+
+### Due insidie PromQL incontrate
+
+| Insidia | Sintomo | Causa | Fix |
+|---|---|---|---|
+| **Vector matching** | divisione → risultato vuoto | `_bucket` ha la label extra `le`, `_count` no → nessun match | `/ ignoring(le)` |
+| **`le` è una stringa** | `bucket{le="15"}` → vuoto | la crate Rust serializza i bucket float con il decimale: `"15.0"` | usare `le="15.0"` |
+
+> `histogram_quantile(..., rate(...[5m]))` restituisce `NaN` se non ci sono osservazioni negli ultimi 5 minuti: il rate è 0 su tutti i bucket. È atteso in assenza di traffico recente, non un errore.
+
+---
+
+## 7. Pipeline completa
+
+```
+codice Rust  (.inc() / .observe())
+  → endpoint /metrics  (formato esposizione Prometheus)
+    → Prometheus  (scrape order-service:8080 ogni 15s)
+      → PromQL  (calcola gli SLI, confrontati con gli SLO)
+```

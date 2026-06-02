@@ -18,6 +18,6 @@ Current Job-Done timeline:
 - [x] Redesigning a service with an event driven architecture
 - [x] Adapt other services to interact with the redesigned one
 - [x] Use Kafka
-- [ ] Define SLOs and SLIs 
-- [ ] K8s deploy implementation
+- [x] Define SLOs and SLIs 
+- [x] K8s deploy implementation
 - [x] Redesign a service as Agent-Based & prototype it

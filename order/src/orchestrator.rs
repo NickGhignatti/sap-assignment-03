@@ -5,7 +5,7 @@ use crate::{
 use anyhow::Result;
 use chrono::Utc;
 use common::{OrderMessage, SagaEvent};
-use prometheus::{IntCounter, Registry};
+use prometheus::{Histogram, HistogramOpts, IntCounter, Registry};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
 use std::{sync::Arc, time::Duration};
@@ -23,6 +23,7 @@ pub struct SagaMetrics {
     pub completed: IntCounter,
     pub failed: IntCounter,
     pub compensated: IntCounter,
+    pub duration_seconds: Histogram,
 }
 
 impl SagaMetrics {
@@ -38,11 +39,23 @@ impl SagaMetrics {
         let compensated =
             IntCounter::new("order_saga_compensated_total", "Number of saga compensated").unwrap();
         let _ = registry.register(Box::new(compensated.clone()));
+        let duration_seconds = Histogram::with_opts(
+            HistogramOpts::new(
+                "order_saga_duration_seconds",
+                "Saga end-to-end duration in seconds",
+            )
+            .buckets(vec![1.0, 2.5, 5.0, 10.0, 15.0, 30.0]),
+        )
+        .unwrap();
+        let _ = registry
+            .register(Box::new(duration_seconds.clone()))
+            .unwrap();
         Self {
             started,
             completed,
             failed,
             compensated,
+            duration_seconds,
         }
     }
 }
@@ -201,6 +214,10 @@ impl SagaOrchestrator {
         saga.end_time = Some(Utc::now());
         self.repo.save(&saga).await?;
         self.metrics.completed.inc();
+        let elapsed = saga.end_time.unwrap() - saga.start_time;
+        self.metrics
+            .duration_seconds
+            .observe(elapsed.num_milliseconds() as f64 / 1_000.0);
 
         let event = SagaEvent::OrderCompleted {
             saga_id: saga.saga_id.clone(),
