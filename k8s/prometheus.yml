@@ -22,6 +22,9 @@ data:
       - job_name: "order-service" # arbitrary label for this group of targets
         static_configs:
           - targets: ["order-service:8080"] # K8s Service DNS name + port
+      - job_name: "drone-service"
+        static_configs:
+          - targets: ["drone-service:8082"]
 ---
 apiVersion: apps/v1
 kind: Deployment

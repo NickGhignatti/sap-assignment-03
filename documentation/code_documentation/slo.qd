@@ -37,6 +37,20 @@ L'**error budget** è il complemento dell'SLO: `100% − SLO`. È la quantità d
 
 > La scelta di queste due coppie copre entrambi gli archetipi fondamentali di SLI: **disponibilità** (SLO 1) e **latenza** (SLO 2).
 
+### SLO aggiuntivi (estensione)
+
+Oltre ai due richiesti, sono strumentati due SLI ulteriori:
+
+> **SLO 3 — Disponibilità HTTP.**
+> ≥ **99%** delle risposte HTTP dell'Order Service non è 5xx.
+> **SLI:** `1 − (5xx / totale)` — i 4xx (es. `422`) **non** contano come fallimento del servizio.
+> *Misurato da un middleware Axum (`http_metrics.rs`) che conta ogni risposta per status code.*
+
+> **SLO 4 — Successo di assegnazione drone.**
+> ≥ **90%** delle richieste di consegna è accettata dalla flotta.
+> **SLI:** `assigned / (assigned + refused)`
+> *Incrementato in `DroneFleet::dispatch_order` in base alla decisione `deliberate()` dell'agente; il caso "nessun drone disponibile" conta come rifiuto.*
+
 ---
 
 ## 3. Strumentazione nel codice
@@ -50,6 +64,9 @@ Le metriche vivono in `order/src/orchestrator.rs`, nella struct `SagaMetrics`, r
 | `order_saga_failed_total` | Counter | `handle_*_failure` / `on_*_failed` |
 | `order_saga_compensated_total` | Counter | `compensate_saga()` |
 | `order_saga_duration_seconds` | Histogram | `complete_saga()` (`.observe()`) |
+| `http_requests_total{status}` | CounterVec | middleware `track_metrics` (Order Service) |
+| `drone_assignment_assigned_total` | Counter | `DroneFleet::dispatch_order` (Drone Service) |
+| `drone_assignment_refused_total` | Counter | `DroneFleet::dispatch_order` (Drone Service) |
 
 L'istogramma usa bucket espliciti che **straddleano** la soglia SLO di 15s:
 
@@ -99,6 +116,9 @@ scrape_configs:
   - job_name: "order-service"
     static_configs:
       - targets: ["order-service:8080"]   # DNS interno del Service
+  - job_name: "drone-service"
+    static_configs:
+      - targets: ["drone-service:8082"]
 ```
 
 ---
@@ -117,6 +137,18 @@ order_saga_duration_seconds_bucket{le="15.0"}
   / ignoring(le) order_saga_duration_seconds_count
 ```
 
+### SLI 3 — Disponibilità HTTP (non-5xx)
+```promql
+1 - (sum(http_requests_total{status=~"5.."}) or vector(0)) / sum(http_requests_total)
+```
+> `or vector(0)` evita un risultato vuoto quando non ci sono ancora risposte 5xx.
+
+### SLI 4 — Successo di assegnazione drone
+```promql
+drone_assignment_assigned_total
+  / (drone_assignment_assigned_total + drone_assignment_refused_total)
+```
+
 ### Latenza p95 (diagnostica)
 ```promql
 histogram_quantile(0.95, rate(order_saga_duration_seconds_bucket[5m]))
@@ -133,7 +165,20 @@ histogram_quantile(0.95, rate(order_saga_duration_seconds_bucket[5m]))
 
 ---
 
-## 7. Pipeline completa
+## 7. Report automatico degli SLO
+
+Lo script `generate-slo-report.ps1` (root del progetto) interroga Prometheus per ogni SLI, lo confronta con il target dello SLO, calcola l'**error budget consumato** e genera un report Markdown in `reports/`.
+
+```powershell
+.\generate-slo-report.ps1
+# -> reports/slo-report-<timestamp>.md  +  reports/slo-report-latest.md
+```
+
+Il report contiene: tabella di compliance (target vs misurato vs stato vs budget), snapshot delle metriche grezze, e le query PromQL usate. L'error budget consumato è `(1 − misurato) / (1 − target)`: oltre il 100% lo SLO è violato.
+
+---
+
+## 8. Pipeline completa
 
 ```
 codice Rust  (.inc() / .observe())

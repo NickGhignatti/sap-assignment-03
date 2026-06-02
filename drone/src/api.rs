@@ -7,13 +7,27 @@ use crate::store::DroneEventStore;
 use axum::{
     Json,
     extract::{Path, State},
-    http::StatusCode,
+    http::{StatusCode, header},
     response::IntoResponse,
 };
+use prometheus::{Encoder, Registry, TextEncoder};
 use serde::Serialize;
 use std::sync::Arc;
 
 pub type AppState = Arc<DroneEventStore>;
+
+// GET /metrics — Prometheus exposition endpoint.
+pub async fn metrics(State(registry): State<Registry>) -> impl IntoResponse {
+    let metric_families = registry.gather();
+    let mut buffer = Vec::new();
+    TextEncoder::new()
+        .encode(&metric_families, &mut buffer)
+        .unwrap();
+    (
+        [(header::CONTENT_TYPE, "text/plain; version=0.0.4")],
+        buffer,
+    )
+}
 
 /// Summary of a single event returned by the history endpoints.
 #[derive(Debug, Serialize)]

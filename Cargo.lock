@@ -836,6 +836,7 @@ dependencies = [
  "common",
  "futures",
  "mongodb",
+ "prometheus",
  "rand 0.8.6",
  "rdkafka",
  "serde",

@@ -11,6 +11,7 @@ use tracing::info;
 use crate::{
     agent::{Agent, DroneAgent},
     intentions::DroneIntention,
+    metrics::DroneMetrics,
     store::DroneEventStore,
 };
 
@@ -58,6 +59,7 @@ impl AssignmentStrategy for RoundRobinStrategy {
 pub struct DroneFleet {
     agents: Vec<DroneAgent>,
     strategy: Box<dyn AssignmentStrategy>,
+    metrics: Arc<DroneMetrics>,
 }
 
 impl DroneFleet {
@@ -66,21 +68,36 @@ impl DroneFleet {
         store: Arc<DroneEventStore>,
         producer: Arc<FutureProducer>,
         strategy: Box<dyn AssignmentStrategy>,
+        metrics: Arc<DroneMetrics>,
     ) -> Self {
         let agents = (0..size)
             .map(|_| DroneAgent::new(Arc::clone(&store), Arc::clone(&producer)))
             .collect();
         info!(size, "DroneFleet initialised");
-        Self { agents, strategy }
+        Self {
+            agents,
+            strategy,
+            metrics,
+        }
     }
 
     pub async fn dispatch_order(&mut self, order: OrderMessage) -> Result<()> {
         let Some(idx) = self.strategy.select(&self.agents) else {
+            // No idle drone = the fleet cannot serve this delivery → a refusal.
+            self.metrics.refused.inc();
             return Err(anyhow::anyhow!("No available drones"));
         };
 
         self.agents[idx].update_beliefs(order);
         let goal = self.agents[idx].deliberate();
+
+        // SLI #4: count the assignment outcome decided by the agent.
+        match &goal {
+            DroneIntention::AcceptDelivery { .. } => self.metrics.assigned.inc(),
+            DroneIntention::RefuseDelivery { .. } => self.metrics.refused.inc(),
+            _ => {}
+        }
+
         let plan = self.agents[idx].plan(goal);
         self.agents[idx].execute(plan).await?;
         Ok(())

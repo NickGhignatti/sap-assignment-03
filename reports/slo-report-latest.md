@@ -1,0 +1,52 @@
+﻿# SLO Report - Shipping on the Air
+
+_Generated: 2026-06-02 17:29:05_
+
+Snapshot of every Service Level Indicator measured by Prometheus, compared against its Service Level Objective.
+
+## SLO compliance
+
+| SLO | Indicator | Type | Target | Measured | Status | Error budget used |
+|-----|-----------|------|--------|----------|--------|-------------------|
+| SLO-1 | Saga success rate | Availability | 95.00% | 100.00% | MET | 0% |
+| SLO-2 | Saga completion < 15s | Latency | 90.00% | 0.00% | BREACHED | 999% |
+| SLO-3 | HTTP availability (non-5xx) | Availability | 99.00% | 100.00% | MET | 0% |
+| SLO-4 | Drone assignment success | Availability | 90.00% | 60.00% | BREACHED | 400% |
+
+> Error budget used = (1 - measured) / (1 - target). Above 100% means the objective is breached.
+
+## Raw metric snapshot
+
+| Metric | Value |
+|--------|-------|
+| `order_saga_started_total` | 4 |
+| `order_saga_completed_total` | 3 |
+| `order_saga_failed_total` | 0 |
+| `order_saga_compensated_total` | 0 |
+| `order_saga_duration_seconds_count` | 3 |
+| `order_saga_duration_seconds_sum` | 2622.629 |
+| `drone_assignment_assigned_total` | 3 |
+| `drone_assignment_refused_total` | 2 |
+
+## PromQL used
+
+**SLO-1: Saga success rate**
+```promql
+order_saga_completed_total / (order_saga_completed_total + order_saga_failed_total + order_saga_compensated_total)
+```
+
+**SLO-2: Saga completion < 15s**
+```promql
+order_saga_duration_seconds_bucket{le="15.0"} / ignoring(le) order_saga_duration_seconds_count
+```
+
+**SLO-3: HTTP availability (non-5xx)**
+```promql
+1 - (sum(http_requests_total{status=~"5.."}) or vector(0)) / sum(http_requests_total)
+```
+
+**SLO-4: Drone assignment success**
+```promql
+drone_assignment_assigned_total / (drone_assignment_assigned_total + drone_assignment_refused_total)
+```
+

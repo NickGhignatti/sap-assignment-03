@@ -1,12 +1,14 @@
 pub mod api;
 pub mod consumer;
+pub mod http_metrics;
 pub mod orchestrator;
 pub mod repository;
 pub mod saga;
 pub mod service;
 
 use anyhow::Result;
-use axum::{Router, routing::get, routing::post};
+use axum::{Router, middleware, routing::get, routing::post};
+use http_metrics::{HttpMetrics, track_metrics};
 use mongodb::Client;
 use orchestrator::SagaOrchestrator;
 use prometheus::Registry;
@@ -73,6 +75,7 @@ async fn main() -> Result<()> {
     consumer::start(consumer, orchestrator.clone()).await?;
 
     let svc = Arc::new(OrderService::new(orchestrator));
+    let http_metrics = HttpMetrics::new(&registry);
 
     let metrics_router = Router::new()
         .route("/metrics", get(api::metrics))
@@ -84,7 +87,9 @@ async fn main() -> Result<()> {
         .route("/{orderId}/saga-status", get(api::saga_status))
         .route("/health", get(api::health))
         .with_state(svc)
-        .merge(metrics_router);
+        .merge(metrics_router)
+        // Availability SLI: count every response by status code.
+        .layer(middleware::from_fn_with_state(http_metrics, track_metrics));
 
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;

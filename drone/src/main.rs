@@ -4,6 +4,7 @@ pub mod beliefs;
 pub mod consumer;
 pub mod fleet;
 pub mod intentions;
+pub mod metrics;
 pub mod model;
 pub mod service;
 pub mod store;
@@ -11,6 +12,7 @@ pub mod store;
 use anyhow::Result;
 use axum::{Router, routing::get};
 use mongodb::Client;
+use prometheus::Registry;
 use rdkafka::ClientConfig;
 use rdkafka::consumer::StreamConsumer;
 use rdkafka::producer::FutureProducer;
@@ -20,6 +22,7 @@ use tokio::sync::Mutex;
 use tracing::info;
 
 use crate::fleet::{DroneFleet, RoundRobinStrategy};
+use crate::metrics::DroneMetrics;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -68,6 +71,10 @@ async fn main() -> Result<()> {
         .set("enable.auto.commit", "false")
         .create()?;
 
+    // ── Metrics ─────────────────────────────────────────────────────────────────
+    let registry = Registry::new();
+    let drone_metrics = DroneMetrics::new(&registry);
+
     // ── Wire up the agent fleet ───────────────────────────────────────────────
     // Wrap store and producer in Arc so the fleet's agents can share them.
     let producer = Arc::new(producer);
@@ -79,6 +86,7 @@ async fn main() -> Result<()> {
         Arc::clone(&store),
         Arc::clone(&producer),
         Box::new(RoundRobinStrategy::new()),
+        Arc::clone(&drone_metrics),
     )));
 
     consumer::start_order_consumer(order_consumer, Arc::clone(&fleet)).await?;
@@ -97,13 +105,18 @@ async fn main() -> Result<()> {
     });
 
     // ── HTTP server ───────────────────────────────────────────────────────────
+    let metrics_router = Router::new()
+        .route("/metrics", get(api::metrics))
+        .with_state(registry.clone());
+
     let app = Router::new()
         .route("/order/{orderId}/status", get(api::get_order_status))
         .route("/drone/{droneId}/events", get(api::drone_events))
         .route("/drone/{droneId}/rebuild", get(api::rebuild_drone))
         .route("/order/{orderId}/events", get(api::order_events))
         .route("/health", get(api::health))
-        .with_state(Arc::clone(&store));
+        .with_state(Arc::clone(&store))
+        .merge(metrics_router);
 
     let port = env::var("PORT").unwrap_or_else(|_| "8082".to_string());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
