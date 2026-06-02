@@ -9,6 +9,7 @@ use anyhow::Result;
 use axum::{Router, routing::get, routing::post};
 use mongodb::Client;
 use orchestrator::SagaOrchestrator;
+use prometheus::Registry;
 use rdkafka::ClientConfig;
 use rdkafka::consumer::StreamConsumer;
 use rdkafka::producer::FutureProducer;
@@ -67,17 +68,23 @@ async fn main() -> Result<()> {
         .create()?;
 
     // ── Wire up services ──────────────────────────────────────────────────────
-    let orchestrator = SagaOrchestrator::new(repo, producer);
+    let registry = Registry::new();
+    let orchestrator = SagaOrchestrator::new(repo, producer, &registry);
     consumer::start(consumer, orchestrator.clone()).await?;
 
     let svc = Arc::new(OrderService::new(orchestrator));
+
+    let metrics_router = Router::new()
+        .route("/metrics", get(api::metrics))
+        .with_state(registry.clone());
 
     // ── HTTP server ───────────────────────────────────────────────────────────
     let app = Router::new()
         .route("/", post(api::create_order))
         .route("/{orderId}/saga-status", get(api::saga_status))
         .route("/health", get(api::health))
-        .with_state(svc);
+        .with_state(svc)
+        .merge(metrics_router);
 
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;

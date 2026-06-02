@@ -3,10 +3,11 @@ use crate::service::{CreateOrderRequest, OrderService, SagaStatusResponse};
 use axum::{
     Json,
     extract::{Path, State},
-    http::StatusCode,
+    http::{StatusCode, header},
     response::IntoResponse,
 };
 use chrono::Utc;
+use prometheus::{Encoder, Registry, TextEncoder};
 use std::sync::Arc;
 
 pub type AppState = Arc<OrderService>;
@@ -75,4 +76,17 @@ pub async fn saga_status(
 // GET /health
 pub async fn health() -> &'static str {
     "Order Service is running"
+}
+
+// GET /metrics
+pub async fn metrics(State(registry): State<Registry>) -> impl IntoResponse {
+    let metric_families = registry.gather();
+    let encoder = TextEncoder::new();
+    let mut buffer = Vec::new();
+    encoder.encode(&metric_families, &mut buffer).unwrap();
+
+    (
+        [(header::CONTENT_TYPE, "text/plain; version=0.0.4")],
+        buffer,
+    )
 }

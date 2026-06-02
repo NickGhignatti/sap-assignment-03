@@ -5,15 +5,10 @@ use crate::{
 use anyhow::Result;
 use chrono::Utc;
 use common::{OrderMessage, SagaEvent};
+use prometheus::{IntCounter, Registry};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
-use std::{
-    sync::{
-        Arc,
-        atomic::{AtomicU64, Ordering},
-    },
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
@@ -23,12 +18,33 @@ use uuid::Uuid;
 pub const SAGA_EVENTS_TOPIC: &str = "saga-events";
 pub const ORDER_REQUESTS_TOPIC: &str = "order-requests";
 
-#[derive(Default)]
 pub struct SagaMetrics {
-    pub started: AtomicU64,
-    pub completed: AtomicU64,
-    pub failed: AtomicU64,
-    pub compensated: AtomicU64,
+    pub started: IntCounter,
+    pub completed: IntCounter,
+    pub failed: IntCounter,
+    pub compensated: IntCounter,
+}
+
+impl SagaMetrics {
+    pub fn new(registry: &Registry) -> Self {
+        let started =
+            IntCounter::new("order_saga_started_total", "Number of saga started").unwrap();
+        let _ = registry.register(Box::new(started.clone()));
+        let completed =
+            IntCounter::new("order_saga_completed_total", "Number of saga completed").unwrap();
+        let _ = registry.register(Box::new(completed.clone()));
+        let failed = IntCounter::new("order_saga_failed_total", "Number of saga failed").unwrap();
+        let _ = registry.register(Box::new(failed.clone()));
+        let compensated =
+            IntCounter::new("order_saga_compensated_total", "Number of saga compensated").unwrap();
+        let _ = registry.register(Box::new(compensated.clone()));
+        Self {
+            started,
+            completed,
+            failed,
+            compensated,
+        }
+    }
 }
 
 // FutureProducer is Arc-backed internally, so Clone is cheap.
@@ -40,10 +56,10 @@ pub struct SagaOrchestrator {
 }
 
 impl SagaOrchestrator {
-    pub fn new(repo: SagaRepository, producer: FutureProducer) -> Self {
+    pub fn new(repo: SagaRepository, producer: FutureProducer, registry: &Registry) -> Self {
         Self {
             repo,
-            metrics: Arc::new(SagaMetrics::default()),
+            metrics: Arc::new(SagaMetrics::new(registry)),
             producer,
         }
     }
@@ -81,7 +97,7 @@ impl SagaOrchestrator {
         );
 
         self.repo.save(&saga).await?;
-        self.metrics.started.fetch_add(1, Ordering::Relaxed);
+        self.metrics.started.inc();
         info!(saga_id, order_id, "SAGA avviata");
         self.validate_order(&mut saga).await?;
         Ok(saga_id)
@@ -184,7 +200,7 @@ impl SagaOrchestrator {
         saga.status = SagaStatus::Completed;
         saga.end_time = Some(Utc::now());
         self.repo.save(&saga).await?;
-        self.metrics.completed.fetch_add(1, Ordering::Relaxed);
+        self.metrics.completed.inc();
 
         let event = SagaEvent::OrderCompleted {
             saga_id: saga.saga_id.clone(),
@@ -202,7 +218,7 @@ impl SagaOrchestrator {
     async fn handle_validation_failure(&self, saga: &mut SagaState, reason: &str) -> Result<()> {
         saga.mark_failed(reason);
         self.repo.save(saga).await?;
-        self.metrics.failed.fetch_add(1, Ordering::Relaxed);
+        self.metrics.failed.inc();
 
         let event = SagaEvent::OrderValidationFailed {
             saga_id: saga.saga_id.clone(),
@@ -225,7 +241,7 @@ impl SagaOrchestrator {
         };
         saga.mark_failed(&reason);
         self.repo.save(&saga).await?;
-        self.metrics.failed.fetch_add(1, Ordering::Relaxed);
+        self.metrics.failed.inc();
         error!(
             saga_id = saga.saga_id,
             reason, "SAGA fallita durante lo scheduling"
@@ -240,7 +256,7 @@ impl SagaOrchestrator {
         };
         saga.mark_failed(&reason);
         self.repo.save(&saga).await?;
-        self.metrics.failed.fetch_add(1, Ordering::Relaxed);
+        self.metrics.failed.inc();
         error!(
             saga_id = saga.saga_id,
             reason, "SAGA fallita durante l'assegnazione del drone"
@@ -301,7 +317,7 @@ impl SagaOrchestrator {
 
         saga.mark_compensated();
         self.repo.save(&saga).await?;
-        self.metrics.compensated.fetch_add(1, Ordering::Relaxed);
+        self.metrics.compensated.inc();
         info!(saga_id = saga.saga_id, "Compensazione completata");
 
         let reason = saga.failure_reason.clone().unwrap_or_default();
