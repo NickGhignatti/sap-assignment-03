@@ -1,0 +1,154 @@
+.docname {Code Docs}
+.include {docs}
+
+# Conclusioni
+
+Questa sezione ripercorre i tre punti richiesti dall'assignment e descrive come
+ciascuno è stato affrontato e risolto nel progetto **DroneFlow**, rimandando alle
+pagine di riferimento per i dettagli tecnici.
+
+---
+
+## 1. Architettura Event-Driven
+
+**Richiesta:** riprogettare un microservizio adottando un'architettura event-driven
+con Apache Kafka come middleware.
+
+Il **Drone Service** è stato identificato come il candidato ideale per la
+riprogettazione: è il componente più reattivo del sistema, il cui comportamento
+dipende interamente da eventi esterni (arrivo di un ordine, compensazione dalla SAGA,
+scadenza del timer di consegna). Reimplementarlo come sistema puramente event-driven
+era quindi la scelta più naturale e coerente.
+
+La migrazione da RabbitMQ/AMQP a **Apache Kafka** ha riguardato l'intero transport
+layer dei tre servizi, lasciando invariata la business logic (il percorso completo è
+in [Evoluzione del progetto](evoluzione.qd)). I punti chiave dell'implementazione,
+documentati in [Messaging Layer (Kafka)](kafka.qd):
+
+- **Tre topic distinti** (`order-requests`, `drone-requests`, `saga-events`) con
+  routing per `order_id` come chiave di partizione, che garantisce l'ordinamento
+  degli eventi per ogni singolo ordine.
+- **Quattro consumer group indipendenti**, uno per ogni ruolo nel sistema. Il Drone
+  Service ne usa due in parallelo: uno per gli ordini in arrivo
+  (`drone-service-orders`) e uno dedicato alla compensazione
+  (`drone-service-compensation`).
+- **Semantica di commit esplicita**: l'offset viene confermato solo dopo
+  l'elaborazione riuscita, abilitando la rielaborazione automatica in caso di errore
+  transitorio. I messaggi malformati (*poison pill*) vengono saltati per evitare il
+  blocco del consumer.
+- Gli altri due microservizi ([Order](order.qd) e [Delivery](delivery.qd)) sono stati
+  adattati al nuovo transport senza modifiche alla loro logica applicativa.
+
+---
+
+## 2. Scaling e Service Level Objectives
+
+**Richiesta:** definire almeno 2 SLO con i relativi SLI, estendere l'implementazione
+per misurarli e realizzare un deployment Kubernetes.
+
+### SLO e SLI
+
+Sono stati definiti **quattro SLO**, superando il minimo richiesto di due (dettagli
+in [Osservabilità & SLO](slo.qd)):
+
+| SLO | Target | SLI | Servizio |
+|---|---|---|---|
+| Affidabilità SAGA | ≥ 95% completate | `completed / (completed + failed + compensated)` | Order |
+| Latenza SAGA | ≥ 90% sotto i 15s | `bucket{le="15.0"} / count` | Order |
+| Disponibilità HTTP | ≥ 99% risposte non-5xx | `1 − (5xx / totale)` | Order |
+| Successo assegnazione drone | ≥ 90% accettate | `assigned / (assigned + refused)` | Drone |
+
+Le metriche sono implementate tramite **Prometheus**: counter e histogram incrementati
+direttamente nel codice Rust (`orchestrator.rs` per l'Order Service, `fleet.rs` per il
+Drone Service) ed esposti sull'endpoint `/metrics` di ciascun servizio. Un server
+Prometheus in cluster esegue lo scraping ogni 15 secondi.
+
+Per supportare la verifica in autonomia, è stato realizzato uno script PowerShell
+(`generate-slo-report.ps1`) che interroga Prometheus tramite PromQL, calcola l'**error
+budget consumato** per ogni SLO e genera un report Markdown nella cartella `reports/`.
+
+### Deployment Kubernetes
+
+L'intero sistema è dispiegabile su Kubernetes con **11 manifest** nella cartella
+`k8s/`, organizzati nel namespace `droneflow` (dettagli in
+[Deployment Kubernetes](k8s.qd)):
+
+- `StatefulSet` per MongoDB e Kafka, che richiedono storage e identità DNS stabili.
+- `Deployment` per i tre microservizi e Kafka UI, stateless e liberamente schedulabili.
+- `ConfigMap` e `Secret` per la configurazione non sensibile e le credenziali.
+- `Ingress` Traefik per esporre all'esterno solo i servizi con API HTTP.
+
+Il deployment è stato testato su **k3d** (k3s su Docker). L'intero cluster può essere
+avviato con la sequenza di comandi documentata in [k8s.qd](k8s.qd).
+
+---
+
+## 3. Architettura ad Agenti
+
+**Richiesta:** applicare un approccio agent-oriented al sistema di controllo del
+drone, identificare un modello/architettura e realizzare un prototipo.
+
+### Modello scelto: BDI
+
+È stato adottato il paradigma **BDI (Belief–Desire–Intention)**, un modello classico
+dei sistemi multi-agente che si adatta perfettamente al dominio: un drone deve
+percepire il proprio contesto, ragionare sui propri vincoli e prendere decisioni
+autonome su cosa fare. Il modello è documentato in
+[Flotta ad Agenti (BDI)](agent.qd).
+
+Il ciclo di vita di ogni agente segue cinque fasi:
+
+```
+perceive()       → arriva un OrderMessage da Kafka
+update_beliefs() → aggiorna lo stato interno (peso, deadline, disponibilità)
+deliberate()     → sceglie un'intenzione: AcceptDelivery / RefuseDelivery / Idle
+plan()           → traduce l'intenzione in una sequenza di azioni atomiche
+execute()        → persiste gli eventi su MongoDB e pubblica su Kafka
+```
+
+### Prototipo implementato
+
+Il prototipo è strutturato in quattro moduli principali:
+
+- **`beliefs.rs`** — la belief base di ogni agente: disponibilità, ordine corrente,
+  fase operativa, capacità di carico e rispetto della deadline.
+- **`intentions.rs`** — le intenzioni (`AcceptDelivery`, `RefuseDelivery`,
+  `CompleteDelivery`, `Compensate`) e la funzione `plan_for()` che le traduce in
+  sequenze di `DroneDesire`.
+- **`agent.rs`** — il trait `Agent` con il ciclo BDI completo e la sua implementazione
+  in `DroneAgent`.
+- **`fleet.rs`** — `DroneFleet`, che gestisce un pool di **tre agenti** con una
+  strategia di assegnazione intercambiabile (Strategy Pattern). In produzione viene
+  usata `RoundRobinStrategy` per distribuire uniformemente il carico.
+
+Ogni agente è **completamente isolato**: non condivide stato con gli altri. La
+coordinazione avviene esclusivamente attraverso la flotta, che seleziona l'agente
+appropriato per ogni ordine e gestisce i casi trasversali (arrivi e compensazioni).
+
+L'integrazione con il protocollo SAGA non è stata alterata: gli stessi topic Kafka e
+gli stessi `SagaEvent` del sistema precedente continuano a funzionare. L'approccio ad
+agenti ha cambiato esclusivamente *come* il Drone Service prende le decisioni
+internamente, senza impatti sul contratto con gli altri microservizi.
+
+---
+
+## Considerazioni finali
+
+I tre punti dell'assignment convergono in un sistema coerente:
+
+- Kafka fornisce il **backbone asincrono** che disaccoppia i servizi e rende il
+  sistema resiliente ai fallimenti temporanei.
+- Gli SLO e il deployment Kubernetes trasformano il prototipo in un sistema
+  **osservabile e operabile**, con metriche che misurano oggettivamente la qualità
+  del servizio.
+- L'architettura BDI introduce **autonomia decisionale** nel Drone Service: il drone
+  non esegue istruzioni, ma ragiona sul proprio stato e decide autonomamente se una
+  consegna è fattibile.
+
+Il risultato è una piattaforma a microservizi in cui ogni livello — trasporto,
+orchestrazione, deployment e decision-making — è progettato con un approccio distinto
+e ben motivato. La struttura della documentazione riflette questa stratificazione:
+le pagine **"Il sistema oggi"** descrivono lo stato attuale come riferimento unico,
+quelle di **"Infrastruttura & operabilità"** ne coprono il deployment e
+l'osservabilità, e l'**[Evoluzione del progetto](evoluzione.qd)** ricostruisce il
+percorso che ha condotto a questo risultato.

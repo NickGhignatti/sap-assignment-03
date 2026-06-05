@@ -2,14 +2,22 @@
 .include {docs}
 
 > [NOTE!]
-> Deployment dell'intero sistema su **Kubernetes** (testato su **k3d**, un wrapper di k3s su Docker).
-> I manifest sostituiscono `docker-compose.yml` come ambiente di orchestrazione, mantenendo lo stesso contratto applicativo (variabili d'ambiente, porte, topic Kafka).
+> Deployment dell'intero sistema su **Kubernetes** (testato su **k3d**, un wrapper di
+> k3s su Docker). I manifest sostituiscono `docker-compose.yml` come ambiente di
+> orchestrazione, mantenendo lo stesso *contratto applicativo* (variabili d'ambiente,
+> porte, topic Kafka).
 
 # Deployment Kubernetes
 
-## 1. Manifest
+## 1. Panoramica
 
-Tutti i manifest vivono nella cartella `k8s/` e sono raccolti nel namespace `droneflow`.
+Il deployment su Kubernetes raccoglie tutte le risorse in un unico namespace
+(`droneflow`) e le descrive in 11 manifest dichiarativi nella cartella `k8s/`. La
+filosofia è quella tipica di Kubernetes: si dichiara lo *stato desiderato* (quanti
+pod, quali immagini, quale configurazione) e il control plane si occupa di
+raggiungerlo e mantenerlo. Rispetto a `docker-compose`, il salto concettuale è la
+distinzione tra workload **stateless** (replicabili e riprogrammabili liberamente) e
+workload **stateful** (con storage e identità di rete stabili).
 
 | File | Risorse | Scopo |
 |---|---|---|
@@ -22,6 +30,7 @@ Tutti i manifest vivono nella cartella `k8s/` e sono raccolti nel namespace `dro
 | `order-service.yml` | `Deployment` + `Service` | Orchestratore SAGA |
 | `delivery-service.yml` | `Deployment` + `Service` | Consumer di delivery |
 | `drone-service.yml` | `Deployment` + `Service` | Flotta di agenti drone |
+| `prometheus.yml` | `ConfigMap` + `Deployment` + `Service` | Raccolta metriche (vedi [SLO](slo.qd)) |
 | `ingress.yml` | `Ingress` (Traefik) | Punto d'ingresso HTTP esterno |
 
 ---
@@ -70,50 +79,121 @@ Tutti i manifest vivono nella cartella `k8s/` e sono raccolti nel namespace `dro
         SEC -.->|"envFrom"| OS
         SEC -.->|"envFrom"| DRS
 
+**Lettura del diagramma.** Il traffico esterno entra esclusivamente dall'**Ingress
+Traefik**, che instrada per prefisso di path: `/order` → order-service, `/drone` →
+drone-service. Si noti che il `delivery-service` **non** compare nell'Ingress: è
+event-driven puro, senza API HTTP. I quattro workload stateless (i tre servizi più la
+Kafka UI) sono `Deployment`; i due workload stateful (MongoDB e Kafka) sono
+`StatefulSet` con volume persistente. `ConfigMap` e `Secret` vengono iniettati nei
+pod via `envFrom` (frecce tratteggiate): la prima per la config non sensibile, il
+secondo per le credenziali.
+
 ---
 
 ## 3. Scelte di design
 
 ### Deployment vs StatefulSet
 
+La distinzione è il fulcro del deployment. Riguarda *che cosa* succede quando
+Kubernetes ricrea un pod.
+
 | Risorsa | Workload | Motivo |
 |---|---|---|
 | `StatefulSet` | MongoDB, Kafka | Necessitano storage persistente stabile (`volumeClaimTemplates`) e identità DNS stabile (`pod-0`) |
 | `Deployment` | order, delivery, drone, kafka-ui | Stateless: K8s può ricrearli/riprogrammarli liberamente |
 
+Un `Deployment` tratta i suoi pod come **intercambiabili**: se uno muore, ne crea un
+altro identico, con un nome casuale e nessun legame con storage o identità precedenti.
+Va benissimo per i microservizi: non hanno stato locale da preservare (lo stato vive
+su MongoDB e Kafka). Un `StatefulSet`, invece, dà a ogni pod un'**identità stabile**
+(`kafka-0`, `mongodb-0`) e un **volume persistente dedicato** (tramite
+`volumeClaimTemplates`) che sopravvive ai riavvii. Kafka e MongoDB ne hanno bisogno:
+un broker che perdesse il suo log a ogni restart, o un database che perdesse i suoi
+dati, sarebbero inutili.
+
 ### Service headless per gli StatefulSet
 
-MongoDB e Kafka usano un **Service headless** (`clusterIP: None`): è il requisito di Kubernetes per dare a ogni pod di uno StatefulSet un nome DNS stabile. I client interni raggiungono comunque il broker tramite il nome breve del Service (`kafka:9092`, `mongodb:27017`).
+```yaml
+# kafka.yml e mongodb.yml
+spec:
+  clusterIP: None     # ← headless
+```
+
+MongoDB e Kafka usano un **Service headless** (`clusterIP: None`). Un Service normale
+espone un singolo IP virtuale che fa da load-balancer verso i pod; un Service headless
+**non** alloca un IP virtuale, ma crea record DNS che puntano direttamente ai singoli
+pod. È il requisito di Kubernetes per dare a ogni pod di uno `StatefulSet` un nome DNS
+stabile. I client interni raggiungono comunque il broker tramite il nome breve del
+Service (`kafka:9092`, `mongodb:27017`), che il DNS del cluster risolve.
+
+> [NOTE!]
+> Per Kafka esiste anche un secondo Service `kafka-cluster-ip` di tipo `ClusterIP`,
+> affiancato a quello headless. Il primo serve l'identità stabile dello StatefulSet;
+> il secondo fornisce un endpoint con IP virtuale stabile per i client che non hanno
+> bisogno di raggiungere uno specifico pod.
 
 ### ConfigMap vs Secret
 
+La separazione segue la sensibilità del dato.
+
 | Dato | Risorsa | Perché |
 |---|---|---|
-| `KAFKA_BROKERS`, config Kafka UI | ConfigMap | Non sensibile |
-| `MONGODB_URI` (con credenziali), `MONGO_USERNAME/PASSWORD` | Secret | Sensibile |
+| `KAFKA_BROKERS`, config Kafka UI | ConfigMap (`droneflow-config`) | Non sensibile |
+| `MONGODB_URI` (con credenziali), `MONGO_USERNAME/PASSWORD` | Secret (`droneflow-secret`) | Sensibile |
 
-I pod consumano entrambi con `envFrom`, che inietta tutte le chiavi come variabili d'ambiente in un colpo solo. Per questo le chiavi seguono la convenzione `UPPER_SNAKE_CASE` (nomi validi per env var).
+Entrambi vengono consumati dai pod con `envFrom`, che inietta **tutte** le chiavi
+come variabili d'ambiente in un colpo solo:
 
-### Ingress
+```yaml
+# order-service.yml
+envFrom:
+  - configMapRef: { name: droneflow-config }
+  - secretRef:    { name: droneflow-secret }
+```
 
-Solo `order-service` e `drone-service` espongono HTTP, quindi solo loro sono instradati dall'Ingress. `delivery-service` è **event-driven puro** (consuma solo Kafka, nessuna route HTTP) e non compare nell'Ingress.
+Per questo le chiavi seguono la convenzione `UPPER_SNAKE_CASE`: devono essere nomi di
+variabili d'ambiente validi. Il Secret usa `stringData` (valori in chiaro nel
+manifest) invece di `data` (che richiederebbe base64): comodo in sviluppo, da
+gestire diversamente in produzione.
+
+### Ingress selettivo
+
+```yaml
+# ingress.yml
+- path: /order  → order-service:8080
+- path: /drone  → drone-service:8082
+```
+
+Solo `order-service` e `drone-service` espongono HTTP, quindi solo loro sono
+instradati dall'Ingress. `delivery-service` è **event-driven puro** (consuma solo
+Kafka, nessuna route HTTP) e non compare. È un riflesso diretto, a livello
+infrastrutturale, della natura stateless e headless del Delivery Service descritta in
+[Delivery Service](delivery.qd).
 
 ---
 
-## 4. Note sul broker Kafka in KRaft su K8s
+## 4. Il broker Kafka in KRaft su Kubernetes
 
-A differenza di docker-compose, il broker espone un solo listener rilevante per il cluster:
+A differenza di `docker-compose` (due listener, vedi [Messaging Layer](kafka.qd)), su
+Kubernetes il broker espone un solo listener rilevante per il cluster:
 
 | Variabile | Valore |
 |---|---|
+| `KAFKA_PROCESS_ROLES` | `broker,controller` |
+| `KAFKA_LISTENERS` | `PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093` |
 | `KAFKA_ADVERTISED_LISTENERS` | `PLAINTEXT://kafka:9092` |
 | `KAFKA_CONTROLLER_QUORUM_VOTERS` | `1@localhost:9093` |
-| `KAFKA_PROCESS_ROLES` | `broker,controller` |
+| `KAFKA_LISTENER_SECURITY_PROTOCOL_MAP` | `PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT` |
 | `CLUSTER_ID` | UUID base64url di **22 caratteri** (vincolo Confluent) |
+| `KAFKA_AUTO_CREATE_TOPICS_ENABLE` | `true` |
 
-> ⚠️ I valori delle liste separate da virgola (`broker,controller`, listener map) **non devono contenere spazi**: Kafka li interpreta come stringhe letterali e fallisce l'avvio.
+> ⚠️ I valori delle liste separate da virgola (`broker,controller`, la listener map)
+> **non devono contenere spazi**: Kafka li interpreta come stringhe letterali e
+> fallisce l'avvio.
 
-L'errore `UnknownTopicOrPartition: saga-events` all'avvio è **benigno**: i consumer si sottoscrivono prima che il topic esista; con `KAFKA_AUTO_CREATE_TOPICS_ENABLE=true` il topic viene creato alla prima produzione.
+L'errore `UnknownTopicOrPartition: saga-events` all'avvio è **benigno**: i consumer si
+sottoscrivono prima che il topic esista; con `KAFKA_AUTO_CREATE_TOPICS_ENABLE=true` il
+topic viene creato alla prima produzione.
 
 ---
 
@@ -141,13 +221,27 @@ kubectl apply -f k8s/
 kubectl get pods -n droneflow
 ```
 
-> Le immagini usano `imagePullPolicy: IfNotPresent` così K8s usa la versione importata in locale invece di cercarla su un registry remoto.
+> Le immagini usano `imagePullPolicy: IfNotPresent`, così K8s usa la versione
+> importata in locale invece di cercarla su un registry remoto.
+
+### Nota sul build delle immagini
+
+Il `docker build` parte **dalla root del progetto** (il `.` finale), non dalla
+cartella del singolo servizio, perché il `Dockerfile` deve poter copiare l'intero
+workspace (compresa la crate `common`). I Dockerfile usano un **multi-stage build con
+`cargo-chef`**: un primo stadio pre-computa e mette in cache la compilazione delle
+dipendenze (invalidata solo quando cambiano `Cargo.lock` o un `Cargo.toml`), così che
+modifiche al solo codice applicativo non ricompilino l'intero albero di dipendenze.
+L'immagine runtime finale è una `debian:bookworm-slim` minimale con solo
+`ca-certificates`, che esegue il binario come utente non-root.
 
 ---
 
 ## 6. Lezioni di integrazione (compose → K8s)
 
-Il porting da docker-compose ha richiesto di allineare il **contratto delle variabili d'ambiente**: il valore deve corrispondere *esattamente* a ciò che l'applicazione legge.
+Il porting da `docker-compose` ha richiesto di allineare il **contratto delle
+variabili d'ambiente**: il valore deve corrispondere *esattamente* a ciò che
+l'applicazione legge con `env::var(...)`.
 
 | Problema riscontrato | Causa | Fix |
 |---|---|---|
@@ -155,17 +249,22 @@ Il porting da docker-compose ha richiesto di allineare il **contratto delle vari
 | Connessione Mongo rifiutata | URI senza credenziali né `authSource=admin` | `mongodb://root:root@mongodb:27017/?authSource=admin` nel Secret |
 | Auth fallita dopo modifica password | Lo StatefulSet inizializza l'utente root solo su un **volume vuoto** | `kubectl delete pvc -l app=mongodb` per forzare la re-inizializzazione |
 
-> **Takeaway:** una chiave di ConfigMap che l'app non legge viene ignorata silenziosamente. In K8s la diagnosi parte sempre da `kubectl logs` e `kubectl describe pod`.
+> **Takeaway:** una chiave di ConfigMap che l'app non legge viene ignorata
+> silenziosamente — non c'è errore, solo un fallback a default sbagliati. In K8s la
+> diagnosi parte sempre da `kubectl logs` e `kubectl describe pod`.
 
 ---
 
 ## 7. Script di test
 
-Due script PowerShell nella root verificano il deployment tramite `kubectl port-forward` (bypassano l'Ingress per evitare problemi di path-prefix):
+Due script PowerShell nella root verificano il deployment tramite
+`kubectl port-forward` (bypassano l'Ingress per evitare problemi di path-prefix):
 
 | Script | Scopo |
 |---|---|
 | `health-check.ps1` | Stato di pod/service/ingress + ping `/health` |
 | `test-k8s.ps1` | Flusso completo: crea ordine → verifica avanzamento SAGA → stato drone |
 
-> Nota PowerShell 5.1: i file `.ps1` devono restare in **ASCII puro**. Caratteri Unicode (es. `—`, box-drawing `─`) rompono il parser e causano errori fuorvianti (`missing terminator`, `missing '}'`).
+> Nota PowerShell 5.1: i file `.ps1` devono restare in **ASCII puro**. Caratteri
+> Unicode (es. `—`, box-drawing `─`) rompono il parser e causano errori fuorvianti
+> (`missing terminator`, `missing '}'`).

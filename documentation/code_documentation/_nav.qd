@@ -1,12 +1,16 @@
-###! Come funziona
+###! Il sistema oggi
 - [Architettura](architettura.qd)
-- [Common](common.qd)
-- [Order](order.qd)
-- [Delivery](delivery.qd)
-- [Drone](drone.qd)
+- [Common (libreria)](common.qd)
+- [Order Service](order.qd)
+- [Delivery Service](delivery.qd)
+- [Drone Service](drone.qd)
+- [Flotta ad Agenti (BDI)](agent.qd)
 
-##! Aggiornamenti
-- [Integrazione con Kafka](kafka.qd)
-- [Drone ad Agenti (BDI)](agent.qd)
+##! Infrastruttura & operabilità
+- [Messaging Layer (Kafka)](kafka.qd)
 - [Deployment Kubernetes](k8s.qd)
-- [SLO & SLI](slo.qd)
+- [Osservabilità & SLO](slo.qd)
+
+##! Appendice
+- [Evoluzione del progetto](evoluzione.qd)
+- [Conclusioni](conclusioni.qd)

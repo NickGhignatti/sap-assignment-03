@@ -2,12 +2,17 @@
 .include {docs}
 
 > [NOTE!]
-> Definizione di **2 SLO** (Service Level Objective) con i relativi **SLI** (Service Level Indicator) per il caso di studio, ed estensione dell'implementazione per **misurarli** tramite Prometheus.
-> Le metriche sono esposte dall'Order Service su `/metrics` e raccolte da un server Prometheus interno al cluster.
+> Definizione di **2 SLO** (Service Level Objective) richiesti, estesi a **4**, con i
+> relativi **SLI** (Service Level Indicator), e implementazione della loro
+> **misurazione** tramite Prometheus. Le metriche sono esposte dai servizi su
+> `/metrics` e raccolte da un Prometheus interno al cluster.
 
-# SLO & SLI — Misurazione dei livelli di servizio
+# Osservabilità & SLO — Misurazione dei livelli di servizio
 
 ## 1. Teoria — SLI, SLO, Error Budget
+
+Per ragionare in modo rigoroso sulla qualità del servizio servono tre concetti
+distinti, spesso confusi tra loro.
 
 | Termine | Cos'è | Esempio |
 |---|---|---|
@@ -15,15 +20,34 @@
 | **SLO** | *Obiettivo*: una soglia sull'SLI in una finestra temporale | "≥ 95% di saga completate su 30 giorni" |
 | **SLA** | *Accordo*: contratto con penali (non richiesto qui) | rimborso se disponibilità < 99% |
 
-Un buon SLI è quasi sempre un **rapporto `good / total`**, naturalmente compreso tra 0 e 1:
+Un **SLI** è la *misura*: un numero che descrive oggettivamente come si sta
+comportando il sistema. Un **SLO** è l'*obiettivo*: la soglia che ci si impegna a
+rispettare su quell'SLI, in una data finestra temporale. Un **SLA** è l'*accordo
+contrattuale* costruito sopra a uno SLO, con penali — non rilevante per questo
+progetto, ma utile a completare il quadro.
+
+Un buon SLI è quasi sempre un **rapporto `good / total`**, naturalmente compreso tra
+0 e 1:
 
 $$ \text{SLI} = \frac{\text{eventi buoni}}{\text{eventi validi}} $$
 
-L'**error budget** è il complemento dell'SLO: `100% − SLO`. È la quantità di fallimento *ammessa* prima di dover intervenire. Per questo l'obiettivo non è mai il 100%: inseguirlo è infinitamente costoso e inutile.
+La forma a rapporto ha un vantaggio pratico: è autonormalizzante (sempre tra 0 e 1) e
+indipendente dal volume di traffico, quindi confrontabile direttamente con la soglia
+dello SLO.
+
+L'**error budget** è il complemento dello SLO: `100% − SLO`. È la quantità di
+fallimento *ammessa* prima di dover intervenire. Per uno SLO al 95%, l'error budget è
+il 5%: si possono "spendere" fino al 5% di fallimenti senza violare l'obiettivo.
+Questo è il motivo per cui l'obiettivo non è (quasi) mai il 100%: inseguire la
+perfezione assoluta è infinitamente costoso e operativamente inutile. L'error budget
+trasforma l'affidabilità da assoluto morale a risorsa gestibile.
 
 ---
 
-## 2. I due SLO definiti
+## 2. I quattro SLO definiti
+
+L'assignment richiede almeno due SLO; ne sono stati definiti quattro, per coprire
+entrambi i servizi con interfaccia osservabile e i due archetipi fondamentali di SLI.
 
 > **SLO 1 — Affidabilità (availability-style).**
 > ≥ **95%** delle saga d'ordine si completa con successo su finestra mobile di 30 giorni.
@@ -35,54 +59,70 @@ L'**error budget** è il complemento dell'SLO: `100% − SLO`. È la quantità d
 > **SLI:** `bucket{le="15.0"} / count`
 > **Error budget:** 10% può eccedere i 15s (copre la coda di cold-start).
 
-> La scelta di queste due coppie copre entrambi gli archetipi fondamentali di SLI: **disponibilità** (SLO 1) e **latenza** (SLO 2).
+> La scelta di queste due coppie copre entrambi gli archetipi fondamentali di SLI:
+> **disponibilità** (SLO 1) e **latenza** (SLO 2).
 
 ### SLO aggiuntivi (estensione)
 
-Oltre ai due richiesti, sono strumentati due SLI ulteriori:
-
 > **SLO 3 — Disponibilità HTTP.**
 > ≥ **99%** delle risposte HTTP dell'Order Service non è 5xx.
-> **SLI:** `1 − (5xx / totale)` — i 4xx (es. `422`) **non** contano come fallimento del servizio.
-> *Misurato da un middleware Axum (`http_metrics.rs`) che conta ogni risposta per status code.*
+> **SLI:** `1 − (5xx / totale)` — i 4xx (es. `422`) **non** contano come fallimento
+> del servizio (sono errori del client, non del server).
+> *Misurato dal middleware Axum `http_metrics.rs`, che conta ogni risposta per status code.*
 
 > **SLO 4 — Successo di assegnazione drone.**
 > ≥ **90%** delle richieste di consegna è accettata dalla flotta.
 > **SLI:** `assigned / (assigned + refused)`
-> *Incrementato in `DroneFleet::dispatch_order` in base alla decisione `deliberate()` dell'agente; il caso "nessun drone disponibile" conta come rifiuto.*
+> *Incrementato in `DroneFleet::dispatch_order` in base alla decisione `deliberate()`
+> dell'agente; il caso "nessun drone disponibile" conta come rifiuto.*
 
 ---
 
 ## 3. Strumentazione nel codice
 
-Le metriche vivono in `order/src/orchestrator.rs`, nella struct `SagaMetrics`, registrate in un `prometheus::Registry` creato in `main.rs`.
+Le metriche della SAGA vivono in `order/src/orchestrator.rs`, nella struct
+`SagaMetrics`, registrate in un `prometheus::Registry` creato in `main.rs`. Quelle
+HTTP in `http_metrics.rs`, quelle del drone in `drone/src/metrics.rs`.
 
 | Metrica | Tipo Prometheus | Incrementata in |
 |---|---|---|
 | `order_saga_started_total` | Counter | `start_order_saga()` |
 | `order_saga_completed_total` | Counter | `complete_saga()` |
-| `order_saga_failed_total` | Counter | `handle_*_failure` / `on_*_failed` |
+| `order_saga_failed_total` | Counter | `handle_validation_failure` / `on_*_failed` |
 | `order_saga_compensated_total` | Counter | `compensate_saga()` |
 | `order_saga_duration_seconds` | Histogram | `complete_saga()` (`.observe()`) |
 | `http_requests_total{status}` | CounterVec | middleware `track_metrics` (Order Service) |
 | `drone_assignment_assigned_total` | Counter | `DroneFleet::dispatch_order` (Drone Service) |
 | `drone_assignment_refused_total` | Counter | `DroneFleet::dispatch_order` (Drone Service) |
 
-L'istogramma usa bucket espliciti che **straddleano** la soglia SLO di 15s:
+La distinzione tra i tipi è importante. Un **Counter** è monotòno crescente: conta
+occorrenze (quante saga sono iniziate, completate, fallite). Un **Histogram**
+campiona una distribuzione: ogni `observe(valore)` incrementa i bucket appropriati.
+Un **CounterVec** è un counter con dimensioni (label): `http_requests_total` ha una
+serie distinta per ogni status code.
+
+L'istogramma `order_saga_duration_seconds` usa bucket espliciti che **straddleano**
+(attraversano) la soglia SLO di 15 secondi:
 
 ```
 buckets = [1.0, 2.5, 5.0, 10.0, 15.0, 30.0]
 ```
 
-> Il bucket `15.0` è obbligatorio: l'SLI di latenza si legge direttamente da `bucket{le="15.0"} / count`.
+> Il bucket `15.0` è **obbligatorio**: l'SLI di latenza si legge direttamente da
+> `bucket{le="15.0"} / count`. Senza un bucket esattamente a 15s, non si potrebbe
+> calcolare la frazione di saga sotto la soglia.
 
-Un Histogram si espande in più serie temporali: una `_bucket` per soglia (cumulative, `le` = "less than or equal"), più `_sum` e `_count`. Il bucket `+Inf` coincide sempre con `_count`.
+Un Histogram si espande in più serie temporali: una serie `_bucket` per ogni soglia
+(cumulativa: `le` = "less than or equal", quindi `bucket{le="15.0"}` conta *tutte* le
+osservazioni ≤ 15s), più `_sum` e `_count`. Il bucket `+Inf` coincide sempre con
+`_count` (tutte le osservazioni sono ≤ infinito).
 
 ---
 
 ## 4. Esposizione — endpoint `/metrics`
 
-L'handler `api::metrics` raccoglie il registry e lo serializza nel formato testuale Prometheus:
+Ogni servizio espone le metriche su `/metrics`, serializzandole nel formato testuale
+di esposizione Prometheus:
 
 ```rust
 let metric_families = registry.gather();
@@ -91,25 +131,37 @@ TextEncoder::new().encode(&metric_families, &mut buffer).unwrap();
 ([(header::CONTENT_TYPE, "text/plain; version=0.0.4")], buffer)
 ```
 
-La rotta è montata con uno stato dedicato (il `Registry`) e unita al router principale via `.merge()`, perché lo stato delle altre rotte è `Arc<OrderService>`.
+`registry.gather()` raccoglie tutte le metriche registrate; il `TextEncoder` le
+serializza nel formato che Prometheus si aspetta. La rotta è montata con uno stato
+dedicato (il `Registry`) e unita al router principale via `.merge()`, perché lo stato
+delle altre rotte è diverso (`Arc<OrderService>` o `Arc<DroneEventStore>`).
 
 ---
 
 ## 5. Raccolta — deployment di Prometheus
 
-Prometheus gira nel cluster (`k8s/prometheus.yml`) con configurazione **statica**: ConfigMap montata come file + Deployment + Service.
+Prometheus gira nel cluster (`k8s/prometheus.yml`) con configurazione **statica**:
+una ConfigMap montata come file, più un Deployment e un Service.
 
 .mermaid
     graph LR
         subgraph ns["namespace: droneflow"]
             OS["order-service:8080\n/metrics"]
+            DRS["drone-service:8082\n/metrics"]
             P["prometheus:9090\n(scrape ogni 15s)"]
             CM["ConfigMap\nprometheus-config\n(prometheus.yml)"]
         end
         CM -->|"volume mount\n/etc/prometheus"| P
         P -->|"scrape"| OS
+        P -->|"scrape"| DRS
 
-La ConfigMap è montata come **volume** (non come env var): ogni chiave diventa un file. La chiave `prometheus.yml` appare quindi in `/etc/prometheus/prometheus.yml`, dove l'immagine `prom/prometheus` la legge di default.
+**Lettura del diagramma.** Prometheus adotta il modello **pull**: è lui che, ogni 15
+secondi, interroga (`scrape`) l'endpoint `/metrics` di ogni target configurato — non
+sono i servizi a inviare le metriche. La lista dei target è nella ConfigMap
+`prometheus-config`, montata come **volume** (non come variabile d'ambiente): ogni
+chiave della ConfigMap diventa un file, quindi la chiave `prometheus.yml` appare in
+`/etc/prometheus/prometheus.yml`, dove l'immagine `prom/prometheus` la legge di
+default.
 
 ```yaml
 scrape_configs:
@@ -121,38 +173,59 @@ scrape_configs:
       - targets: ["drone-service:8082"]
 ```
 
+I target sono i nomi DNS interni dei Service Kubernetes: Prometheus li risolve
+all'interno del cluster e ne fa lo scrape direttamente.
+
 ---
 
 ## 6. Query PromQL degli SLI
+
+Ogni SLI è una query PromQL che restituisce un valore 0..1, confrontabile con il
+target dello SLO.
 
 ### SLI 1 — Saga success rate
 ```promql
 order_saga_completed_total
   / (order_saga_completed_total + order_saga_failed_total + order_saga_compensated_total)
 ```
+Frazione di saga concluse con successo sul totale delle saga *terminate* (completate,
+fallite o compensate). Il denominatore esclude volutamente le saga ancora in corso:
+si misura l'esito, non il lavoro in sospeso.
 
 ### SLI 2 — Frazione di saga sotto i 15s
 ```promql
 order_saga_duration_seconds_bucket{le="15.0"}
   / ignoring(le) order_saga_duration_seconds_count
 ```
+Numeratore: numero di osservazioni con durata ≤ 15s (il bucket cumulativo).
+Denominatore: numero totale di osservazioni. Il rapporto è la frazione di saga sotto
+la soglia. La clausola `ignoring(le)` è necessaria perché il `_bucket` ha la label
+extra `le` e il `_count` no: senza, il vector matching non troverebbe corrispondenza
+(vedi le insidie sotto).
 
 ### SLI 3 — Disponibilità HTTP (non-5xx)
 ```promql
 1 - (sum(http_requests_total{status=~"5.."}) or vector(0)) / sum(http_requests_total)
 ```
-> `or vector(0)` evita un risultato vuoto quando non ci sono ancora risposte 5xx.
+Uno meno la frazione di risposte 5xx. Il `status=~"5.."` è una regex che cattura tutti
+gli status 5xx. `or vector(0)` evita un risultato vuoto quando non ci sono ancora
+risposte 5xx (in quel caso `sum(...)` non produrrebbe alcuna serie, e l'intera
+espressione sarebbe vuota invece di valere 1).
 
 ### SLI 4 — Successo di assegnazione drone
 ```promql
 drone_assignment_assigned_total
   / (drone_assignment_assigned_total + drone_assignment_refused_total)
 ```
+Frazione di richieste accettate dalla flotta sul totale delle richieste valutate.
 
 ### Latenza p95 (diagnostica)
 ```promql
 histogram_quantile(0.95, rate(order_saga_duration_seconds_bucket[5m]))
 ```
+Stima il 95° percentile della durata sulle osservazioni degli ultimi 5 minuti. È una
+metrica diagnostica complementare (non uno SLO): risponde a "qual è la latenza che il
+95% delle saga non supera?".
 
 ### Due insidie PromQL incontrate
 
@@ -161,20 +234,38 @@ histogram_quantile(0.95, rate(order_saga_duration_seconds_bucket[5m]))
 | **Vector matching** | divisione → risultato vuoto | `_bucket` ha la label extra `le`, `_count` no → nessun match | `/ ignoring(le)` |
 | **`le` è una stringa** | `bucket{le="15"}` → vuoto | la crate Rust serializza i bucket float con il decimale: `"15.0"` | usare `le="15.0"` |
 
-> `histogram_quantile(..., rate(...[5m]))` restituisce `NaN` se non ci sono osservazioni negli ultimi 5 minuti: il rate è 0 su tutti i bucket. È atteso in assenza di traffico recente, non un errore.
+> `histogram_quantile(..., rate(...[5m]))` restituisce `NaN` se non ci sono
+> osservazioni negli ultimi 5 minuti: il `rate` è 0 su tutti i bucket. È atteso in
+> assenza di traffico recente, non un errore.
 
 ---
 
 ## 7. Report automatico degli SLO
 
-Lo script `generate-slo-report.ps1` (root del progetto) interroga Prometheus per ogni SLI, lo confronta con il target dello SLO, calcola l'**error budget consumato** e genera un report Markdown in `reports/`.
+Lo script `generate-slo-report.ps1` (root del progetto) interroga Prometheus per ogni
+SLI, lo confronta con il target dello SLO, calcola l'**error budget consumato** e
+genera un report Markdown in `reports/`.
 
 ```powershell
 .\generate-slo-report.ps1
 # -> reports/slo-report-<timestamp>.md  +  reports/slo-report-latest.md
 ```
 
-Il report contiene: tabella di compliance (target vs misurato vs stato vs budget), snapshot delle metriche grezze, e le query PromQL usate. L'error budget consumato è `(1 − misurato) / (1 − target)`: oltre il 100% lo SLO è violato.
+Lo script apre un `kubectl port-forward` verso `svc/prometheus`, esegue le query
+PromQL dei quattro SLO (le stesse della sezione 6, codificate in un array di
+`pscustomobject`), e per ciascuno determina lo stato (`MET` / `BREACHED` / `NO DATA`)
+e l'error budget consumato. Il report contiene: una tabella di compliance (target vs
+misurato vs stato vs budget), uno snapshot delle metriche grezze, e le query PromQL
+usate.
+
+L'**error budget consumato** è calcolato come:
+
+$$ \text{budget consumato} = \frac{1 - \text{misurato}}{1 - \text{target}} $$
+
+cioè il fallimento effettivo diviso il fallimento ammesso. Oltre il 100% lo SLO è
+violato: si è speso più budget di quanto disponibile. Lo script lo logga anche a
+schermo come tabella, oltre a scriverlo su file (con `slo-report-latest.md` sempre
+aggiornato all'ultima esecuzione).
 
 ---
 
@@ -183,6 +274,12 @@ Il report contiene: tabella di compliance (target vs misurato vs stato vs budget
 ```
 codice Rust  (.inc() / .observe())
   → endpoint /metrics  (formato esposizione Prometheus)
-    → Prometheus  (scrape order-service:8080 ogni 15s)
+    → Prometheus  (scrape order-service:8080 e drone-service:8082 ogni 15s)
       → PromQL  (calcola gli SLI, confrontati con gli SLO)
+        → generate-slo-report.ps1  (compliance + error budget → Markdown)
 ```
+
+Ogni livello aggiunge un grado di astrazione: dal singolo incremento di un counter nel
+codice, all'aggregazione temporale di Prometheus, al calcolo dell'SLI in PromQL, fino
+al report leggibile dall'uomo. È la catena che trasforma un evento di runtime in una
+misura oggettiva della qualità del servizio.

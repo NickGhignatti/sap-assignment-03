@@ -2,20 +2,29 @@
 .include {docs}
 
 > [NOTE!]
-> Il Drone Service è stato riprogettato come sistema ad agenti autonomi (BDI).
-> La documentazione dell'architettura BDI si trova nella sezione [Drone ad Agenti (BDI)](agent.qd).
-> Questa pagina descrive il servizio nella sua forma attuale: architettura, flussi, API e deployment.
+> Il Drone Service è organizzato in due livelli. Questa pagina documenta il livello
+> **di servizio**: persistenza (event sourcing), API HTTP, consumer Kafka, scheduler
+> e wiring. Il cuore **decisionale** — la flotta di agenti BDI che decide se
+> accettare o rifiutare una consegna — è documentato in
+> [Flotta ad Agenti (BDI)](agent.qd).
 
 # Drone Service — Documentazione Tecnica
 
 ## 1. Responsabilità
 
-Il Drone Service è il componente più complesso del sistema. Ha quattro responsabilità distinte:
+Il Drone Service è il componente più complesso del sistema, con quattro
+responsabilità distinte:
 
-1. **Assegnazione autonoma** — una flotta di tre agenti BDI valuta ogni ordine in arrivo e decide autonomamente se accettarlo o rifiutarlo, in base al peso del carico e alla deadline.
-2. **Event Sourcing** — persiste ogni cambio di stato del drone come evento immutabile su MongoDB; lo stato corrente è sempre ricostruibile dalla sequenza degli eventi.
-3. **Scheduler** — un task periodico (ogni 10 s) controlla se i droni in volo hanno raggiunto la destinazione e completa la consegna di conseguenza.
-4. **Compensazione** — riceve eventi `CompensateDrone` dalla SAGA via Kafka e riporta l'agente coinvolto allo stato `Idle`.
+1. **Assegnazione autonoma.** Una flotta di tre agenti BDI valuta ogni ordine in
+   arrivo e decide *autonomamente* se accettarlo o rifiutarlo, in base al peso del
+   carico e alla deadline. Questa è la parte ad agenti, in [agent.qd](agent.qd).
+2. **Event Sourcing.** Persiste ogni cambio di stato del drone come **evento
+   immutabile** su MongoDB. Lo stato corrente non è memorizzato direttamente: è
+   sempre *ricostruibile* applicando in ordine la sequenza degli eventi.
+3. **Scheduler.** Un task periodico (ogni 10 secondi) controlla se i droni in volo
+   hanno raggiunto la destinazione e, in tal caso, completa la consegna.
+4. **Compensazione.** Riceve gli eventi `CompensateDrone` dalla SAGA via Kafka e
+   riporta l'agente coinvolto allo stato `Idle`.
 
 ---
 
@@ -52,13 +61,28 @@ Il Drone Service è il componente più complesso del sistema. Ha quattro respons
         HTTP --> API
         API --> STORE
 
+**Lettura del diagramma.** Tre flussi convergono sulla `DroneFleet`:
+(1) gli **ordini** da `drone-requests`, tramite `start_order_consumer`;
+(2) le **compensazioni** da `saga-events`, tramite `start_compensation_consumer`;
+(3) gli **arrivi**, tramite lo `Scheduler Task` che chiama `check_arrivals()` ogni
+10 secondi. La flotta instrada ogni richiesta a uno dei tre agenti. Gli agenti
+scrivono gli eventi sul `DroneEventStore` (che li persiste su MongoDB) e pubblicano
+i `SagaEvent` di esito (`DroneAssigned`/`DroneAssignmentFailed`) su `saga-events`.
+Sul lato destro, gli **handler HTTP** leggono dal `DroneEventStore` per servire le
+query di stato e storico — un percorso completamente separato dal flusso di scrittura.
+
 ---
 
 ## 3. Modello dati
 
-### `DroneBeliefs` (in memoria, per agente)
+Il Drone Service distingue **tre rappresentazioni** dello stato di un drone, ognuna
+con uno scopo diverso. Capire la differenza è essenziale.
 
-Ogni `DroneAgent` mantiene una propria belief base isolata. Non esiste più una mappa condivisa.
+### `DroneBeliefs` — lo stato *vivo* dell'agente (in memoria)
+
+È la belief base di un `DroneAgent`: ciò che l'agente *crede* su sé stesso in questo
+istante. Vive in memoria, isolata per agente, e guida le decisioni. È descritta in
+dettaglio in [agent.qd](agent.qd).
 
 ```
 ┌──────────────────────────────────────┐
@@ -76,9 +100,11 @@ Ogni `DroneAgent` mantiene una propria belief base isolata. Non esiste più una 
 └──────────────────────────────────────┘
 ```
 
-### `DroneEntry` (ricostruita dall'event store)
+### `DroneEntry` — lo stato *ricostruito* dagli eventi
 
-Usata dall'API HTTP e da `rebuild_drone()`. Non è lo stato live dell'agente.
+Definita in `model.rs`, è una rappresentazione in memoria **ricostruita
+dall'event store** (non lo stato live dell'agente). La usano l'handler HTTP
+`/rebuild` e il metodo `rebuild_drone()`.
 
 ```
 ┌────────────────────────────────────┐
@@ -94,7 +120,14 @@ Usata dall'API HTTP e da `rebuild_drone()`. Non è lo stato live dell'agente.
 └────────────────────────────────────┘
 ```
 
-### `DroneEvent` (persistito su MongoDB)
+`DroneState` è un enum a tre valori: `Sleeping` → `InTransit` → `Returning`. I
+metodi `start()` (→ `InTransit`, fissa `dispatch_time`) ed `end()` (→ `Returning`,
+fissa `delivery_time`) sono applicati durante la ricostruzione.
+
+### `DroneEvent` — il fatto *persistito* su MongoDB
+
+Il tipo condiviso (in [common](common.qd)), serializzato come documento nella
+collection `drone_events`. Ogni documento è un evento immutabile.
 
 ```
 ┌─────────────────────────────────────┐
@@ -110,6 +143,12 @@ Usata dall'API HTTP e da `rebuild_drone()`. Non è lo stato live dell'agente.
 └─────────────────────────────────────┘
 ```
 
+> [NOTE!]
+> La distinzione chiave: **`DroneBeliefs`** è lo stato *deciso dall'agente ora*;
+> **`DroneEvent`** è la *verità storica persistita*; **`DroneEntry`** è una
+> *vista derivata*, ricostruita dagli eventi su richiesta. L'invariante del sistema
+> è che lo stato ricostruito dagli eventi coincida con quello osservato nelle belief.
+
 ---
 
 ## 4. Macchina a stati — `DroneState`
@@ -118,19 +157,28 @@ Usata dall'API HTTP e da `rebuild_drone()`. Non è lo stato live dell'agente.
     stateDiagram-v2
         [*] --> Sleeping : DroneEntry::new()
 
-        Sleeping --> InTransit : start() — Dispatched event salvato
-        InTransit --> Returning : end() — Delivered event salvato
+        Sleeping --> InTransit : start() — Dispatched event
+        InTransit --> Returning : end() — Delivered event
 
         note right of InTransit
             expected_arrival è impostato
             Lo scheduler controlla ogni 10s
         end note
 
+**Lettura del diagramma.** `DroneState` è la macchina a stati *della vista
+ricostruita* (`DroneEntry`), non delle belief dell'agente. Una nuova entry nasce
+`Sleeping`; l'applicazione dell'evento `Dispatched` la porta `InTransit` (e fissa
+`dispatch_time`); l'applicazione di `Delivered` la porta `Returning`. L'evento
+`Returned` non cambia ulteriormente lo stato (resta `Returning`): rappresenta solo
+il rientro fisico alla base. È durante la fase `InTransit` che il drone è
+"monitorato" dallo scheduler in base a `expected_arrival`.
+
 ---
 
-## 5. Event Sourcing — Sequenza completa degli eventi
+## 5. Event Sourcing — sequenza completa degli eventi
 
-Per ogni drone, la sequenza di eventi su MongoDB è sempre questa:
+Per ogni drone, la sequenza di eventi su MongoDB è sempre questa, in ordine di
+`version` crescente:
 
 ```
 version=0  DRONE_CREATED    { drone_id, order_id, customer_id, from, to, weight, ... }
@@ -139,11 +187,11 @@ version=2  DRONE_DELIVERED  { drone_id, order_id, delivery_time }
 version=3  DRONE_RETURNED   { drone_id, order_id, return_time }
 ```
 
-### Invariante garantita da `rebuild_drone()`
-
-```
-stato_ricostruito_da_eventi == stato_osservato_nelle_belief
-```
+L'idea dell'**Event Sourcing** è che lo stato corrente non venga memorizzato come
+tale: si memorizza la *sequenza di fatti* che lo hanno prodotto, e lo stato si
+**ricostruisce** applicando i fatti in ordine. Il vantaggio è un audit log completo
+e immutabile: si può sempre rispondere alla domanda "come è arrivato il drone in
+questo stato?" riproducendo gli eventi.
 
 .mermaid
     flowchart LR
@@ -163,6 +211,13 @@ stato_ricostruito_da_eventi == stato_osservato_nelle_belief
         E2 -->|"end()"| S2
         S2 --> E3
         E3 -->|"no state change"| S3
+
+**Lettura del diagramma.** A sinistra la sequenza di eventi persistiti; a destra lo
+stato ricostruito a ogni passo. `rebuild_drone()` legge gli eventi ordinati per
+`version`, costruisce la `DroneEntry` dal `Created` (v=0) e poi applica i successivi:
+`Dispatched` → `start()`, `Delivered` → `end()`, `Returned` → nessun cambiamento.
+L'invariante garantita è: *stato ricostruito dagli eventi == stato osservato nelle
+belief dell'agente*.
 
 ---
 
@@ -196,6 +251,16 @@ stato_ricostruito_da_eventi == stato_osservato_nelle_belief
         P4 -->|"ETA scaduta"| T_SCHED --> P5 --> T4 --> P6 --> T_ACK --> P_END
         P4 -->|"SAGA fallisce"| T_COMP --> P_COMP --> P_END
 
+**Lettura del diagramma.** Il token (un ordine) entra in `p0` e attraversa il ciclo
+BDI in `t1`. Da lì si biforca: se l'agente **accetta** (`AcceptDelivery`), salva
+`Created`, pubblica `DroneAssigned`, salva `Dispatched` e arriva in `p4` (drone in
+volo); se **rifiuta** (`RefuseDelivery`), pubblica `DroneAssignmentFailed` e termina.
+Dal posto "drone in volo" (`p4`) ci sono due uscite mutuamente esclusive: lo
+**scheduler** rileva l'arrivo (ETA scaduta) e completa la consegna (`Delivered` →
+`Returned` → belief reset), *oppure* arriva una **compensazione** dalla SAGA che
+resetta l'agente a `Idle`. È la stessa biforcazione tra completamento normale e
+rollback che caratterizza tutta l'architettura.
+
 ---
 
 ## 7. Diagramma di sequenza — Consegna completa
@@ -226,7 +291,7 @@ stato_ricostruito_da_eventi == stato_osservato_nelle_belief
 
         CONS->>K: commit offset
 
-        Note over AGENT: dopo delivery_minutes minuti...
+        Note over AGENT: dopo l'orario di arrivo previsto...
 
         FLEET->>FLEET: check_arrivals() [scheduler, ogni 10s]
         FLEET->>AGENT: has_arrived() → true
@@ -237,6 +302,15 @@ stato_ricostruito_da_eventi == stato_osservato_nelle_belief
         AGENT->>STORE: save_event(Returned, v=3)
         STORE->>MDB: insert_one
         AGENT->>AGENT: update_beliefs → Idle
+
+**Lettura del diagramma.** La prima metà è l'**assegnazione**, guidata dal consumer
+di ordini: la flotta seleziona un agente, che esegue il ciclo BDI e produce gli
+eventi `Created` e `Dispatched` più la notifica `DroneAssigned`. Solo dopo
+l'esecuzione completa il consumer committa l'offset. La seconda metà è il
+**completamento**, guidato dallo scheduler (non dal consumer): quando l'orario di
+arrivo è passato, l'agente delibera `CompleteDelivery` e salva `Delivered` e
+`Returned`, tornando `Idle`. I due momenti sono **temporalmente disgiunti** e
+guidati da trigger diversi (Kafka vs. timer).
 
 ---
 
@@ -250,91 +324,170 @@ stato_ricostruito_da_eventi == stato_osservato_nelle_belief
         participant AGENT as DroneAgent
 
         K->>CONS: SagaEvent::CompensateDrone {drone_id}
-        CONS->>CONS: filtra per CompensateDrone
+        CONS->>CONS: match su CompensateDrone
         CONS->>FLEET: compensate(drone_id)
-        FLEET->>FLEET: trova agente con drone_id
+        FLEET->>FLEET: trova l'agente con quel drone_id
         FLEET->>AGENT: execute([RecordCompensation])
         AGENT->>AGENT: update_compensated() → Idle
         CONS->>K: commit offset
-        Note over CONS: sempre ack su compensazione — un retry non aiuterebbe
+        Note over CONS: sempre commit su compensazione — un retry non aiuterebbe
+
+**Lettura del diagramma.** Il consumer di compensazione riceve *tutti* gli eventi di
+`saga-events`, ma filtra: agisce solo su `CompensateDrone`. Trova l'agente che ha
+quel `drone_id`, gli fa eseguire l'azione `RecordCompensation` (che non scrive alcun
+evento — la compensazione è un *segnale di controllo*, non un fatto di dominio) e ne
+resetta le belief a `Idle`. L'offset viene **sempre** committato: la compensazione è
+sincrona e idempotente, e un retry non aggiungerebbe nulla.
 
 ---
 
 ## 9. La flotta e la concorrenza
 
-`DroneFleet` coordina tre agenti indipendenti. Non esiste più una `InFlightMap` condivisa: lo stato di ogni drone vive esclusivamente nelle sue `DroneBeliefs`.
+`DroneFleet` coordina tre agenti indipendenti. Non esiste una mappa condivisa dello
+stato dei droni: lo stato di ogni drone vive esclusivamente nelle sue `DroneBeliefs`,
+private all'agente.
 
 | Task concorrente | Operazione | Frequenza |
 |---|---|---|
-| Consumer `drone-requests` | `dispatch_order()` → BDI cycle su un agente | Ad ogni ordine Kafka |
+| Consumer `drone-requests` | `dispatch_order()` → ciclo BDI su un agente | Ad ogni ordine Kafka |
 | Scheduler | `check_arrivals()` → `CompleteDelivery` sugli agenti arrivati | Ogni 10 secondi |
-| Consumer `saga-events` | `compensate(drone_id)` → reset beliefs | Al ricevimento di `CompensateDrone` |
+| Consumer `saga-events` | `compensate(drone_id)` → reset belief | Al ricevimento di `CompensateDrone` |
 | Handler HTTP | `store.get_events_for_*()` | Ad ogni chiamata GET |
 
-**Nota importante**: nessuna di queste operazioni condivide lock tra di loro. Ogni agente è isolato; l'unica risorsa condivisa è l'`Arc<DroneEventStore>` (MongoDB), che gestisce la concorrenza internamente tramite il driver asincrono.
+I tre task che mutano la flotta (i due consumer e lo scheduler) accedono alla
+`DroneFleet` tramite un `Arc<tokio::sync::Mutex<DroneFleet>>` condiviso: il `Mutex`
+asincrono serializza gli accessi, evitando data race tra di essi. Gli handler HTTP,
+invece, **non** toccano la flotta: leggono direttamente dall'`Arc<DroneEventStore>`,
+che gestisce la concorrenza internamente tramite il driver MongoDB asincrono. Il
+percorso di lettura (HTTP) e quello di scrittura (consumer/scheduler) sono quindi
+disaccoppiati. La struttura interna degli agenti e l'isolamento delle belief sono
+trattati in [agent.qd](agent.qd).
 
 ---
 
-## 10. Scheduler — Sostituto di `@Scheduled`
+## 10. Scheduler — il task periodico
 
-Il task periodico è un `tokio::spawn` con `tokio::time::interval`:
+Il completamento delle consegne non è guidato da un evento Kafka, ma da un task
+periodico definito in `main.rs`:
 
 ```rust
+let scheduler_fleet = Arc::clone(&fleet);
 tokio::spawn(async move {
     let mut interval = tokio::time::interval(Duration::from_secs(10));
     loop {
-        interval.tick().await;       // cede il thread al runtime durante l'attesa
-        fleet.check_arrivals().await.ok();
+        interval.tick().await;       // cede il runtime durante l'attesa
+        if let Err(e) = scheduler_fleet.lock().await.check_arrivals().await {
+            tracing::error!("Arrival scheduler error: {e}");
+        }
     }
 });
 ```
 
-`check_arrivals()` itera sugli agenti, chiama `has_arrived()` su ognuno, ed esegue il piano `CompleteDelivery` su quelli che hanno raggiunto la destinazione.
+`interval.tick().await` sospende il task (senza occupare un thread) finché non
+scadono i 10 secondi; poi acquisisce il lock sulla flotta e chiama
+`check_arrivals()`, che itera sugli agenti e completa la consegna di quelli il cui
+`has_arrived()` è `true`. Un eventuale errore viene loggato senza interrompere il
+loop.
 
 ---
 
-## 11. API Reference
+## 11. Reference dei moduli
+
+### `main.rs` — wiring e avvio
+
+Assembla l'intero servizio: connessione a MongoDB (database `drone_service`,
+`DroneEventStore`); un producer Kafka (`acks=all`); **due** consumer con `group.id`
+distinti (`drone-service-orders` per gli ordini, `drone-service-compensation` per le
+compensazioni); il `Registry` Prometheus con le `DroneMetrics`; la `DroneFleet` di
+**3 agenti** con `RoundRobinStrategy`, avvolta in `Arc<Mutex<...>>`; i due task
+consumer; lo scheduler degli arrivi; infine il server HTTP Axum (porta `8082`) con
+graceful shutdown.
+
+### `store.rs` — `DroneEventStore`
+
+Wrapper sulla collection `drone_events`. Salva i `DroneEvent` direttamente come BSON
+(nessuna doppia serializzazione).
+
+| Metodo | Ritorno | Descrizione |
+|---|---|---|
+| `save_event(event)` | `Result<()>` | `insert_one` dell'evento; logga `drone_id`/`event_type`/`version` |
+| `get_events_for_drone(drone_id)` | `Result<Vec<DroneEvent>>` | Eventi di un drone, ordinati per `version` |
+| `get_events_for_order(order_id)` | `Result<Vec<DroneEvent>>` | Eventi di un ordine, ordinati per `version` |
+| `count_events_for_drone(drone_id)` | `Result<u64>` | Conteggio eventi — usato per calcolare la prossima `version` |
+| `rebuild_drone(drone_id)` | `Result<Option<DroneEntry>>` | Ricostruisce lo stato applicando gli eventi |
+
+**`rebuild_drone()` in dettaglio.** Legge gli eventi ordinati; se la lista è vuota
+ritorna `None`. Verifica che il **primo evento sia `Created`** — altrimenti l'event
+store è corrotto e ritorna un errore (`anyhow::bail!`). Costruisce una `DroneEntry`
+dal `Created`, poi applica i successivi (`Dispatched` → `start()`, `Delivered` →
+`end()`, `Returned` → nessuna azione) e ritorna l'entry ricostruita.
+
+### `model.rs` — `DroneEntry`, `DroneState`
+
+`DroneState` (enum `Sleeping`/`InTransit`/`Returning`, serializzato in
+`SCREAMING_SNAKE_CASE`, con `Display`). `DroneEntry` è in memoria, non persistita:
+ne descrive lo stato ricostruito. I metodi `start()`/`end()` fanno avanzare lo stato
+e fissano i timestamp; `Display` produce una riga diagnostica del tipo
+`"Drone <id> Returning from '...' to '...' — Ns elapsed"`.
+
+### `consumer.rs` — due consumer Kafka
+
+- `start_order_consumer(consumer, fleet)` — sottoscrive `drone-requests`. Per ogni
+  `OrderMessage` valido chiama `fleet.lock().await.dispatch_order(order)`. Commit su
+  successo; nessun commit su errore transiente; commit-skip su poison pill.
+- `start_compensation_consumer(consumer, fleet)` — sottoscrive `saga-events`. Fa
+  pattern matching: solo `CompensateDrone` viene gestito (`fleet.compensate(...)` +
+  commit); ogni altro `SagaEvent` viene committato immediatamente senza azione (ramo
+  `Ok(_other)`); il JSON malformato viene committato e saltato.
+
+> [NOTE!]
+> In AMQP la routing key `saga.compensate.drone` faceva sì che *solo* gli eventi di
+> compensazione drone arrivassero sulla coda. In Kafka il consumer riceve **tutti**
+> gli eventi del topic `saga-events` e il filtraggio avviene in codice applicativo
+> (il `match`). Il commit immediato degli eventi non pertinenti è l'equivalente di
+> "la routing key non corrispondeva".
+
+### `metrics.rs` — `DroneMetrics`
+
+Due `IntCounter`: `drone_assignment_assigned_total` (consegne accettate) e
+`drone_assignment_refused_total` (rifiutate per peso, deadline o assenza di droni).
+Sono la base dell'SLI di successo di assegnazione (vedi
+[Osservabilità & SLO](slo.qd)); vengono incrementati in `DroneFleet::dispatch_order`.
+
+### `api.rs` — handler HTTP
+
+Tutti gli handler sono *stateless* e leggono dal `DroneEventStore`. Vedi la sezione
+12 per la reference completa.
+
+---
+
+## 12. API Reference
 
 Porta: **8082**
-
----
 
 ### `GET /health`
 **Response `200`:** `Drone Service is running`
 
----
-
 ### `GET /metrics`
 Espone le metriche Prometheus in formato text exposition.
-
 ```
-# HELP drone_assignment_assigned_total Deliveries accepted by the fleet
+# HELP drone_assignment_assigned_total Number of deliveries accepted and assigned to a drone
 # TYPE drone_assignment_assigned_total counter
 drone_assignment_assigned_total 42
 
-# HELP drone_assignment_refused_total Deliveries refused (constraint violation)
+# HELP drone_assignment_refused_total Number of deliveries refused by the fleet
 # TYPE drone_assignment_refused_total counter
 drone_assignment_refused_total 3
 ```
-
-**SLI** — tasso di successo: `assigned / (assigned + refused)`
-
----
+**SLI** — tasso di successo: `assigned / (assigned + refused)`.
 
 ### `GET /order/{orderId}/status`
 Ultimo evento registrato per l'ordine indicato.
-
-**Response `200`:**
-```
-Latest event: DRONE_DISPATCHED at 2026-04-10T14:00:01Z
-```
-**Response `404`:** nessun evento trovato per quell'`order_id`.
-
----
+**Response `200`:** `Latest event: DRONE_DISPATCHED at 2026-04-10T14:00:01Z`
+**Response `404`:** nessun evento per quell'`order_id`.
 
 ### `GET /order/{orderId}/events`
-Storico completo degli eventi associati a un ordine.
-
+Storico completo degli eventi associati a un ordine (JSON).
 **Response `200`:**
 ```json
 [
@@ -344,31 +497,22 @@ Storico completo degli eventi associati a un ordine.
   { "event_type": "DRONE_RETURNED",   "timestamp": "2026-04-10T14:25:01Z", "version": 3 }
 ]
 ```
-
----
+**Response `404`:** nessun evento per quell'`order_id`.
 
 ### `GET /drone/{droneId}/events`
 Ultimo evento registrato per il drone indicato.
-
-**Response `200`:**
-```
-Latest event: DRONE_RETURNED at 2026-04-10T14:25:01Z
-```
-
----
+**Response `200`:** `Latest event: DRONE_RETURNED at 2026-04-10T14:25:01Z`
+**Response `404`:** nessun evento per quel `drone_id`.
 
 ### `GET /drone/{droneId}/rebuild`
 Ricostruisce lo stato del drone applicando l'event log in ordine (event sourcing).
-
-**Response `200`:**
-```
-Drone a1b2-... Returning from 'Via Roma 1' to 'Via Dante 5' — 1502s elapsed
-```
-**Response `404`:** nessun evento trovato per quel `drone_id`.
+**Response `200`:** `Drone a1b2-... Returning from 'Via Roma 1' to 'Via Dante 5' — 1502s elapsed`
+**Response `404`:** nessun evento per quel `drone_id`.
+**Response `500`:** event store corrotto (primo evento non `Created`).
 
 ---
 
-## 12. Graceful shutdown
+## 13. Graceful shutdown
 
 ```rust
 axum::serve(listener, app)
@@ -378,4 +522,6 @@ axum::serve(listener, app)
     .await?;
 ```
 
-`with_graceful_shutdown` attende il completamento delle richieste HTTP in corso prima di chiudere il server. I consumer Kafka e lo scheduler vengono interrotti quando il processo termina.
+`with_graceful_shutdown` attende il completamento delle richieste HTTP in corso
+prima di chiudere il server. I consumer Kafka e lo scheduler, essendo task spawnati,
+vengono interrotti alla terminazione del processo.
