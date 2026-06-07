@@ -3,13 +3,146 @@
 
 # DroneFlow — Architettura del Sistema
 
+> [NOTE!]
+> Questa pagina descrive il sistema **nella sua forma attuale**: tre microservizi
+> Rust che comunicano in modo asincrono attraverso **Apache Kafka**, orchestrati
+> da una SAGA. Il percorso storico che ha portato a questa architettura (la
+> versione iniziale su RabbitMQ/AMQP, la migrazione a Kafka, la riprogettazione
+> del Drone Service ad agenti) è raccontato nell'[Evoluzione del progetto](evoluzione.qd).
+
 ## 1. Panoramica
 
-DroneFlow è una piattaforma a **microservizi event-driven** che gestisce l'intero ciclo di vita di una consegna con droni. Tre servizi indipendenti comunicano esclusivamente tramite messaggi AMQP su RabbitMQ; nessuna chiamata REST diretta esiste tra i backend.
+DroneFlow è una piattaforma a **microservizi event-driven** che gestisce l'intero
+ciclo di vita di una consegna con droni — dalla ricezione dell'ordine, alla
+schedulazione della consegna, all'assegnazione di un drone, fino al completamento
+o alla compensazione in caso di fallimento.
+
+Il principio architetturale fondante è il **disaccoppiamento totale tra i
+backend**: i tre servizi **non si chiamano mai direttamente via REST**. L'unico
+canale di comunicazione inter-servizio è lo scambio di messaggi asincroni su
+Kafka. Un servizio non sa (e non ha bisogno di sapere) quali altri servizi
+esistono: pubblica eventi su un topic e consuma eventi da un altro. Questo rende
+il sistema:
+
+- **Resiliente** — se un servizio è temporaneamente offline, i messaggi
+  destinati a lui restano nel topic Kafka e vengono consumati appena torna su.
+  Nessuna richiesta viene persa e nessun chiamante resta bloccato in attesa.
+- **Scalabile orizzontalmente** — più repliche dello stesso servizio condividono
+  un *consumer group* e Kafka distribuisce automaticamente le partizioni tra di
+  loro (load balancing), senza alcuna modifica al codice.
+- **Evolvibile** — si può sostituire o riscrivere un servizio purché continui a
+  rispettare il *contratto dei messaggi* (i tipi serializzati definiti in
+  [`common`](common.qd)).
+
+Gli unici punti di contatto con il mondo esterno sono due interfacce HTTP: quella
+dell'**Order Service** (per creare ordini e interrogarne lo stato) e quella del
+**Drone Service** (per consultare lo storico degli eventi dei droni). Il
+**Delivery Service** è invece *puramente event-driven*: non espone alcuna rotta
+HTTP, vive esclusivamente di Kafka.
 
 ---
 
-## 2. Componenti del sistema
+## 2. I tre microservizi e le loro responsabilità
+
+| Servizio | Ruolo | Interfaccia | Stato persistente |
+|---|---|---|---|
+| **Order** | Punto d'ingresso HTTP + **orchestratore SAGA** | HTTP `:8080` + Kafka | MongoDB `order_service` (stato delle saga) |
+| **Delivery** | Coordinamento intermedio: assegna un `delivery_id` e inoltra | Solo Kafka | *Nessuno* (stateless) |
+| **Drone** | **Flotta di agenti BDI** + **Event Sourcing** + scheduler arrivi | HTTP `:8082` + Kafka | MongoDB `drone_service` (event store) |
+
+L'**Order Service** ha due nature: da un lato è un server HTTP che accetta le
+richieste degli utenti, dall'altro è il *cervello* della transazione distribuita.
+Reagisce agli eventi pubblicati dagli altri servizi e fa avanzare (o compensare)
+la SAGA. È approfondito in [Order Service](order.qd).
+
+Il **Delivery Service** è il più semplice: riceve un ordine validato, gli assegna
+un identificativo di consegna e lo passa al Drone Service, notificando
+contestualmente l'orchestratore. È *stateless* — non possiede database. Dettagli
+in [Delivery Service](delivery.qd).
+
+Il **Drone Service** è il più articolato: una **flotta di tre agenti autonomi**
+(modello Belief–Desire–Intention) decide per ogni ordine se accettarlo o
+rifiutarlo, persiste ogni cambio di stato come evento immutabile (Event Sourcing)
+e completa le consegne tramite uno scheduler periodico. La parte di servizio
+(persistenza, API, scheduler) è in [Drone Service](drone.qd); il cuore decisionale
+ad agenti è in [Flotta ad Agenti (BDI)](agent.qd).
+
+---
+
+## 3. Struttura del workspace Rust
+
+Il progetto è un **workspace Cargo** con quattro membri: una libreria condivisa e
+tre binari, uno per microservizio.
+
+```toml
+# Cargo.toml (root)
+[workspace]
+resolver = "3"
+members = ["common", "delivery", "drone", "order"]
+```
+
+```
+workspace/
+├── Cargo.toml              ← workspace root [members = [...]]
+├── Cargo.lock              ← lockfile condiviso da tutti i membri
+├── common/                 ← libreria condivisa (no binary)
+│   └── src/
+│       ├── lib.rs          ← re-export pubblico: events + messages
+│       ├── events.rs       ← SagaEvent, DroneEvent
+│       └── messages.rs     ← OrderMessage
+├── order/
+│   └── src/
+│       ├── main.rs         ← wiring: Mongo, Kafka, HTTP, metriche
+│       ├── api.rs          ← handler HTTP (Axum)
+│       ├── service.rs      ← OrderService + DTO di richiesta/risposta
+│       ├── orchestrator.rs ← SagaOrchestrator + SagaMetrics
+│       ├── saga.rs         ← SagaState, SagaStatus, SagaStep
+│       ├── repository.rs   ← SagaRepository (MongoDB)
+│       ├── consumer.rs     ← task consumer Kafka (saga-events)
+│       └── http_metrics.rs ← middleware metriche di disponibilità HTTP
+├── delivery/
+│   └── src/
+│       ├── main.rs         ← wiring: Kafka producer + consumer
+│       ├── service.rs      ← DeliveryService
+│       └── consumer.rs     ← task consumer Kafka (order-requests)
+└── drone/
+    └── src/
+        ├── main.rs         ← wiring: Mongo, Kafka (2 consumer), flotta, scheduler
+        ├── agent.rs        ← trait Agent + DroneAgent (ciclo BDI)
+        ├── beliefs.rs      ← DroneBeliefs, AgentPhase
+        ├── intentions.rs   ← DroneIntention, DroneDesire, plan_for()
+        ├── fleet.rs        ← DroneFleet + AssignmentStrategy
+        ├── store.rs        ← DroneEventStore (event sourcing su MongoDB)
+        ├── model.rs        ← DroneEntry, DroneState (stato ricostruito)
+        ├── consumer.rs     ← task consumer Kafka (drone-requests + saga-events)
+        ├── metrics.rs      ← DroneMetrics (counter assigned/refused)
+        ├── api.rs          ← handler HTTP (Axum)
+        └── service.rs      ← DroneService imperativo (legacy, vedi nota)
+```
+
+> [NOTE!]
+> Il file `drone/src/service.rs` contiene la **vecchia implementazione imperativa**
+> `DroneService` (con la mappa condivisa `InFlightMap`), rimasta nel tree per
+> riferimento storico. Il `main.rs` del Drone Service **non la usa**: istanzia
+> invece la `DroneFleet` di agenti. L'unico elemento del modulo ancora referenziato
+> è la costante `SAGA_EVENTS_TOPIC`. La storia di questa sostituzione è in
+> [Evoluzione del progetto](evoluzione.qd).
+
+**Perché una libreria `common`?** I tre servizi devono serializzare e
+deserializzare *esattamente* le stesse strutture dati: se l'Order Service
+pubblicasse un `OrderMessage` con un campo che il Delivery Service non si aspetta,
+la deserializzazione fallirebbe a runtime. Centralizzando i tipi in un'unica crate
+condivisa, il compilatore Rust diventa il garante del contratto: un cambiamento al
+formato di un messaggio non compila finché tutti i servizi non sono allineati.
+Il dettaglio dei tipi è in [Common — Libreria Condivisa](common.qd).
+
+---
+
+## 4. Componenti del sistema
+
+Il diagramma seguente mostra tutti i componenti runtime e i flussi di messaggi
+Kafka. Le frecce *produce* indicano una scrittura su un topic; le frecce *consume*
+indicano una sottoscrizione (con il relativo `group.id`).
 
 .mermaid
     graph TB
@@ -17,12 +150,13 @@ DroneFlow è una piattaforma a **microservizi event-driven** che gestisce l'inte
 
         subgraph Services["Microservizi"]
             Order["Order Service\n:8080\n(Orchestratore SAGA)"]
-            Delivery["Delivery Service\n(Consumer AMQP)"]
-            Drone["Drone Service\n:8082\n(Event Sourcing)"]
+            Delivery["Delivery Service\n(Kafka Consumer)"]
+            Drone["Drone Service\n:8082\n(Flotta BDI + Event Sourcing)"]
         end
 
         subgraph Infra["Infrastruttura"]
-            RMQ[["RabbitMQ\n:5672 / :15672"]]
+            K[["Apache Kafka\n:9092 (interno)\n:9094 (host)"]]
+            KUI["Kafka UI\n:8090"]
             MDB_O[("MongoDB\norder_service")]
             MDB_D[("MongoDB\ndrone_service")]
         end
@@ -30,74 +164,113 @@ DroneFlow è una piattaforma a **microservizi event-driven** che gestisce l'inte
         Client -->|"POST /\nGET /{id}/saga-status"| Order
         Client -->|"GET /order/{id}/status\nGET /drone/{id}/events"| Drone
 
-        Order -->|"order_queue"| RMQ
-        Order -->|"saga_events_exchange"| RMQ
-        RMQ -->|"saga_events_queue"| Order
+        Order -->|"produce: order-requests"| K
+        Order -->|"produce: saga-events"| K
+        K -->|"consume: saga-events\ngroup: order-service"| Order
 
-        RMQ -->|"order_queue"| Delivery
-        Delivery -->|"drone_queue"| RMQ
-        Delivery -->|"saga_events_exchange"| RMQ
+        K -->|"consume: order-requests\ngroup: delivery-service"| Delivery
+        Delivery -->|"produce: drone-requests"| K
+        Delivery -->|"produce: saga-events"| K
 
-        RMQ -->|"drone_queue"| Drone
-        RMQ -->|"drone_compensation_queue"| Drone
-        Drone -->|"saga_events_exchange"| RMQ
+        K -->|"consume: drone-requests\ngroup: drone-service-orders"| Drone
+        K -->|"consume: saga-events\ngroup: drone-service-compensation"| Drone
+        Drone -->|"produce: saga-events"| K
 
         Order --- MDB_O
         Drone --- MDB_D
+        KUI -.->|"monitor"| K
+
+**Lettura del diagramma.** Si parte dal `Client HTTP` in alto. Una consegna nasce
+con una `POST /` all'Order Service, che diventa il punto di partenza della SAGA.
+Da quel momento, **tutta la comunicazione tra i backend passa per Kafka** (il
+nodo centrale): non c'è alcuna freccia diretta tra Order, Delivery e Drone. Ogni
+servizio produce messaggi su uno o più topic e ne consuma da altri.
+
+Si noti la **simmetria delle responsabilità di persistenza**: solo Order e Drone
+hanno un database (rispettivamente per lo stato delle saga e per l'event store dei
+droni); il Delivery non ne ha, coerentemente con la sua natura stateless. La
+**Kafka UI** è uno strumento di monitoraggio che si collega in sola lettura al
+broker — non fa parte del flusso applicativo.
 
 ---
 
-## 3. Topologia AMQP
+## 5. Topologia Kafka — sintesi
 
-.mermaid
-    graph LR
-        subgraph Exchanges
-            DEF["(default exchange)\nrouting key = queue name"]
-            SEX["saga_events_exchange\ntype: topic"]
-        end
+Il sistema usa **tre topic** e **quattro consumer group**. Questa è la sintesi
+necessaria a leggere i flussi delle sezioni successive; la trattazione completa
+(KRaft, listener, chiavi di partizione, semantica di commit) è in
+[Messaging Layer (Kafka)](kafka.qd).
 
-        subgraph Queues
-            OQ["order_queue"]
-            DRQ["drone_queue"]
-            SEQ["saga_events_queue\nbinding: saga.*"]
-            DCQ["drone_compensation_queue\nbinding: saga.compensate.drone"]
-        end
+| Topic | Produttori | Consumatori | Tipo messaggio | Chiave |
+|---|---|---|---|---|
+| `saga-events` | order, delivery, drone | order, drone | `SagaEvent` (JSON) | `order_id` |
+| `order-requests` | order | delivery | `OrderMessage` (JSON) | `order_id` |
+| `drone-requests` | delivery | drone | `OrderMessage` (JSON) | `order_id` |
 
-        DEF -->|"order_queue"| OQ
-        DEF -->|"drone_queue"| DRQ
-        SEX -->|"saga.*"| SEQ
-        SEX -->|"saga.compensate.drone"| DCQ
-
-        OQ -->|consumed by| Delivery
-        DRQ -->|consumed by| Drone
-        SEQ -->|consumed by| Order
-        DCQ -->|consumed by| Drone
-
-### Routing keys usate
-
-| Routing Key | Pubblicato da | Consumato da | Scopo |
+| Consumer group | Servizio | Topic | Ruolo |
 |---|---|---|---|
-| `saga.started` | Order | — | Audit/monitoring |
-| `saga.validated` | Order | — | Audit/monitoring |
-| `saga.delivery_scheduled` | Delivery | Order | Step 2 completato |
-| `saga.drone_assigned` | Drone | Order | Step 3 completato |
-| `saga.completed` | Order | — | SAGA terminata con successo |
-| `saga.validation_failed` | Order | — | Step 1 fallito |
-| `saga.compensate.drone` | Order | Drone | Compensazione Step 3 |
-| `saga.compensate_delivery` | Order | — | Compensazione Step 2 |
-| `saga.compensate_order` | Order | — | Compensazione Step 1 |
-| `saga.cancelled` | Order | — | Ordine annullato |
+| `order-service` | order | `saga-events` | Avanza la SAGA a ogni evento di step |
+| `delivery-service` | delivery | `order-requests` | Schedula la delivery, inoltra al drone |
+| `drone-service-orders` | drone | `drone-requests` | Assegna un drone, avvia la consegna |
+| `drone-service-compensation` | drone | `saga-events` | Gestisce gli eventi `COMPENSATE_DRONE` |
+
+Due osservazioni chiave che ricorreranno nei flussi:
+
+1. **La chiave di partizione è sempre `order_id`.** Kafka garantisce
+   l'ordinamento dei messaggi *all'interno di una partizione*; usando `order_id`
+   come chiave, tutti i messaggi relativi allo stesso ordine finiscono nella
+   stessa partizione e vengono quindi consumati nell'ordine in cui sono stati
+   prodotti. L'ordinamento globale tra ordini diversi non è necessario.
+2. **Il Drone Service usa due consumer group distinti.** Uno
+   (`drone-service-orders`) per ricevere gli ordini da consegnare, l'altro
+   (`drone-service-compensation`) per ricevere gli eventi di compensazione. Sono
+   group separati perché hanno cursori (offset) indipendenti e logiche di
+   gestione diverse.
 
 ---
 
-## 4. Flusso completo — Happy Path
+## 6. Il pattern SAGA
+
+La consegna di un drone è una **transazione distribuita**: coinvolge tre servizi e
+due database, e *non* può essere protetta da una transazione ACID classica (non
+esiste un lock distribuito su Kafka + due MongoDB). Si usa quindi il pattern
+**SAGA**, che spezza la transazione in una sequenza di **step locali**, ognuno con
+una corrispondente **azione di compensazione** che lo annulla.
+
+DroneFlow adotta la variante a **orchestrazione**: un coordinatore centrale
+(il `SagaOrchestrator` nell'Order Service) decide quale step eseguire e, in caso
+di fallimento, quali compensazioni emettere. L'alternativa — la *coreografia*,
+dove ogni servizio reagisce agli eventi degli altri senza un coordinatore — è
+stata scartata perché renderebbe la logica di compensazione molto più difficile da
+seguire e testare.
+
+I tre step della SAGA sono:
+
+| Step | Eseguito da | Evento di successo | Compensazione |
+|---|---|---|---|
+| 1. **OrderValidation** | Order (sincrono) | *(interno)* | `CompensateOrder` |
+| 2. **DeliveryScheduling** | Delivery | `DeliveryScheduled` | `CompensateDelivery` |
+| 3. **DroneAssignment** | Drone | `DroneAssigned` | `CompensateDrone` |
+
+Il principio fondamentale della compensazione è che gli step vanno annullati in
+**ordine inverso** rispetto a quello di esecuzione: se è fallito lo step 3, si
+compensa prima il drone, poi la delivery, poi l'ordine. Questo è implementato in
+[`SagaState::steps_to_compensate()`](order.qd) con un semplice `sort()` seguito da
+`reverse()` sugli step completati.
+
+---
+
+## 7. Flusso completo — Happy Path
+
+Il diagramma seguente traccia una consegna che va a buon fine, dall'arrivo della
+richiesta HTTP fino al rientro del drone alla base.
 
 .mermaid
     sequenceDiagram
         actor Client
         participant O as Order Service
         participant MDB_O as MongoDB (order)
-        participant RMQ as RabbitMQ
+        participant K as Kafka
         participant D as Delivery Service
         participant DR as Drone Service
         participant MDB_D as MongoDB (drone)
@@ -107,92 +280,171 @@ DroneFlow è una piattaforma a **microservizi event-driven** che gestisce l'inte
         O->>MDB_O: save SagaState (STARTED)
         O->>O: valida ordine (Step 1)
         O->>MDB_O: save SagaState (IN_PROGRESS, step: DeliveryScheduling)
-        O->>RMQ: publish → order_queue (OrderMessage)
+        O->>K: produce → order-requests (OrderMessage, key=order_id)
         O-->>Client: 201 {order_id, saga_id}
 
-        RMQ->>D: consume order_queue
+        K->>D: consume order-requests (group: delivery-service)
         D->>D: genera delivery_id
-        D->>RMQ: publish → drone_queue (OrderMessage)
-        D->>RMQ: publish → saga.delivery_scheduled
+        D->>K: produce → drone-requests (OrderMessage, key=order_id)
+        D->>K: produce → saga-events (DeliveryScheduled, key=order_id)
 
-        RMQ->>O: consume saga_events_queue (DeliveryScheduled)
+        K->>O: consume saga-events (group: order-service)
+        O->>O: match DeliveryScheduled
         O->>MDB_O: save SagaState (step: DroneAssignment)
+        O->>K: commit offset
 
-        RMQ->>DR: consume drone_queue
+        K->>DR: consume drone-requests (group: drone-service-orders)
+        DR->>DR: DroneFleet::dispatch_order() — RoundRobin seleziona un agente
+        DR->>DR: update_beliefs(order)
+        DR->>DR: deliberate() → AcceptDelivery
+        DR->>DR: plan() → [StoreCreated, PublishAssigned, StoreDispatched]
         DR->>MDB_D: save DroneEvent::Created (v0)
-        DR->>RMQ: publish → saga.drone_assigned
+        DR->>K: produce → saga-events (DroneAssigned, key=order_id)
         DR->>MDB_D: save DroneEvent::Dispatched (v1)
-        DR->>DR: aggiunge a in_flight map
+        DR->>DR: update_beliefs() → phase: ExecutingDelivery
+        DR->>K: commit offset
 
-        RMQ->>O: consume saga_events_queue (DroneAssigned)
+        K->>O: consume saga-events (group: order-service)
+        O->>O: match DroneAssigned
         O->>MDB_O: save SagaState (COMPLETED)
-        O->>RMQ: publish → saga.completed
+        O->>K: produce → saga-events (OrderCompleted, key=order_id)
+        O->>K: commit offset
 
         Note over DR: scheduler ogni 10s
-        DR->>DR: settle_arrived()
+        DR->>DR: DroneFleet::check_arrivals()
+        DR->>DR: has_arrived() → true
+        DR->>DR: deliberate() → CompleteDelivery
         DR->>MDB_D: save DroneEvent::Delivered (v2)
         DR->>MDB_D: save DroneEvent::Returned (v3)
-        DR->>DR: rimuove da in_flight map
+        DR->>DR: update_beliefs() → phase: Idle
+
+**Narrazione passo per passo.**
+
+1. **Creazione dell'ordine (sincrona).** Il client invia `POST /`. L'Order Service
+   genera un `order_id` e un `saga_id`, salva lo stato iniziale della saga su
+   MongoDB (`STARTED`) ed esegue **subito, in modo sincrono**, lo Step 1: la
+   validazione dell'ordine (peso > 0, indirizzi non vuoti). Se la validazione
+   passa, marca lo step come completato, salva di nuovo lo stato
+   (`IN_PROGRESS`, prossimo step `DeliveryScheduling`) e **pubblica** l'ordine sul
+   topic `order-requests`. Solo a questo punto risponde al client con `201` e i due
+   identificativi. **Tutto ciò che segue è asincrono**: il client ha già la sua
+   risposta e non resta in attesa.
+
+2. **Schedulazione della consegna (Step 2).** Il Delivery Service, sottoscritto a
+   `order-requests`, consuma il messaggio. Genera un `delivery_id`, inoltra
+   l'`OrderMessage` sul topic `drone-requests` (per il Drone Service) e pubblica un
+   evento `DeliveryScheduled` su `saga-events` (per l'orchestratore). Si noti che il
+   `saga_id` nell'evento è lasciato **vuoto**: il Delivery Service non lo conosce, e
+   l'orchestratore correla la saga tramite `order_id` (vedi [Delivery Service](delivery.qd)).
+
+3. **Avanzamento della saga.** L'orchestratore, sottoscritto a `saga-events`,
+   riceve `DeliveryScheduled`, recupera la saga per `order_id`, registra il
+   `delivery_id`, marca lo Step 2 completato (prossimo step `DroneAssignment`) e
+   **committa l'offset** Kafka — confermando così di aver elaborato il messaggio.
+
+4. **Assegnazione del drone (Step 3).** Il Drone Service consuma da
+   `drone-requests`. La `DroneFleet` seleziona un agente con la strategia
+   round-robin; l'agente *aggiorna le proprie belief*, *delibera* di accettare la
+   consegna, *pianifica* la sequenza di azioni ed *esegue*: salva l'evento `Created`
+   (versione 0), pubblica `DroneAssigned` su `saga-events`, salva l'evento
+   `Dispatched` (versione 1) e aggiorna le belief alla fase `ExecutingDelivery`. Il
+   ciclo decisionale BDI è descritto in [Flotta ad Agenti (BDI)](agent.qd).
+
+5. **Completamento della saga.** L'orchestratore riceve `DroneAssigned`, marca la
+   saga `COMPLETED`, registra la durata end-to-end (per l'SLO di latenza) e pubblica
+   `OrderCompleted`. La transazione distribuita è conclusa con successo.
+
+6. **Arrivo a destinazione (asincrono, via scheduler).** Indipendentemente dalla
+   saga, ogni 10 secondi lo scheduler del Drone Service chiama `check_arrivals()`.
+   Quando l'orario di arrivo previsto di un drone è passato, l'agente delibera
+   `CompleteDelivery` e salva gli eventi `Delivered` (v2) e `Returned` (v3),
+   tornando infine `Idle` e quindi di nuovo disponibile.
+
 ---
 
-## 5. Flusso completo — Compensazione (fallimento Step 3)
+## 8. Flusso completo — Compensazione
+
+Quando uno step fallisce *dopo* che altri step sono già stati completati, la SAGA
+deve **annullare** il lavoro svolto. Il diagramma mostra il caso peggiore: il
+fallimento dello Step 3 (assegnazione del drone), che richiede di compensare tutti
+e tre gli step a ritroso.
 
 .mermaid
     sequenceDiagram
         participant O as Order Service
         participant MDB_O as MongoDB (order)
-        participant RMQ as RabbitMQ
+        participant K as Kafka
         participant DR as Drone Service
 
-        Note over RMQ,O: DroneAssignmentFailed ricevuto
-        RMQ->>O: consume saga_events_queue
+        Note over K,O: DroneAssignmentFailed ricevuto (group: order-service)
+        K->>O: consume saga-events
+        O->>O: match DroneAssignmentFailed
         O->>MDB_O: save SagaState (FAILED)
         O->>MDB_O: save SagaState (COMPENSATING)
+        O->>K: commit offset
 
         Note over O: steps_to_compensate() = [DroneAssignment, DeliveryScheduling, OrderValidation]
 
-        O->>RMQ: publish → saga.compensate.drone
-        RMQ->>DR: consume drone_compensation_queue
-        DR->>DR: compensate(drone_id) — rimuove da in_flight
+        O->>K: produce → saga-events (CompensateDrone, key=order_id)
+        O->>K: produce → saga-events (CompensateDelivery, key=order_id)
+        O->>K: produce → saga-events (CompensateOrder, key=order_id)
 
-        O->>RMQ: publish → saga.compensate_delivery
-        O->>RMQ: publish → saga.compensate_order
+        K->>DR: consume saga-events (group: drone-service-compensation)
+        DR->>DR: match CompensateDrone
+        DR->>DR: DroneFleet::compensate(drone_id)
+        DR->>DR: update_compensated() → phase: Idle
+        DR->>K: commit offset
+
+        Note over DR,K: altri eventi (CompensateDelivery, CompensateOrder)\nricevuti dallo stesso consumer → match _ → commit immediato (skip)
+
         O->>MDB_O: save SagaState (COMPENSATED)
-        O->>RMQ: publish → saga.cancelled
+        O->>K: produce → saga-events (OrderCancelled, key=order_id)
+
+**Narrazione passo per passo.**
+
+1. **Rilevamento del fallimento.** Il Drone Service, non potendo soddisfare la
+   consegna (per esempio un peso eccessivo o l'assenza di droni disponibili), ha
+   pubblicato `DroneAssignmentFailed`. L'orchestratore lo riceve, recupera la saga,
+   la marca `FAILED` con la motivazione, poi `COMPENSATING`, e committa l'offset.
+
+2. **Calcolo dell'ordine di compensazione.** L'orchestratore chiama
+   `steps_to_compensate()`, che restituisce gli step completati in **ordine
+   inverso**. Nel caso peggiore: `[DroneAssignment, DeliveryScheduling,
+   OrderValidation]`.
+
+3. **Emissione delle compensazioni.** Per ogni step da compensare, l'orchestratore
+   pubblica l'evento corrispondente su `saga-events`: `CompensateDrone`,
+   `CompensateDelivery`, `CompensateOrder`. Tutti con chiave `order_id`, quindi
+   nella stessa partizione e nell'ordine emesso.
+
+4. **Reazione del Drone Service.** Il consumer di compensazione
+   (`drone-service-compensation`) riceve *tutti* gli eventi `saga-events`, ma agisce
+   **solo** su `CompensateDrone`: libera l'agente coinvolto resettandone le belief
+   a `Idle`. Tutti gli altri eventi (incluse le compensazioni destinate ad altri
+   servizi, ma anche `OrderCompleted`, `DeliveryScheduled`, ecc.) cadono nel ramo
+   `_` del match e vengono **committati immediatamente** senza azione — l'equivalente
+   applicativo del "la routing key non corrispondeva" di RabbitMQ.
+
+5. **Chiusura.** Completate le compensazioni, l'orchestratore marca la saga
+   `COMPENSATED` e pubblica `OrderCancelled` come evento terminale di audit.
+
+> [NOTE!]
+> Le compensazioni di `CompensateDelivery` e `CompensateOrder` non hanno un
+> consumer dedicato che le elabori attivamente: il Delivery Service è stateless
+> (non c'è nulla di persistente da annullare) e l'annullamento dell'ordine è già
+> registrato nello stato della saga su MongoDB. Questi eventi restano comunque
+> sul topic come **traccia di audit** dell'avvenuta compensazione.
 
 ---
 
-## 6. Struttura del workspace Rust
+## 9. Dove approfondire
 
-```
-workspace/
-├── Cargo.toml              ← workspace root [members = [...]]
-├── Cargo.lock
-├── common/                 ← libreria condivisa (no binary)
-│   └── src/
-│       ├── lib.rs          ← pub mod events; pub mod messages;
-│       ├── events.rs       ← SagaEvent, DroneEvent
-│       └── messages.rs     ← OrderMessage
-├── order/
-│   └── src/
-│       ├── main.rs         ← wiring
-│       ├── api.rs          ← HTTP handlers (Axum)
-│       ├── service.rs      ← OrderService + DTOs
-│       ├── orchestrator.rs ← SagaOrchestrator
-│       ├── saga.rs         ← SagaState, SagaStatus, SagaStep
-│       ├── repository.rs   ← SagaRepository (MongoDB)
-│       └── consumer.rs     ← AMQP consumer task
-├── delivery/
-│   └── src/
-│       ├── main.rs
-│       ├── service.rs      ← DeliveryService
-│       └── consumer.rs     ← AMQP consumer task
-└── drone/
-    └── src/
-        ├── main.rs
-        ├── api.rs          ← HTTP handlers (Axum)
-        ├── service.rs      ← DroneService
-        ├── model.rs        ← DroneEntry, DroneState
-        ├── store.rs        ← DroneEventStore (MongoDB)
-        └── consumer.rs     ← AMQP consumer tasks (x2)
-```
+- **Contratti dei messaggi** (`OrderMessage`, `SagaEvent`, `DroneEvent`):
+  [Common — Libreria Condivisa](common.qd).
+- **Orchestrazione della SAGA** e macchine a stati: [Order Service](order.qd).
+- **Coordinamento e statelessness**: [Delivery Service](delivery.qd).
+- **Event sourcing, scheduler, API**: [Drone Service](drone.qd).
+- **Decisione autonoma degli agenti**: [Flotta ad Agenti (BDI)](agent.qd).
+- **Dettagli del transport Kafka**: [Messaging Layer (Kafka)](kafka.qd).
+- **Deployment e osservabilità**: [Deployment Kubernetes](k8s.qd) e
+  [Osservabilità & SLO](slo.qd).

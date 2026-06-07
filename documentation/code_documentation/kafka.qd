@@ -1,84 +1,54 @@
 .docname {Code Docs}
 .include {docs}
 
+# Messaging Layer — Apache Kafka
+
 > [NOTE!]
-> Sostituzione di RabbitMQ/AMQP con Apache Kafka su tutti e tre i microservizi.
-> L'unica cosa riscritta è stata il transport layer.
+> Questa pagina è la **reference del transport layer**: come i tre microservizi
+> usano Kafka per comunicare. La storia della migrazione da RabbitMQ/AMQP a Kafka è
+> in [Evoluzione del progetto](evoluzione.qd); la vista d'insieme dei flussi è in
+> [Architettura del Sistema](architettura.qd).
 
-## 1. Cosa è cambiato
+## 1. Perché Kafka
 
-| Layer | v1 (AMQP) | v2 (Kafka) | Modificato? |
-|---|---|---|---|
-| Crate di trasporto | `lapin 2` | `rdkafka 0.37` | ✅ |
-| Broker | RabbitMQ 3 | Kafka 3.8 (KRaft, no Zookeeper) | ✅ |
-| Topologia messaggi | Exchange topic + routing keys | Topic flat + message key | ✅ |
-| Modello consumer | Push (broker chiama il servizio) | Pull (`consumer.recv().await`) | ✅ |
-| Acknowledgement | `basic_ack` / `basic_nack` | `commit_message` / no-commit | ✅ |
-| Business logic | Saga orchestration, compensazione | Invariata | ⬛ |
-| Modelli dati | `SagaEvent`, `DroneEvent`, `OrderMessage` | Invariati | ⬛ |
-| Persistenza MongoDB | Stato saga, event sourcing | Invariata | ⬛ |
-| API HTTP | `POST /order`, endpoint stato drone | Invariate | ⬛ |
+L'intera comunicazione inter-servizio passa per Apache Kafka. La scelta porta tre
+proprietà che reggono l'architettura event-driven:
 
----
+- **Log durevole e rigiocabile.** Un topic Kafka è un log append-only persistito su
+  disco. Un messaggio non viene cancellato quando viene consumato: resta nel log, e
+  un consumer può rileggerlo (per esempio dopo un riavvio, ripartendo da un offset).
+  Questo è ciò che rende il sistema resiliente ai fallimenti temporanei.
+- **Disaccoppiamento produttore/consumatore.** Chi produce non sa chi consuma. Si
+  può aggiungere un nuovo consumatore di un topic senza toccare i produttori.
+- **Scalabilità tramite partizioni e consumer group.** Un topic è diviso in
+  partizioni; un gruppo di consumer si divide le partizioni automaticamente. Più
+  repliche di un servizio scalano senza modifiche al codice.
 
-## 2. Componenti del sistema
-
-.mermaid
-    graph TB
-        Client(["👤 Client HTTP"])
-
-        subgraph Services["Microservizi"]
-            Order["Order Service\n:8080\n(Orchestratore SAGA)"]
-            Delivery["Delivery Service\n(Kafka Consumer)"]
-            Drone["Drone Service\n:8082\n(Event Sourcing)"]
-        end
-
-        subgraph Infra["Infrastruttura"]
-            K[["Apache Kafka\n:9092 (interno)\n:9094 (host)"]]
-            KUI["Kafka UI\n:8090"]
-            MDB_O[("MongoDB\norder_service")]
-            MDB_D[("MongoDB\ndrone_service")]
-        end
-
-        Client -->|"POST /\nGET /{id}/saga-status"| Order
-        Client -->|"GET /order/{id}/status\nGET /drone/{id}/events"| Drone
-
-        Order -->|"produce: order-requests"| K
-        Order -->|"produce: saga-events"| K
-        K -->|"consume: saga-events\ngroup: order-service"| Order
-
-        K -->|"consume: order-requests\ngroup: delivery-service"| Delivery
-        Delivery -->|"produce: drone-requests"| K
-        Delivery -->|"produce: saga-events"| K
-
-        K -->|"consume: drone-requests\ngroup: drone-service-orders"| Drone
-        K -->|"consume: saga-events\ngroup: drone-service-compensation"| Drone
-        Drone -->|"produce: saga-events"| K
-
-        Order --- MDB_O
-        Drone --- MDB_D
-        KUI -.->|"monitor"| K
+I client Kafka usati sono basati sulla crate `rdkafka` (binding a `librdkafka`).
 
 ---
 
-## 3. Topologia Kafka — Topic e Consumer Groups
+## 2. Topologia — Topic e Consumer Group
 
 ### Topic
 
-| Topic | Produttori | Consumatori | Tipo messaggio | Chiave partizione |
-|---|---|---|---|---|
-| `saga-events` | order, delivery, drone | order, drone | `SagaEvent` (JSON) | `order_id` |
-| `order-requests` | order | delivery | `OrderMessage` (JSON) | `order_id` |
-| `drone-requests` | delivery | drone | `OrderMessage` (JSON) | `order_id` |
+Il sistema usa **tre topic**, tutti con payload JSON e chiave di partizione
+`order_id`.
 
-### Consumer Groups
+| Topic | Produttori | Consumatori | Tipo messaggio | Chiave |
+|---|---|---|---|---|
+| `saga-events` | order, delivery, drone | order, drone | `SagaEvent` | `order_id` |
+| `order-requests` | order | delivery | `OrderMessage` | `order_id` |
+| `drone-requests` | delivery | drone | `OrderMessage` | `order_id` |
+
+### Consumer Group
 
 | Group ID | Servizio | Topic sottoscritto | Ruolo |
 |---|---|---|---|
 | `order-service` | order | `saga-events` | Avanza la SAGA su ogni step event |
-| `delivery-service` | delivery | `order-requests` | Schedula delivery, inoltra a drone |
-| `drone-service-orders` | drone | `drone-requests` | Assegna drone, avvia timer consegna |
-| `drone-service-compensation` | drone | `saga-events` | Gestisce eventi `COMPENSATE_DRONE` |
+| `delivery-service` | delivery | `order-requests` | Schedula la delivery, inoltra al drone |
+| `drone-service-orders` | drone | `drone-requests` | Assegna un drone, avvia la consegna |
+| `drone-service-compensation` | drone | `saga-events` | Gestisce gli eventi `COMPENSATE_DRONE` |
 
 .mermaid
     graph LR
@@ -100,103 +70,180 @@
         OR -->|"subscribe"| G2
         DR -->|"subscribe"| G3
 
-> **Consumer group semantics:** tutte le repliche dello stesso servizio condividono un `group.id`.
-> Kafka distribuisce le partizioni tra di loro automaticamente (load balancing).
-> Servizi con `group.id` diverso ricevono ciascuno una copia indipendente dello stream (fan-out).
-
-## 4. Flusso completo — Happy Path
-
-.mermaid
-    sequenceDiagram
-        actor Client
-        participant O as Order Service
-        participant MDB_O as MongoDB (order)
-        participant K as Kafka
-        participant D as Delivery Service
-        participant DR as Drone Service
-        participant MDB_D as MongoDB (drone)
-
-        Client->>O: POST / {ordine}
-        O->>O: genera order_id + saga_id
-        O->>MDB_O: save SagaState (STARTED)
-        O->>O: valida ordine (Step 1)
-        O->>MDB_O: save SagaState (IN_PROGRESS, step: DeliveryScheduling)
-        O->>K: produce → order-requests (OrderMessage, key=order_id)
-        O-->>Client: 201 {order_id, saga_id}
-
-        K->>D: consume order-requests (group: delivery-service)
-        D->>D: genera delivery_id
-        D->>K: produce → drone-requests (OrderMessage, key=order_id)
-        D->>K: produce → saga-events (DeliveryScheduled, key=order_id)
-
-        K->>O: consume saga-events (group: order-service)
-        O->>O: match DeliveryScheduled
-        O->>MDB_O: save SagaState (step: DroneAssignment)
-        O->>K: commit offset
-
-        K->>DR: consume drone-requests (group: drone-service-orders)
-        DR->>MDB_D: save DroneEvent::Created (v0)
-        DR->>K: produce → saga-events (DroneAssigned, key=order_id)
-        DR->>MDB_D: save DroneEvent::Dispatched (v1)
-        DR->>DR: aggiunge a in_flight map
-        DR->>K: commit offset
-
-        K->>O: consume saga-events (group: order-service)
-        O->>O: match DroneAssigned
-        O->>MDB_O: save SagaState (COMPLETED)
-        O->>K: produce → saga-events (OrderCompleted, key=order_id)
-        O->>K: commit offset
-
-        Note over DR: scheduler ogni 10s
-        DR->>DR: settle_arrived()
-        DR->>MDB_D: save DroneEvent::Delivered (v2)
-        DR->>MDB_D: save DroneEvent::Returned (v3)
-        DR->>DR: rimuove da in_flight map
+**Lettura del diagramma.** Si noti che il topic `saga-events` è sottoscritto da
+**due** group distinti (`order-service` e `drone-service-compensation`): è un caso di
+**fan-out**. Ogni group riceve una copia indipendente dell'intero stream di eventi e
+ne mantiene un cursore (offset) separato. L'Order Service avanza la SAGA; il Drone
+Service cerca le compensazioni. I due non interferiscono. Gli altri due topic hanno
+un solo consumatore ciascuno.
 
 ---
 
-## 5. Flusso completo — Compensazione (fallimento Step 3)
+## 3. Chiave di partizione e ordinamento
 
-.mermaid
-    sequenceDiagram
-        participant O as Order Service
-        participant MDB_O as MongoDB (order)
-        participant K as Kafka
-        participant DR as Drone Service
+Tutti i messaggi usano **`order_id` come chiave di partizione**. Questa è la singola
+decisione di design più importante del transport layer.
 
-        Note over K,O: DroneAssignmentFailed ricevuto (group: order-service)
-        K->>O: consume saga-events
-        O->>O: match DroneAssignmentFailed
-        O->>MDB_O: save SagaState (FAILED)
-        O->>MDB_O: save SagaState (COMPENSATING)
-        O->>K: commit offset
+Kafka garantisce l'ordinamento dei messaggi **solo all'interno di una singola
+partizione**. Distribuendo i messaggi per chiave (`order_id`), Kafka assicura che
+tutti i messaggi relativi allo stesso ordine finiscano nella **stessa partizione** e
+quindi siano consumati **nell'ordine in cui sono stati prodotti**. Per esempio, per
+un dato ordine, l'evento `DeliveryScheduled` sarà sempre processato prima di
+`DroneAssigned`, perché entrambi hanno la stessa chiave e arrivano nella stessa
+partizione in sequenza.
 
-        Note over O: steps_to_compensate() = [DroneAssignment, DeliveryScheduling, OrderValidation]
+L'ordinamento *globale* tra ordini diversi non è necessario (e nemmeno desiderabile:
+limiterebbe la parallelizzazione). Ordini diversi possono finire su partizioni
+diverse ed essere elaborati in parallelo. Nel codice, la chiave è impostata nel
+`FutureRecord`:
 
-        O->>K: produce → saga-events (CompensateDrone, key=order_id)
-        O->>K: produce → saga-events (CompensateDelivery, key=order_id)
-        O->>K: produce → saga-events (CompensateOrder, key=order_id)
-
-        K->>DR: consume saga-events (group: drone-service-compensation)
-        DR->>DR: match CompensateDrone
-        DR->>DR: compensate(drone_id) — rimuove da in_flight
-        DR->>K: commit offset
-
-        Note over DR,K: altri eventi (CompensateDelivery, CompensateOrder)\nricevuti dallo stesso consumer → match _ → commit immediato (skip)
-
-        O->>MDB_O: save SagaState (COMPENSATED)
-        O->>K: produce → saga-events (OrderCancelled, key=order_id)
+```rust
+FutureRecord::to(topic).key(key).payload(payload.as_slice())
+//                       ^^^^^^^^ key = order_id
+```
 
 ---
 
-## 6. Infrastruttura — Note sui listener Kafka
+## 4. Produttore — durabilità con `acks=all`
 
-Kafka gira in **KRaft mode** (nessun Zookeeper). Il broker espone due listener:
+Tutti e tre i servizi configurano il producer in modo identico:
+
+```rust
+let producer: FutureProducer = ClientConfig::new()
+    .set("bootstrap.servers", &brokers)
+    .set("message.timeout.ms", "5000")
+    .set("acks", "all")
+    .create()?;
+```
+
+- **`acks=all`** è la garanzia di durabilità più forte: una `send` si considera
+  riuscita solo quando il *leader della partizione* **e tutte le repliche in-sync**
+  hanno confermato la scrittura. Con una singola replica (il setup di sviluppo) ciò
+  significa che il leader ha persistito il messaggio; in un cluster multi-replica
+  protegge dalla perdita di dati alla caduta di un broker.
+- **`message.timeout.ms=5000`** limita a 5 secondi il tempo massimo per consegnare un
+  messaggio al broker prima di considerare la `send` fallita.
+
+Ogni `send` usa un `Timeout::After(Duration::from_secs(5))` lato applicativo e mappa
+l'eventuale errore Kafka in un `anyhow::Error` descrittivo. Poiché il `FutureProducer`
+è `Arc`-backed internamente, clonarlo è economico: è ciò che permette di condividere
+un unico producer tra più componenti.
+
+---
+
+## 5. Consumatore — commit manuale e at-least-once
+
+Tutti i consumer condividono la stessa configurazione di base:
+
+```rust
+let consumer: StreamConsumer = ClientConfig::new()
+    .set("bootstrap.servers", &brokers)
+    .set("group.id", "<nome-gruppo>")
+    .set("auto.offset.reset", "earliest")
+    .set("enable.auto.commit", "false")
+    .create()?;
+```
+
+- **`group.id`** identifica il consumer group (vedi tabella §2). Tutte le repliche
+  con lo stesso `group.id` si dividono le partizioni (load balancing); group diversi
+  ricevono copie indipendenti dello stream (fan-out).
+- **`auto.offset.reset=earliest`**: se il group non ha un offset committato (primo
+  avvio o reset), parte dall'inizio del topic. Garantisce che nessun messaggio
+  prodotto prima dell'avvio del consumer venga perso.
+- **`enable.auto.commit=false`**: gli offset si committano **manualmente**, *dopo*
+  aver elaborato con successo ogni messaggio. È l'equivalente del `basic_ack` di AMQP
+  e la chiave della consegna **at-least-once**.
+
+Il pattern del loop di consumo, identico nei tre servizi:
+
+.mermaid
+    flowchart TD
+        A["consumer.recv() — pull\ndel prossimo messaggio"]
+        B{"payload presente?"}
+        T["commit + skip\n(tombstone)"]
+        C{"deserializzazione"}
+        D["handler applicativo"]
+        E{"esito"}
+        OK["commit_message()\n(offset avanza)"]
+        NOC["NON committa\n(Kafka rielabora)"]
+        PP["commit + skip\n(poison pill)"]
+
+        A --> B
+        B -->|"No"| T
+        B -->|"Sì"| C
+        C -->|"Err"| PP
+        C -->|"Ok"| D --> E
+        E -->|"Ok"| OK
+        E -->|"Err transiente"| NOC
+
+        style OK fill:#dfd
+        style NOC fill:#fdd
+        style PP fill:#fdd
+
+**Lettura del diagramma.** `recv()` è il *pull*: il consumer chiede a Kafka il
+prossimo messaggio (l'opposto del modello *push* di AMQP, in cui era il broker a
+spingere). Quattro esiti:
+
+| Esito | Azione | Equivalente AMQP |
+|---|---|---|
+| Payload vuoto (tombstone) | commit + skip | — |
+| JSON malformato (poison pill) | commit + skip | `nack(requeue=false)` |
+| Handler `Ok` | `commit_message` | `basic_ack` |
+| Handler `Err` transiente | **no commit** | `nack(requeue=true)` |
+
+La distinzione cruciale è tra **poison pill** ed **errore transiente**. Un messaggio
+malformato non diventerà mai valido: committarlo lo *salta*, evitando un loop infinito
+di retry. Un errore transiente (es. MongoDB momentaneamente irraggiungibile) merita
+invece un retry: **non** committare l'offset fa sì che Kafka riconsegni il messaggio
+a un prossimo poll (dopo un riavvio o un rebalance del consumer). L'at-least-once nasce
+proprio da qui: un messaggio è committato solo dopo l'elaborazione riuscita, quindi nel
+peggiore dei casi viene elaborato *più di una volta*, mai *zero volte*.
+
+Il commit è eseguito in modalità `CommitMode::Async` (fire-and-forget, throughput più
+alto). In scenari che richiedano la garanzia più forte si userebbe `CommitMode::Sync`.
+
+> [NOTE!]
+> **Niente wildcard di routing.** In AMQP una routing key come `saga.compensate.drone`
+> faceva sì che il broker consegnasse a una coda *solo* gli eventi pertinenti. In
+> Kafka un consumer riceve **tutti** i messaggi del topic a cui è sottoscritto, e il
+> filtraggio avviene in **codice applicativo**. È il caso del consumer di
+> compensazione del Drone Service, che riceve l'intero `saga-events` e agisce solo su
+> `CompensateDrone`, committando immediatamente tutto il resto.
+
+---
+
+## 6. Infrastruttura — KRaft e i listener
+
+Kafka gira in **KRaft mode** (Kafka Raft), cioè **senza Zookeeper**: il broker è
+contemporaneamente *broker* e *controller* (`KAFKA_PROCESS_ROLES=broker,controller`),
+e gestisce i metadati del cluster con un quorum Raft interno. Questo semplifica
+drasticamente il deployment: un solo processo invece di due cluster separati.
+
+In `docker-compose` il broker espone **due listener**, per servire client su reti
+diverse:
 
 | Listener | Indirizzo | Usato da |
 |---|---|---|
 | `PLAINTEXT` | `kafka:9092` | Container Docker (comunicazione inter-servizio) |
 | `EXTERNAL` | `localhost:9094` | Macchina host (CLI Kafka, IDE, Kafka UI) |
 
-La variabile d'ambiente per i servizi è `KAFKA_BROKERS=kafka:9092`.
-Per accedere dall'host usare `localhost:9094`.
+I servizi leggono il broker dalla variabile d'ambiente `KAFKA_BROKERS=kafka:9092`. È
+un *seed*: da un solo indirizzo, i client Kafka scoprono automaticamente l'intera
+topologia del cluster. Dall'host si usa invece `localhost:9094`.
+
+In Kubernetes la configurazione del broker è leggermente diversa (un solo listener
+rilevante per il cluster); i dettagli, incluse le insidie di KRaft su K8s, sono in
+[Deployment Kubernetes](k8s.qd).
+
+### Creazione automatica dei topic
+
+Con `KAFKA_AUTO_CREATE_TOPICS_ENABLE=true`, i topic vengono creati alla **prima
+produzione**. Questo elimina la necessità di dichiarare la topologia all'avvio (in
+AMQP servivano `exchange_declare`/`queue_declare`): i servizi partono e producono, e
+i topic nascono al volo.
+
+> [NOTE!]
+> All'avvio può comparire un errore benigno `UnknownTopicOrPartition: saga-events`:
+> i consumer si sottoscrivono *prima* che il topic esista. Con l'auto-creazione
+> abilitata, il topic viene creato alla prima produzione e il consumer riprende
+> normalmente.

@@ -5,49 +5,126 @@
 
 ## 1. Scopo
 
-`common` è una libreria Rust che espone i **tipi condivisi** tra i tre microservizi. Centralizzare questi tipi garantisce che tutti i servizi usino la stessa struttura dati per serializzare e deserializzare i messaggi AMQP, eliminando ogni possibilità di disallineamento.
+`common` è una libreria Rust (una *crate* senza binario) che espone i **tipi
+condivisi** tra i tre microservizi. È il **contratto** del sistema: ogni messaggio
+che viaggia su Kafka è una di queste strutture, serializzata in JSON.
 
----
+Il motivo per cui questi tipi vivono in un'unica libreria, invece di essere
+duplicati in ogni servizio, è la **sicurezza a tempo di compilazione**. Se l'Order
+Service producesse un `OrderMessage` e il Delivery Service ne avesse una
+definizione anche solo leggermente diversa, la deserializzazione fallirebbe a
+runtime, in produzione, in modo silenzioso e difficile da diagnosticare.
+Centralizzando i tipi, il compilatore garantisce che produttore e consumatore
+parlino *esattamente* la stessa lingua: un cambiamento al formato di un messaggio
+non compila finché tutti i servizi non sono aggiornati.
 
-## 2. Moduli
+```rust
+// common/src/lib.rs — l'intera superficie pubblica della crate
+pub mod events;
+pub mod messages;
+
+pub use events::{DroneEvent, SagaEvent};
+pub use messages::OrderMessage;
+```
+
+Il `lib.rs` si limita a dichiarare i due moduli e a **ri-esportarne** i tre tipi
+principali. Grazie al `pub use`, i servizi scrivono `use common::OrderMessage`
+invece di `use common::messages::OrderMessage`: il percorso d'import è più corto e
+indipendente dall'organizzazione interna dei moduli.
 
 ```
 common/src/
 ├── lib.rs          ← re-export pubblico di events e messages
-├── events.rs       ← SagaEvent, DroneEvent
+├── events.rs       ← SagaEvent, DroneEvent (+ test di serializzazione)
 └── messages.rs     ← OrderMessage
 ```
 
 ---
 
-## 3. `OrderMessage`
+## 2. `OrderMessage` — il messaggio d'ordine
 
-DTO che viaggia su due code: `order_queue` (Order → Delivery) e `drone_queue` (Delivery → Drone).
+`OrderMessage` è il DTO (Data Transfer Object) che descrive *cosa* va consegnato e
+*dove*. Viaggia su due topic: `order-requests` (Order → Delivery) e `drone-requests`
+(Delivery → Drone). È sempre lo stesso ordine che attraversa la pipeline.
 
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrderMessage {
+    pub order_id: String,
+    pub customer_id: String,
+    pub from_address: String,
+    pub to_address: String,
+    pub package_weight: f64,
+    pub requested_delivery_time: DateTime<Utc>,
+    pub max_delivery_time_minutes: i32,
+}
 ```
-┌─────────────────────────────────┐
-│         OrderMessage            │
-├─────────────────────────────────┤
-│ + order_id     : String         │
-│ + customer_id  : String         │
-│ + from_address : String         │
-│ + to_address   : String         │
-│ + package_weight: f64           │
-│ + requested_delivery_time: Utc  │
-│ + max_delivery_time_minutes: i32│
-└─────────────────────────────────┘
-```
+
+| Campo | Tipo | Significato |
+|---|---|---|
+| `order_id` | `String` | UUID dell'ordine — chiave di correlazione di tutto il sistema |
+| `customer_id` | `String` | Identificativo del cliente |
+| `from_address` | `String` | Indirizzo di partenza |
+| `to_address` | `String` | Indirizzo di destinazione |
+| `package_weight` | `f64` | Peso del pacco (kg) — confrontato con `MAX_PAYLOAD_WEIGHT` dall'agente |
+| `requested_delivery_time` | `DateTime<Utc>` | Orario di consegna richiesto |
+| `max_delivery_time_minutes` | `i32` | Finestra massima di consegna (minuti) — usata per il vincolo di deadline |
 
 ### Decisioni di design
-- `PartialEq` confronta solo `order_id` — due messaggi con lo stesso ordine sono considerati equivalenti indipendentemente da eventuali campi aggiornati.
-- Il costruttore `::new()` usa `impl Into<String>` per tutti i campi stringa: evita chiamate `.to_string()` superflue nei call site (zero-cost se si passa già un `String`).
-- `Display` formatta una riga leggibile per i log (omette `requested_delivery_time` per brevità).
+
+**Costruttore `::new()` con `impl Into<String>`.** Tutti i campi stringa del
+costruttore accettano `impl Into<String>`:
+
+```rust
+pub fn new(
+    order_id: impl Into<String>,
+    customer_id: impl Into<String>,
+    // ...
+) -> Self
+```
+
+Questo permette di chiamare `OrderMessage::new("abc", "cust-1", ...)` passando
+direttamente literal `&str` *oppure* `String` già posseduti, senza `.to_string()`
+ridondanti. La conversione è *zero-cost* quando si passa già un `String` (Rust la
+ottimizza a un semplice spostamento di proprietà).
+
+**`PartialEq` basato solo su `order_id`.** L'uguaglianza tra due `OrderMessage` è
+definita confrontando **esclusivamente** l'`order_id`:
+
+```rust
+impl PartialEq for OrderMessage {
+    fn eq(&self, other: &Self) -> bool {
+        self.order_id == other.order_id
+    }
+}
+```
+
+Due messaggi che si riferiscono allo stesso ordine sono considerati equivalenti
+anche se altri campi differiscono. Questa scelta è coerente con il dominio: un
+ordine *è* la sua identità, non l'insieme dei suoi attributi in un dato istante.
+
+**`Display` per i log.** L'implementazione di `Display` produce una riga leggibile
+che omette `requested_delivery_time` per brevità — utile nei log di tracing senza
+appesantirli con timestamp ridondanti (già presenti nel formato del log stesso).
 
 ---
 
-## 4. `SagaEvent`
+## 3. `SagaEvent` — gli eventi della transazione distribuita
 
-Enum tagged union con `#[serde(tag = "type")]`. Il campo `"type"` viene inserito automaticamente nel JSON e usato per deserializzare la variante corretta.
+`SagaEvent` è l'enum che modella **ogni evento** scambiato sul topic `saga-events`.
+È una *tagged union* serializzata con `#[serde(tag = "type")]`: nel JSON viene
+inserito automaticamente un campo `"type"` che identifica la variante, permettendo
+la deserializzazione corretta anche se le varianti hanno campi diversi.
+
+```rust
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "type")]
+pub enum SagaEvent {
+    #[serde(rename = "ORDER_SAGA_STARTED")]
+    OrderSagaStarted { /* ... */ },
+    // ...
+}
+```
 
 .mermaid
     graph LR
@@ -65,7 +142,41 @@ Enum tagged union con `#[serde(tag = "type")]`. Il campo `"type"` viene inserito
         SE --> K["CompensateDelivery"]
         SE --> L["CompensateDrone"]
 
+L'enum ha **12 varianti**, raggruppabili per ruolo nel ciclo di vita della SAGA:
+
+### Eventi di avanzamento (successo)
+
+| Variante | `type` JSON | Pubblicato da | Significato |
+|---|---|---|---|
+| `OrderSagaStarted` | `ORDER_SAGA_STARTED` | — | Saga avviata (evento di audit; porta tutti i campi dell'ordine) |
+| `OrderValidated` | `ORDER_VALIDATED` | — | Step 1 superato (audit) |
+| `DeliveryScheduled` | `DELIVERY_SCHEDULED` | Delivery | Step 2 completato; porta `delivery_id` |
+| `DroneAssigned` | `DRONE_ASSIGNED` | Drone | Step 3 completato; porta `drone_id` |
+| `OrderCompleted` | `ORDER_COMPLETED` | Order | SAGA conclusa con successo |
+
+### Eventi di fallimento
+
+| Variante | `type` JSON | Pubblicato da | Significato |
+|---|---|---|---|
+| `OrderValidationFailed` | `ORDER_VALIDATION_FAILED` | Order | Step 1 fallito; porta `reason` |
+| `DeliverySchedulingFailed` | `DELIVERY_SCHEDULING_FAILED` | (Delivery) | Step 2 fallito; porta `reason` |
+| `DroneAssignmentFailed` | `DRONE_ASSIGNMENT_FAILED` | Drone | Step 3 fallito; porta `reason` |
+| `OrderCancelled` | `ORDER_CANCELLED` | Order | Ordine annullato (evento terminale) |
+
+### Eventi di compensazione
+
+| Variante | `type` JSON | Pubblicato da | Consumato da | Campi aggiuntivi |
+|---|---|---|---|---|
+| `CompensateOrder` | `COMPENSATE_ORDER` | Order | — | `reason` |
+| `CompensateDelivery` | `COMPENSATE_DELIVERY` | Order | — | `delivery_id`, `reason` |
+| `CompensateDrone` | `COMPENSATE_DRONE` | Order | Drone | `drone_id`, `reason` |
+
+Tutte le varianti condividono i campi `saga_id`, `order_id` e `timestamp`; le
+varianti di fallimento e compensazione aggiungono `reason`; alcune portano
+identificativi specifici (`delivery_id`, `drone_id`).
+
 ### Esempio JSON serializzato
+
 ```json
 {
   "type": "DELIVERY_SCHEDULED",
@@ -76,19 +187,49 @@ Enum tagged union con `#[serde(tag = "type")]`. Il campo `"type"` viene inserito
 }
 ```
 
-### Helper methods
-| Metodo | Tipo di ritorno | Descrizione |
+Il campo `"type"` è inserito da `serde` grazie a `#[serde(tag = "type")]`, e il suo
+valore deriva dall'attributo `#[serde(rename = "...")]` di ciascuna variante (es.
+`DELIVERY_SCHEDULED` invece del nome Rust `DeliveryScheduled`). In deserializzazione,
+`serde` legge prima `"type"`, poi sa quale variante istanziare e quali campi
+aspettarsi.
+
+### Metodi helper
+
+Estrarre `order_id` o `saga_id` da un `SagaEvent` richiederebbe un `match` su tutte
+le 12 varianti a ogni call site. Per evitarlo, l'enum offre due accessor:
+
+| Metodo | Ritorno | Descrizione |
 |---|---|---|
 | `order_id()` | `&str` | Estrae `order_id` da qualsiasi variante |
 | `saga_id()` | `&str` | Estrae `saga_id` da qualsiasi variante |
 
-Entrambi usano pattern matching **esaustivo** — il compilatore garantisce che nessuna variante venga dimenticata.
+Entrambi usano un `match` **esaustivo** che sfrutta l'*or-pattern* di Rust
+(`A { order_id, .. } | B { order_id, .. } | ...`) per legare il campo comune in
+un'unica braccia. L'esaustività è garantita dal compilatore: se si aggiungesse una
+nuova variante senza aggiornare questi metodi, il codice non compilerebbe. È così
+che l'orchestratore, ricevendo un evento qualsiasi, ne ricava l'`order_id` per
+correlarlo alla saga giusta.
 
 ---
 
-## 5. `DroneEvent`
+## 4. `DroneEvent` — gli eventi di Event Sourcing del drone
 
-Enum degli eventi del ciclo di vita di un drone. Implementa Event Sourcing: ogni istanza è un fatto immutabile persistito su MongoDB.
+`DroneEvent` modella gli eventi del **ciclo di vita di un drone**. A differenza di
+`SagaEvent` (che è effimero, un messaggio di coordinamento), ogni `DroneEvent` è un
+**fatto immutabile persistito su MongoDB**: insieme, gli eventi di un drone
+costituiscono il suo *event log*, da cui lo stato corrente è sempre ricostruibile
+(pattern Event Sourcing — vedi [Drone Service](drone.qd)).
+
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum DroneEvent {
+    Created    { /* tutti i campi dell'ordine + version */ },
+    Dispatched { drone_id, order_id, dispatch_time, timestamp, version },
+    Delivered  { drone_id, order_id, delivery_time,  timestamp, version },
+    Returned   { drone_id, order_id, return_time,    timestamp, version },
+}
+```
 
 .mermaid
     graph LR
@@ -98,11 +239,25 @@ Enum degli eventi del ciclo di vita di un drone. Implementa Event Sourcing: ogni
         DE --> DL["Delivered\n(v=2)\ndelivery_time"]
         DE --> R["Returned\n(v=3)\nreturn_time"]
 
-### Campo `version`
-Ogni variante porta un campo `version: u64` che rappresenta la posizione dell'evento nel log del drone. Viene calcolato con `DroneEventStore::count_events_for_drone()` prima di ogni insert, garantendo l'ordinamento cronologico dei documenti MongoDB indipendentemente dall'ordine di arrivo.
+Le quattro varianti rappresentano le quattro tappe di una consegna, nell'ordine in
+cui avvengono. `Created` è speciale: è l'unica a portare *tutti* i dati dell'ordine
+(indirizzi, peso, cliente…), perché è l'evento *genesi* da cui si ricostruisce lo
+stato; le altre tre portano solo gli identificativi e il timestamp semantico della
+loro azione.
 
-### Helper methods
-| Metodo | Tipo di ritorno | Descrizione |
+### Il campo `version`
+
+Ogni variante porta un campo `version: u64` che rappresenta la **posizione
+dell'evento nel log del drone** (0, 1, 2, 3…). Viene calcolato chiamando
+`DroneEventStore::count_events_for_drone()` *prima* di ogni inserimento: il nuovo
+evento prende come versione il numero di eventi già presenti. Questo garantisce un
+ordinamento cronologico stabile dei documenti su MongoDB, indipendente dall'ordine
+fisico di scrittura, e permette di ricostruire lo stato applicando gli eventi
+ordinati per `version` crescente.
+
+### Metodi helper
+
+| Metodo | Ritorno | Descrizione |
 |---|---|---|
 | `drone_id()` | `&str` | ID del drone |
 | `order_id()` | `&str` | ID dell'ordine associato |
@@ -110,25 +265,72 @@ Ogni variante porta un campo `version: u64` che rappresenta la posizione dell'ev
 | `event_type()` | `&'static str` | Stringa descrittiva (es. `"DRONE_CREATED"`) |
 | `timestamp()` | `DateTime<Utc>` | Momento di creazione dell'evento |
 
+Come per `SagaEvent`, questi accessor usano `match` esaustivi con or-pattern,
+così il codice del Drone Service può lavorare su un `DroneEvent` generico senza
+distinguere la variante quando non serve (per esempio per ordinare o loggare).
+
 ### Perché due campi temporali su alcuni eventi?
-`Dispatched`, `Delivered` e `Returned` hanno sia `timestamp` (quando l'evento è stato creato nel sistema) sia un campo semantico (`dispatch_time`, `delivery_time`, `return_time`). Il `timestamp` è il momento di scrittura nel log; il campo semantico è il momento in cui l'azione si è verificata. In questo progetto coincidono, ma la separazione è utile in sistemi dove gli eventi possono essere processati in ritardo.
+
+`Dispatched`, `Delivered` e `Returned` hanno sia un `timestamp` sia un campo
+semantico (`dispatch_time`, `delivery_time`, `return_time`). La distinzione è
+concettuale: il `timestamp` è il momento in cui l'evento è stato **scritto nel
+log**; il campo semantico è il momento in cui l'**azione si è verificata** nel
+dominio. In questo progetto i due coincidono (vengono entrambi impostati a
+`Utc::now()` al momento della scrittura), ma la separazione è una buona pratica per
+sistemi in cui gli eventi possono essere registrati in ritardo rispetto al fatto
+che descrivono.
 
 ---
 
-## 6. Serializzazione — Schema complessivo
+## 5. Serializzazione — schema complessivo
+
+Tutti e tre i tipi attraversano la stessa pipeline: da struttura Rust a byte JSON
+in produzione, e viceversa in consumo.
 
 ```
 ┌──────────────┐   serde_json::to_vec   ┌────────────────┐
-│  Rust enum   │ ─────────────────────▶ │  JSON bytes    │
-│  (variant)   │                        │  + "type" tag  │
+│  Rust struct │ ─────────────────────▶ │  JSON bytes    │
+│  o variant   │                        │  (+ "type" tag │
+│              │                        │   per gli enum)│
 └──────────────┘                        └────────────────┘
                                                │
-                                         AMQP payload
+                                       Kafka message payload
                                                │
-┌──────────────┐  serde_json::from_slice ┌────────────────┐
-│  Rust enum   │ ◀───────────────────── │  JSON bytes    │
-│  (variant)   │                        └────────────────┘
+┌──────────────┐ serde_json::from_slice ┌────────────────┐
+│  Rust struct │ ◀───────────────────── │  JSON bytes    │
+│  o variant   │                        └────────────────┘
 └──────────────┘
 ```
 
-Il discriminante `"type"` permette a `serde` di sapere quale variante istanziare senza ambiguità, anche se le varianti hanno campi diversi.
+Per gli enum (`SagaEvent`, `DroneEvent`) il discriminante `"type"` permette a
+`serde` di sapere quale variante istanziare senza ambiguità. Per la struct
+`OrderMessage` non serve alcun tag: la forma è fissa.
+
+### I test come specifica eseguibile
+
+Il modulo `events.rs` include due test che documentano e verificano il contratto di
+serializzazione:
+
+```rust
+#[test]
+fn saga_event_serializes_with_type_field() {
+    let event = SagaEvent::OrderValidated { /* ... */ };
+    let json = serde_json::to_string(&event).unwrap();
+    assert!(json.contains("\"type\":\"ORDER_VALIDATED\""));
+    assert!(json.contains("\"order_id\":\"o1\""));
+}
+
+#[test]
+fn drone_event_round_trip() {
+    let event = DroneEvent::Created { /* ... */ };
+    let json = serde_json::to_string(&event).unwrap();
+    let decoded: DroneEvent = serde_json::from_str(&json).unwrap();
+    assert_eq!(decoded.drone_id(), "d1");
+    assert_eq!(decoded.event_type(), "DRONE_CREATED");
+}
+```
+
+Il primo verifica che il campo `"type"` venga effettivamente emesso con il nome
+*rinominato* (`ORDER_VALIDATED`). Il secondo verifica il *round-trip*: serializzare
+e poi deserializzare restituisce un valore equivalente, con la variante corretta.
+Questi test sono la garanzia minima che il contratto resti stabile nel tempo.
