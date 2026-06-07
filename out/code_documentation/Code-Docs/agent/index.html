@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="flotta-ad-agenti-bdi--il-cuore-decisionale-del-drone-service" data-depth="1"><a href="#flotta-ad-agenti-bdi--il-cuore-decisionale-del-drone-service">Flotta ad Agenti (BDI) — il cuore decisionale del Drone Service</a><ol><li data-target-id="_1-il-modello-bdi" data-depth="2"><a href="#_1-il-modello-bdi">1. Il modello BDI</a></li><li data-target-id="_2-il-trait-agent" data-depth="2"><a href="#_2-il-trait-agent">2. Il trait Agent</a></li><li data-target-id="_3-belief-base--dronebeliefs" data-depth="2"><a href="#_3-belief-base--dronebeliefs">3. Belief base — DroneBeliefs</a><ol><li data-target-id="revisione-delle-belief-stile-agm" data-depth="3"><a href="#revisione-delle-belief-stile-agm">Revisione delle belief (stile AGM)</a></li></ol></li><li data-target-id="_4-deliberazione--dalle-belief-allrsquointenzione" data-depth="2"><a href="#_4-deliberazione--dalle-belief-allrsquointenzione">4. Deliberazione — dalle belief all&rsquo;intenzione</a></li><li data-target-id="_5-intention--plan--desire" data-depth="2"><a href="#_5-intention--plan--desire">5. Intention → Plan → Desire</a></li><li data-target-id="_6-esecuzione--execute" data-depth="2"><a href="#_6-esecuzione--execute">6. Esecuzione — execute()</a></li><li data-target-id="_7-la-flotta--dronefleet" data-depth="2"><a href="#_7-la-flotta--dronefleet">7. La flotta — DroneFleet</a><ol><li data-target-id="il-trait-assignmentstrategy-e-le-sue-implementazioni" data-depth="3"><a href="#il-trait-assignmentstrategy-e-le-sue-implementazioni">Il trait AssignmentStrategy e le sue implementazioni</a></li><li data-target-id="metodi-della-flotta" data-depth="3"><a href="#metodi-della-flotta">Metodi della flotta</a></li></ol></li><li data-target-id="_8-mappatura-sul-flusso-saga" data-depth="2"><a href="#_8-mappatura-sul-flusso-saga">8. Mappatura sul flusso SAGA</a></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="il-sistema-oggi" data-decorative="">Il sistema oggi</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common (libreria)</a></li><li><a href="../order">Order Service</a></li><li><a href="../delivery">Delivery Service</a></li><li><a href="../drone">Drone Service</a></li><li><a href="../agent" aria-current="page">Flotta ad Agenti (BDI)</a></li></ul><h2 id="infrastruttura-amp-operabilità" data-decorative="">Infrastruttura &amp; operabilità</h2><ul><li><a href="../kafka">Messaging Layer (Kafka)</a></li><li><a href="../k8s">Deployment Kubernetes</a></li><li><a href="../slo">Osservabilità &amp; SLO</a></li></ul><h2 id="appendice" data-decorative="">Appendice</h2><ul><li><a href="../evoluzione">Evoluzione del progetto</a></li><li><a href="../conclusioni">Conclusioni</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="flotta-ad-agenti-bdi--il-cuore-decisionale-del-drone-service" data-depth="1"><a href="#flotta-ad-agenti-bdi--il-cuore-decisionale-del-drone-service">Flotta ad Agenti (BDI) — il cuore decisionale del Drone Service</a><ol><li data-target-id="_1-il-modello-bdi" data-depth="2"><a href="#_1-il-modello-bdi">1. Il modello BDI</a></li><li data-target-id="_2-il-trait-agent" data-depth="2"><a href="#_2-il-trait-agent">2. Il trait Agent</a></li><li data-target-id="_3-belief-base--dronebeliefs" data-depth="2"><a href="#_3-belief-base--dronebeliefs">3. Belief base — DroneBeliefs</a><ol><li data-target-id="revisione-delle-belief-stile-agm" data-depth="3"><a href="#revisione-delle-belief-stile-agm">Revisione delle belief (stile AGM)</a></li></ol></li><li data-target-id="_4-deliberazione--dalle-belief-allrsquointenzione" data-depth="2"><a href="#_4-deliberazione--dalle-belief-allrsquointenzione">4. Deliberazione — dalle belief all&rsquo;intenzione</a></li><li data-target-id="_5-intention--plan--desire" data-depth="2"><a href="#_5-intention--plan--desire">5. Intention → Plan → Desire</a></li><li data-target-id="_6-esecuzione--execute" data-depth="2"><a href="#_6-esecuzione--execute">6. Esecuzione — execute()</a></li><li data-target-id="_7-la-flotta--dronefleet" data-depth="2"><a href="#_7-la-flotta--dronefleet">7. La flotta — DroneFleet</a><ol><li data-target-id="il-trait-assignmentstrategy-e-le-sue-implementazioni" data-depth="3"><a href="#il-trait-assignmentstrategy-e-le-sue-implementazioni">Il trait AssignmentStrategy e le sue implementazioni</a></li><li data-target-id="metodi-della-flotta" data-depth="3"><a href="#metodi-della-flotta">Metodi della flotta</a></li></ol></li><li data-target-id="_8-mappatura-sul-flusso-saga" data-depth="2"><a href="#_8-mappatura-sul-flusso-saga">8. Mappatura sul flusso SAGA</a></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><h1 class="page-break" id="flotta-ad-agenti-bdi--il-cuore-decisionale-del-drone-service">Flotta ad Agenti (BDI) — il cuore decisionale del Drone Service</h1><blockquote><p>[NOTE!]
+Questa pagina documenta il modello <strong>agent-oriented</strong> che governa le decisioni del
+Drone Service: una <strong>flotta di agenti autonomi</strong> (<span class="codespan-content"><code>DroneFleet</code></span>), ognuno dei quali
+ragiona sul proprio stato interno per decidere se accettare, rifiutare o completare
+una consegna. La parte di servizio (persistenza, API, scheduler) è in
+<a href="../drone">Drone Service</a>. Il motivo per cui si è passati da un servizio imperativo
+a una flotta di agenti è raccontato nell&rsquo;<a href="../evoluzione">Evoluzione del progetto</a>.</p></blockquote><h2 id="_1-il-modello-bdi">1. Il modello BDI</h2><p>Il paradigma <strong>BDI</strong> (Belief–Desire–Intention) è un modello classico dei sistemi
+multi-agente. Modella un agente autonomo con tre componenti concettuali:</p><table><thead><tr><th>Componente</th><th>Significato</th><th>Nel codice</th></tr></thead><tbody><tr><td><strong>Belief</strong></td><td>Ciò che l&rsquo;agente <em>crede</em> sul mondo e su sé stesso</td><td><span class="codespan-content"><code>beliefs.rs</code></span> → <span class="codespan-content"><code>DroneBeliefs</code></span></td></tr><tr><td><strong>Desire / Intention</strong></td><td>L&rsquo;obiettivo che l&rsquo;agente decide di perseguire</td><td><span class="codespan-content"><code>intentions.rs</code></span> → <span class="codespan-content"><code>DroneIntention</code></span></td></tr><tr><td><strong>Plan</strong></td><td>La sequenza di azioni atomiche per realizzare l&rsquo;obiettivo</td><td><span class="codespan-content"><code>intentions.rs</code></span> → <span class="codespan-content"><code>DroneDesire</code></span> + <span class="codespan-content"><code>plan_for()</code></span></td></tr></tbody></table><p>La scelta del BDI per questo dominio è naturale: un drone deve <strong>percepire</strong> il
+proprio contesto (un ordine in arrivo), <strong>ragionare</strong> sui propri vincoli (può portare
+quel peso? può rispettare la deadline?) e <strong>decidere autonomamente</strong> cosa fare. Non
+riceve ordini imperativi dall&rsquo;esterno: è il drone stesso che, sulla base delle proprie
+belief, <em>decide</em> se la consegna è fattibile.</p><p>Il ciclo di vita dell&rsquo;agente, definito dal trait <span class="codespan-content"><code>Agent</code></span> in <span class="codespan-content"><code>agent.rs</code></span>, si articola in
+cinque fasi:</p><pre><code>1. perceive()        &rarr; arriva un nuovo segnale (OrderMessage)
+2. update_beliefs()  &rarr; revisione della belief base
+3. deliberate()      &rarr; seleziona l'obiettivo attivo (DroneIntention)
+4. plan()            &rarr; mappa obiettivo &rarr; Vec&lt;DroneDesire&gt;
+5. execute()         &rarr; esegue ogni azione (Kafka publish / MongoDB write)</code></pre><figure><pre class="mermaid">flowchart LR
+    P[&quot;perceive()\nOrderMessage&quot;]
+    B[&quot;update_beliefs()\nDroneBeliefs&quot;]
+    D[&quot;deliberate()\nDroneIntention&quot;]
+    PL[&quot;plan()\nVec&amp;lt;DroneDesire&amp;gt;&quot;]
+    E[&quot;execute()\nKafka + MongoDB&quot;]
+
+    P --&gt; B --&gt; D --&gt; PL --&gt; E
+    E -.-&gt;|&quot;belief revision\n(dispatched/returned)&quot;| B</pre></figure><p><strong>Lettura del diagramma.</strong> Il flusso è lineare da <span class="codespan-content"><code>perceive</code></span> a <span class="codespan-content"><code>execute</code></span>, ma con un
+<strong>anello di retroazione</strong>: l&rsquo;esecuzione di certe azioni <em>rivede</em> le belief (la freccia
+tratteggiata). Per esempio, dopo aver salvato l&rsquo;evento <span class="codespan-content"><code>Dispatched</code></span>, l&rsquo;agente aggiorna
+le belief alla fase <span class="codespan-content"><code>ExecutingDelivery</code></span>; dopo <span class="codespan-content"><code>Returned</code></span>, le resetta a <span class="codespan-content"><code>Idle</code></span>. Questo
+chiude il ciclo: lo stato interno dell&rsquo;agente evolve in conseguenza delle sue azioni,
+ed è ciò che leggerà alla prossima deliberazione.</p><hr /><h2 id="_2-il-trait-agent">2. Il trait <span class="codespan-content"><code>Agent</code></span></h2><p>Il ciclo BDI è formalizzato in un trait generico, parametrizzato sui tipi di
+percezione e obiettivo:</p><pre><code class="language-rust">#[allow(async_fn_in_trait)]
+pub trait Agent {
+    type Perception;
+    type Goal;
+
+    fn update_beliefs(&amp;mut self, perception: Self::Perception);
+    fn deliberate(&amp;self) -&gt; Self::Goal;
+    fn plan(&amp;self, goal: Self::Goal) -&gt; Vec&lt;DroneDesire&gt;;
+    async fn execute(&amp;mut self, actions: Vec&lt;DroneDesire&gt;) -&gt; Result&lt;()&gt;;
+}</code></pre><p><span class="codespan-content"><code>DroneAgent</code></span> implementa <span class="codespan-content"><code>Agent</code></span> con <span class="codespan-content"><code>Perception = OrderMessage</code></span> e
+<span class="codespan-content"><code>Goal = DroneIntention</code></span>. La separazione tra <span class="codespan-content"><code>deliberate</code></span> (decide <em>cosa</em> fare,
+immutabile su <span class="codespan-content"><code>&amp;self</code></span>) e <span class="codespan-content"><code>plan</code></span> (traduce l&rsquo;obiettivo in azioni) e <span class="codespan-content"><code>execute</code></span> (le
+realizza, mutabile su <span class="codespan-content"><code>&amp;mut self</code></span>) rispecchia fedelmente la teoria BDI: ragionamento
+e azione sono fasi distinte.</p><pre><code class="language-rust">pub struct DroneAgent {
+    pub beliefs: DroneBeliefs,
+    store: Arc&lt;DroneEventStore&gt;,
+    producer: Arc&lt;FutureProducer&gt;,
+}</code></pre><p>Ogni agente possiede la <strong>propria</strong> belief base e condivide solo le risorse di I/O
+(l&rsquo;event store e il producer Kafka), entrambe <span class="codespan-content"><code>Arc</code></span> e thread-safe.</p><hr /><h2 id="_3-belief-base--dronebeliefs">3. Belief base — <span class="codespan-content"><code>DroneBeliefs</code></span></h2><p>Le belief sono lo stato interno <em>vivo</em> dell&rsquo;agente (in memoria), distinto dal
+<span class="codespan-content"><code>DroneState</code></span> usato dall&rsquo;API HTTP e dall&rsquo;event store (vedi <a href="drone.qd)">Drone Service</a>.</p><pre><code class="language-rust">pub struct DroneBeliefs {
+    pub drone_id: Option&lt;String&gt;,
+    pub is_available: bool,
+    pub current_order: Option&lt;OrderMessage&gt;,
+    pub phase: AgentPhase,
+    pub dispatch_time: Option&lt;DateTime&lt;Utc&gt;&gt;,
+    pub expected_arrival_time: Option&lt;DateTime&lt;Utc&gt;&gt;,
+    pub can_carry_payload: bool,
+    pub can_meet_deadline: bool,
+}</code></pre><table><thead><tr><th>Campo</th><th>Tipo</th><th>Significato</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>drone_id</code></span></td><td><span class="codespan-content"><code>Option&lt;String&gt;</code></span></td><td>Identità del drone, assegnata quando accetta un ordine</td></tr><tr><td><span class="codespan-content"><code>is_available</code></span></td><td><span class="codespan-content"><code>bool</code></span></td><td>Il drone crede di essere libero</td></tr><tr><td><span class="codespan-content"><code>current_order</code></span></td><td><span class="codespan-content"><code>Option&lt;OrderMessage&gt;</code></span></td><td>L&rsquo;ordine attualmente in carico</td></tr><tr><td><span class="codespan-content"><code>phase</code></span></td><td><span class="codespan-content"><code>AgentPhase</code></span></td><td><span class="codespan-content"><code>Idle</code></span> / <span class="codespan-content"><code>ExecutingDelivery</code></span> / <span class="codespan-content"><code>Returning</code></span></td></tr><tr><td><span class="codespan-content"><code>dispatch_time</code></span></td><td><span class="codespan-content"><code>Option&lt;Utc&gt;</code></span></td><td>Quando il drone è partito</td></tr><tr><td><span class="codespan-content"><code>expected_arrival_time</code></span></td><td><span class="codespan-content"><code>Option&lt;Utc&gt;</code></span></td><td>Orario di arrivo previsto (usato da <span class="codespan-content"><code>has_arrived()</code></span>)</td></tr><tr><td><span class="codespan-content"><code>can_carry_payload</code></span></td><td><span class="codespan-content"><code>bool</code></span></td><td>Il peso rientra in <span class="codespan-content"><code>MAX_PAYLOAD_WEIGHT</code></span> (100 kg)</td></tr><tr><td><span class="codespan-content"><code>can_meet_deadline</code></span></td><td><span class="codespan-content"><code>bool</code></span></td><td>La deadline è rispettabile (<span class="codespan-content"><code>max_delivery_time_minutes &gt; 0</code></span>)</td></tr></tbody></table><p><span class="codespan-content"><code>AgentPhase</code></span> è l&rsquo;enum della fase operativa <em>creduta</em> dall&rsquo;agente: <span class="codespan-content"><code>Idle</code></span> (libero),
+<span class="codespan-content"><code>ExecutingDelivery</code></span> (in consegna), <span class="codespan-content"><code>Returning</code></span> (in rientro). È concettualmente
+distinto da <span class="codespan-content"><code>DroneState</code></span> (la vista ricostruita dagli eventi): <span class="codespan-content"><code>AgentPhase</code></span> è il
+<em>presente vivo</em> in memoria, <span class="codespan-content"><code>DroneState</code></span> è la <em>storia</em> ricostruita.</p><p><span class="codespan-content"><code>MAX_PAYLOAD_WEIGHT</code></span> è una costante (<span class="codespan-content"><code>100.0</code></span> kg) che fissa la capacità di carico di
+un drone.</p><h3 id="revisione-delle-belief-stile-agm">Revisione delle belief (stile AGM)</h3><p>Ogni transizione produce una <strong>nuova</strong> belief base immutabile, secondo un pattern
+funzionale <span class="codespan-content"><code>self -&gt; Self</code></span>: invece di mutare i campi sul posto, ogni metodo consuma
+<span class="codespan-content"><code>self</code></span> e restituisce una nuova istanza. Questo rende esplicita ogni revisione di
+credenza e impossibile dimenticarne una parte.</p><table><thead><tr><th>Metodo</th><th>Trigger</th><th>Effetto</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>from_order(order, drone_id)</code></span></td><td>nuovo ordine percepito</td><td>popola <span class="codespan-content"><code>current_order</code></span>, fissa <span class="codespan-content"><code>expected_arrival_time</code></span>, calcola <span class="codespan-content"><code>can_carry_payload</code></span> e <span class="codespan-content"><code>can_meet_deadline</code></span>, <span class="codespan-content"><code>is_available = false</code></span></td></tr><tr><td><span class="codespan-content"><code>update_dispatched()</code></span></td><td>evento <span class="codespan-content"><code>Dispatched</code></span> salvato</td><td><span class="codespan-content"><code>phase = ExecutingDelivery</code></span>, fissa <span class="codespan-content"><code>dispatch_time</code></span></td></tr><tr><td><span class="codespan-content"><code>update_returned()</code></span></td><td>evento <span class="codespan-content"><code>Returned</code></span> salvato</td><td>reset completo (<span class="codespan-content"><code>Self::new()</code></span>) → <span class="codespan-content"><code>Idle</code></span> disponibile</td></tr><tr><td><span class="codespan-content"><code>update_compensated()</code></span></td><td>compensazione ricevuta</td><td>reset completo (<span class="codespan-content"><code>Self::new()</code></span>) → <span class="codespan-content"><code>Idle</code></span> disponibile</td></tr><tr><td><span class="codespan-content"><code>has_arrived()</code></span></td><td>interrogato dallo scheduler</td><td><span class="codespan-content"><code>true</code></span> se <span class="codespan-content"><code>phase == ExecutingDelivery</code></span> <strong>e</strong> l&rsquo;orario attuale ha raggiunto <span class="codespan-content"><code>expected_arrival_time</code></span></td></tr></tbody></table><p>Si noti che <span class="codespan-content"><code>update_returned()</code></span> e <span class="codespan-content"><code>update_compensated()</code></span> fanno entrambi
+<span class="codespan-content"><code>Self::new()</code></span>: portano l&rsquo;agente allo stato vergine, di nuovo disponibile. La
+differenza è solo <em>semantica</em> (consegna completata vs. consegna annullata), ma
+l&rsquo;effetto sulle belief è identico.</p><p><span class="codespan-content"><code>PartialEq</code></span> su <span class="codespan-content"><code>DroneBeliefs</code></span> confronta solo <span class="codespan-content"><code>drone_id</code></span>, <span class="codespan-content"><code>current_order</code></span> e
+<span class="codespan-content"><code>dispatch_time</code></span> — sufficiente a stabilire se due belief si riferiscono alla stessa
+situazione operativa.</p><hr /><h2 id="_4-deliberazione--dalle-belief-allrsquointenzione">4. Deliberazione — dalle belief all&rsquo;intenzione</h2><p><span class="codespan-content"><code>deliberate()</code></span> è il cuore decisionale: legge le belief (in sola lettura, <span class="codespan-content"><code>&amp;self</code></span>) e
+sceglie un <span class="codespan-content"><code>DroneIntention</code></span>. La logica è una catena di guardie:</p><pre><code class="language-rust">fn deliberate(&amp;self) -&gt; DroneIntention {
+    match &amp;self.beliefs.current_order {
+        None =&gt; DroneIntention::Idle,
+        Some(order) =&gt; {
+            if !self.beliefs.can_carry_payload {
+                DroneIntention::RefuseDelivery { /* peso eccessivo */ }
+            } else if !self.beliefs.can_meet_deadline {
+                DroneIntention::RefuseDelivery { /* deadline */ }
+            } else {
+                DroneIntention::AcceptDelivery { order, drone_id }
+            }
+        }
+    }
+}</code></pre><figure><pre class="mermaid">flowchart TD
+    START{&quot;current_order\npresente?&quot;}
+    IDLE[&quot;DroneIntention::Idle&quot;]
+    PAY{&quot;can_carry_payload?&quot;}
+    DL{&quot;can_meet_deadline?&quot;}
+    REFUSE[&quot;DroneIntention::RefuseDelivery\n(reason)&quot;]
+    ACCEPT[&quot;DroneIntention::AcceptDelivery\n(order, drone_id)&quot;]
+
+    START --&gt;|&quot;No&quot;| IDLE
+    START --&gt;|&quot;S&igrave;&quot;| PAY
+    PAY --&gt;|&quot;No&quot;| REFUSE
+    PAY --&gt;|&quot;S&igrave;&quot;| DL
+    DL --&gt;|&quot;No&quot;| REFUSE
+    DL --&gt;|&quot;S&igrave;&quot;| ACCEPT</pre></figure><p><strong>Lettura del diagramma.</strong> Senza un ordine in carico, l&rsquo;agente è <span class="codespan-content"><code>Idle</code></span>. Con un
+ordine, valuta in cascata due vincoli: la <strong>capacità di carico</strong> e la <strong>fattibilità
+della deadline</strong>. Se uno dei due non è soddisfatto, <em>rifiuta</em> (con la relativa
+motivazione); solo se entrambi sono soddisfatti, <em>accetta</em>. È fondamentale che questa
+decisione sia presa dall&rsquo;agente sulla base delle <em>proprie</em> belief: nessun componente
+esterno gli ordina di accettare. L&rsquo;autonomia decisionale è il valore aggiunto del
+modello ad agenti rispetto a un servizio imperativo che applicherebbe gli stessi <span class="codespan-content"><code>if</code></span>
+in modo centralizzato.</p><hr /><h2 id="_5-intention--plan--desire">5. Intention → Plan → Desire</h2><p>Ogni <span class="codespan-content"><code>DroneIntention</code></span> (obiettivo di alto livello) viene tradotto da <span class="codespan-content"><code>plan_for()</code></span> in
+una sequenza di <span class="codespan-content"><code>DroneDesire</code></span> (azioni atomiche). La separazione tra obiettivo e piano
+permette di cambiare <em>come</em> si realizza un obiettivo senza toccare <em>chi</em> lo decide.</p><pre><code class="language-rust">pub enum DroneIntention {
+    AcceptDelivery   { order: OrderMessage, drone_id: String },
+    RefuseDelivery   { order: OrderMessage, reason: String },
+    CompleteDelivery { order_id: String, drone_id: String },
+    Compensate       { drone_id: String },
+    Idle,
+}</code></pre><pre><code class="language-rust">pub enum DroneDesire {
+    StoreCreatedEvent    { drone_id, order },
+    PublishDroneAssigned { drone_id, order_id },
+    StoreDispatchedEvent { drone_id, order_id },
+    StoreDeliveredEvent  { drone_id, order_id },
+    StoreReturnedEvent   { drone_id, order_id },
+    PublishSagaEvent(SagaEvent),
+    RecordCompensation   { drone_id },
+}</code></pre><p>La funzione pura <span class="codespan-content"><code>plan_for(goal)</code></span> mappa ogni intenzione al suo piano:</p><table><thead><tr><th><span class="codespan-content"><code>DroneIntention</code></span></th><th>Piano (<span class="codespan-content"><code>Vec&lt;DroneDesire&gt;</code></span>)</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>AcceptDelivery</code></span></td><td><span class="codespan-content"><code>StoreCreatedEvent</code></span> → <span class="codespan-content"><code>PublishDroneAssigned</code></span> → <span class="codespan-content"><code>StoreDispatchedEvent</code></span></td></tr><tr><td><span class="codespan-content"><code>RefuseDelivery</code></span></td><td><span class="codespan-content"><code>PublishSagaEvent(DroneAssignmentFailed)</code></span></td></tr><tr><td><span class="codespan-content"><code>CompleteDelivery</code></span></td><td><span class="codespan-content"><code>StoreDeliveredEvent</code></span> → <span class="codespan-content"><code>StoreReturnedEvent</code></span></td></tr><tr><td><span class="codespan-content"><code>Compensate</code></span></td><td><span class="codespan-content"><code>RecordCompensation</code></span></td></tr><tr><td><span class="codespan-content"><code>Idle</code></span></td><td><span class="codespan-content"><code>[]</code></span> (nessuna azione)</td></tr></tbody></table><p>L&rsquo;ordine delle azioni nel piano di <span class="codespan-content"><code>AcceptDelivery</code></span> è significativo: prima si
+persiste il <span class="codespan-content"><code>Created</code></span>, <em>poi</em> si notifica la SAGA (<span class="codespan-content"><code>DroneAssigned</code></span>), <em>poi</em> si persiste
+il <span class="codespan-content"><code>Dispatched</code></span>. La notifica avviene tra i due salvataggi così che l&rsquo;orchestratore
+sappia dell&rsquo;assegnazione il prima possibile.</p><hr /><h2 id="_6-esecuzione--execute">6. Esecuzione — <span class="codespan-content"><code>execute()</code></span></h2><p><span class="codespan-content"><code>execute()</code></span> consuma il piano e, per ogni <span class="codespan-content"><code>DroneDesire</code></span>, effettua la scrittura
+appropriata. È l&rsquo;unico metodo <span class="codespan-content"><code>async</code></span> e <span class="codespan-content"><code>&amp;mut self</code></span>, perché compie I/O e rivede le
+belief. Ecco cosa fa ogni braccio del match:</p><table><thead><tr><th><span class="codespan-content"><code>DroneDesire</code></span></th><th>Azione</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>StoreCreatedEvent</code></span></td><td>Calcola la <span class="codespan-content"><code>version</code></span>, salva <span class="codespan-content"><code>DroneEvent::Created</code></span> su MongoDB</td></tr><tr><td><span class="codespan-content"><code>PublishDroneAssigned</code></span></td><td>Pubblica <span class="codespan-content"><code>SagaEvent::DroneAssigned</code></span> su <span class="codespan-content"><code>saga-events</code></span> (key = <span class="codespan-content"><code>order_id</code></span>)</td></tr><tr><td><span class="codespan-content"><code>StoreDispatchedEvent</code></span></td><td>Salva <span class="codespan-content"><code>DroneEvent::Dispatched</code></span>, poi <span class="codespan-content"><code>beliefs = beliefs.update_dispatched()</code></span></td></tr><tr><td><span class="codespan-content"><code>StoreDeliveredEvent</code></span></td><td>Salva <span class="codespan-content"><code>DroneEvent::Delivered</code></span></td></tr><tr><td><span class="codespan-content"><code>StoreReturnedEvent</code></span></td><td>Salva <span class="codespan-content"><code>DroneEvent::Returned</code></span>, poi <span class="codespan-content"><code>beliefs = beliefs.update_returned()</code></span> (reset <span class="codespan-content"><code>Idle</code></span>)</td></tr><tr><td><span class="codespan-content"><code>PublishSagaEvent(e)</code></span></td><td>Pubblica un <span class="codespan-content"><code>SagaEvent</code></span> arbitrario (es. <span class="codespan-content"><code>DroneAssignmentFailed</code></span>); estrae <span class="codespan-content"><code>order_id</code></span> come chiave</td></tr><tr><td><span class="codespan-content"><code>RecordCompensation</code></span></td><td><strong>Nessun evento salvato</strong>: <span class="codespan-content"><code>beliefs = beliefs.update_compensated()</code></span> (reset <span class="codespan-content"><code>Idle</code></span>)</td></tr></tbody></table><p>Due dettagli importanti. (1) Prima di ogni <span class="codespan-content"><code>Store*Event</code></span>, la <span class="codespan-content"><code>version</code></span> viene
+ricalcolata con <span class="codespan-content"><code>store.count_events_for_drone(...)</code></span>: garantisce numerazione
+progressiva corretta. (2) La <strong>revisione delle belief</strong> avviene <em>dentro</em> <span class="codespan-content"><code>execute</code></span>,
+subito dopo la scrittura che la giustifica (<span class="codespan-content"><code>update_dispatched</code></span> dopo <span class="codespan-content"><code>Dispatched</code></span>,
+<span class="codespan-content"><code>update_returned</code></span> dopo <span class="codespan-content"><code>Returned</code></span>): è l&rsquo;anello di retroazione del diagramma in §1.
+<span class="codespan-content"><code>RecordCompensation</code></span> è l&rsquo;unica azione che <strong>non</strong> scrive un evento: la compensazione
+è un segnale di controllo, non un fatto di dominio da registrare.</p><hr /><h2 id="_7-la-flotta--dronefleet">7. La flotta — <span class="codespan-content"><code>DroneFleet</code></span></h2><p><span class="codespan-content"><code>DroneFleet</code></span> gestisce un pool di <span class="codespan-content"><code>DroneAgent</code></span> e instrada gli ordini con una
+<strong>strategia di assegnazione</strong> intercambiabile (Strategy pattern).</p><figure><pre class="mermaid">graph TB
+    ORDER[&quot;OrderMessage\n(da drone-requests)&quot;]
+    FLEET[&quot;DroneFleet\ndispatch_order()&quot;]
+    STRAT{&quot;AssignmentStrategy\nselect()&quot;}
+    A0[&quot;DroneAgent 0&quot;]
+    A1[&quot;DroneAgent 1&quot;]
+    A2[&quot;DroneAgent N&quot;]
+
+    ORDER --&gt; FLEET --&gt; STRAT
+    STRAT --&gt;|&quot;idx&quot;| A0
+    STRAT -.-&gt; A1
+    STRAT -.-&gt; A2</pre></figure><p><strong>Lettura del diagramma.</strong> Un ordine arriva alla flotta, che interroga la strategia
+per scegliere <em>quale</em> agente deve gestirlo. La strategia restituisce un indice
+(<span class="codespan-content"><code>Option&lt;usize&gt;</code></span>); la flotta esegue il ciclo BDI completo su quell&rsquo;agente.</p><h3 id="il-trait-assignmentstrategy-e-le-sue-implementazioni">Il trait <span class="codespan-content"><code>AssignmentStrategy</code></span> e le sue implementazioni</h3><pre><code class="language-rust">pub trait AssignmentStrategy: Send + Sync {
+    fn select(&amp;self, agents: &amp;[DroneAgent]) -&gt; Option&lt;usize&gt;;
+}</code></pre><table><thead><tr><th>Strategia</th><th>Comportamento</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>FirstAvailableStrategy</code></span></td><td>Sceglie il primo agente con <span class="codespan-content"><code>is_available == true</code></span> (<span class="codespan-content"><code>agents.iter().position(...)</code></span>)</td></tr><tr><td><span class="codespan-content"><code>RoundRobinStrategy</code></span></td><td>Cicla tra gli agenti con un <span class="codespan-content"><code>AtomicUsize</code></span>, distribuendo il carico uniformemente</td></tr></tbody></table><p><span class="codespan-content"><code>RoundRobinStrategy</code></span> mantiene un contatore atomico <span class="codespan-content"><code>next</code></span>: a ogni chiamata prova gli
+agenti a partire da <span class="codespan-content"><code>next</code></span> (incrementato con <span class="codespan-content"><code>fetch_add</code></span>, ordering <span class="codespan-content"><code>Relaxed</code></span>) e
+restituisce il primo disponibile, ciclando con il modulo sulla lunghezza del pool. Se
+nessun agente è libero, ritorna <span class="codespan-content"><code>None</code></span>. In produzione il <span class="codespan-content"><code>main.rs</code></span> usa
+<span class="codespan-content"><code>RoundRobinStrategy</code></span> con una flotta di <strong>3 agenti</strong>.</p><h3 id="metodi-della-flotta">Metodi della flotta</h3><pre><code class="language-rust">pub struct DroneFleet {
+    agents: Vec&lt;DroneAgent&gt;,
+    strategy: Box&lt;dyn AssignmentStrategy&gt;,
+    metrics: Arc&lt;DroneMetrics&gt;,
+}</code></pre><table><thead><tr><th>Metodo</th><th>Ruolo</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>new(size, store, producer, strategy, metrics)</code></span></td><td>Crea <span class="codespan-content"><code>size</code></span> agenti che condividono store e producer</td></tr><tr><td><span class="codespan-content"><code>dispatch_order(order)</code></span></td><td>Seleziona un agente ed esegue il ciclo BDI completo</td></tr><tr><td><span class="codespan-content"><code>check_arrivals()</code></span></td><td>Per ogni agente con <span class="codespan-content"><code>has_arrived()</code></span>, esegue il piano <span class="codespan-content"><code>CompleteDelivery</code></span></td></tr><tr><td><span class="codespan-content"><code>compensate(drone_id)</code></span></td><td>Trova l&rsquo;agente con quel <span class="codespan-content"><code>drone_id</code></span> e ne resetta le belief</td></tr></tbody></table><p><strong><span class="codespan-content"><code>dispatch_order()</code></span> in dettaglio.</strong> Chiama <span class="codespan-content"><code>strategy.select()</code></span>. Se ritorna <span class="codespan-content"><code>None</code></span>
+(nessun drone disponibile), incrementa il counter <span class="codespan-content"><code>refused</code></span> e ritorna <span class="codespan-content"><code>Err(&quot;No available drones&quot;)</code></span> — l&rsquo;assenza di droni <em>è</em> un rifiuto. Altrimenti aggiorna le belief
+dell&rsquo;agente scelto, delibera, e in base all&rsquo;esito incrementa il counter giusto
+(<span class="codespan-content"><code>assigned</code></span> per <span class="codespan-content"><code>AcceptDelivery</code></span>, <span class="codespan-content"><code>refused</code></span> per <span class="codespan-content"><code>RefuseDelivery</code></span>) — è qui che si
+alimenta l&rsquo;SLI di successo di assegnazione (vedi <a href="slo.qd)">Osservabilità &amp; SLO</a>.
+Infine pianifica ed esegue.</p><p><strong><span class="codespan-content"><code>check_arrivals()</code></span></strong> itera sugli agenti, e per ognuno con <span class="codespan-content"><code>has_arrived() == true</code></span>
+costruisce l&rsquo;intenzione <span class="codespan-content"><code>CompleteDelivery</code></span> (con <span class="codespan-content"><code>drone_id</code></span> e <span class="codespan-content"><code>order_id</code></span> presi dalle
+belief), la pianifica e la esegue: salva <span class="codespan-content"><code>Delivered</code></span> e <span class="codespan-content"><code>Returned</code></span>, riportando
+l&rsquo;agente a <span class="codespan-content"><code>Idle</code></span>.</p><p><strong><span class="codespan-content"><code>compensate(drone_id)</code></span></strong> scorre gli agenti, e su quello il cui <span class="codespan-content"><code>drone_id</code></span> combacia
+esegue il piano <span class="codespan-content"><code>Compensate</code></span> (<span class="codespan-content"><code>RecordCompensation</code></span>), resettandone le belief.</p><hr /><h2 id="_8-mappatura-sul-flusso-saga">8. Mappatura sul flusso SAGA</h2><p>L&rsquo;approccio ad agenti <strong>non cambia</strong> il protocollo Kafka: gli stessi topic e gli
+stessi <span class="codespan-content"><code>SagaEvent</code></span>. Cambia solo <em>chi</em> prende le decisioni internamente al Drone
+Service.</p><table><thead><tr><th>Trigger esterno</th><th>Metodo flotta</th><th>Intention</th><th>Eventi prodotti</th></tr></thead><tbody><tr><td>consume <span class="codespan-content"><code>drone-requests</code></span></td><td><span class="codespan-content"><code>dispatch_order</code></span></td><td><span class="codespan-content"><code>AcceptDelivery</code></span> / <span class="codespan-content"><code>RefuseDelivery</code></span></td><td><span class="codespan-content"><code>DroneAssigned</code></span> <strong>o</strong> <span class="codespan-content"><code>DroneAssignmentFailed</code></span></td></tr><tr><td>scheduler (ogni 10s)</td><td><span class="codespan-content"><code>check_arrivals</code></span></td><td><span class="codespan-content"><code>CompleteDelivery</code></span></td><td><em>(solo store: Delivered, Returned)</em></td></tr><tr><td>consume <span class="codespan-content"><code>saga-events</code></span> <span class="codespan-content"><code>CompensateDrone</code></span></td><td><span class="codespan-content"><code>compensate</code></span></td><td><span class="codespan-content"><code>Compensate</code></span></td><td><em>(nessuno — reset belief)</em></td></tr></tbody></table><p>In sintesi: gli <strong>ordini</strong> producono un esito di assegnazione (accettato o
+rifiutato), gli <strong>arrivi</strong> producono solo scritture sull&rsquo;event store, le
+<strong>compensazioni</strong> non producono eventi ma solo un reset interno. Ogni trigger esterno
+attiva esattamente un metodo della flotta, e ogni metodo si traduce in un ciclo BDI
+su uno o più agenti.</p>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

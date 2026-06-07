@@ -1,0 +1,35 @@
+.docname {methodology}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Methodology
+Per la gestione e lo sviluppo di questo progetto è stato scelto un approccio metodologico **Agile Ibrido (Adattivo)**, caratterizzato da un ciclo di vita iterativo e incrementale con sprint a lunghezza variabile.
+La decisione di discostarsi dalla rigidità dei framework tradizionali (come il Waterfall) o dalle prescrizioni rigide di uno Scrum puro (che imporrebbe sprint di durata strettamente fissa) è stata presa analizzando le specifiche necessità tecniche e organizzative del progetto.
+L'approccio adottato si divide in due fasi operative distinte:
+- *Fase 1: Fondamenta Architetturali (Sprint Lunghi, 2 settimane a sprint)* .br
+    La prima metà del progetto è caratterizzata da task ad alta complessità cognitiva e decisionale. L'applicazione rigorosa del Domain-Driven Design (DDD), il refactoring verso un'architettura guidata dagli eventi con Apache Kafka, e la configurazione dell'infrastruttura di deployment su Kubernetes richiedono sessioni di lavoro profonde. Adottare sprint più lunghi in questa fase permette di assorbire la complessità infrastrutturale senza la pressione di dover forzare il rilascio di funzionalità incomplete.
+- *Fase 2: Prototipazione e Validazione (Sprint Corti, 1 settimana a sprint)* .br
+    Una volta stabilite e consolidate le fondamenta, lo sviluppo si sposta sulla realizzazione pratica e misurabile. Implementare il sistema basato su agenti per il controllo dei droni e definire/misurare gli SLO e SLI sono attività che beneficiano enormemente di un ciclo di feedback rapido. In questa fase, accorciare la durata degli sprint garantisce la possibilità di testare le implementazioni, identificare rapidamente colli di bottiglia o errori di integrazione, e pivotare le soluzioni tecniche in modo agile.
+
+## Collocazione nel framework PMLC di Wysocki
+
+Wysocki classifica i Project Management Life Cycle (PMLC) lungo una scala di **incertezza sulla soluzione**: **Linear → Incremental → Iterative → Adaptive → Extreme**. All'aumentare dell'incertezza aumentano il numero di process group che si ripetono, il ricorso a una pianificazione *just-in-time*, l'importanza del risk management e il coinvolgimento diretto del cliente.
+
+L'approccio adottato si colloca come **Adaptive (APF — Adaptive Project Framework)**, con elementi iterativi, per le seguenti ragioni:
+
+| Modello PMLC | Adatto quando | Perché scartato / adottato per DroneFlow |
+|--------------|---------------|-------------------------------------------|
+| **Linear** (Waterfall) | Soluzione e requisiti completamente noti e stabili | ❌ I requisiti del drone-service (agent-based) e del refactoring EDA erano solo parzialmente definiti: un piano rigido up-front avrebbe massimizzato la rilavorazione |
+| **Incremental** | Soluzione nota, rilasciata a incrementi | ❌ La soluzione tecnica non era interamente nota a priori |
+| **Iterative** | Soluzione in larga parte nota, da raffinare | 🟡 Adottato parzialmente nella seconda fase (raffinamento di agenti e SLO/SLI) |
+| **Adaptive (APF)** | Goal chiaro ma soluzione incerta, da scoprire per cicli | ✅ **Scelta principale**: goal di servizio chiaro, soluzione tecnica scoperta iterativamente con planning just-in-time e risk management crescente |
+| **Extreme** | Goal e soluzione entrambi incerti (R&D) | ❌ Il goal di servizio era chiaro fin dallo scoping |
+
+In coerenza con questa collocazione, il progetto adotta **sprint a lunghezza variabile** (2 settimane sulle fondamenta ad alta incertezza, 1 settimana sulla prototipazione misurabile) e tiene il **Risk Register come documento vivo**, rivisto a ogni ciclo — esattamente il comportamento che Wysocki associa ai modelli adattivi.

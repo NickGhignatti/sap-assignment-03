@@ -1,0 +1,551 @@
+.docname {Code Docs}
+.include {docs}
+
+# Order Service — Documentazione Tecnica
+
+## 1. Responsabilità
+
+Il servizio Order è il **punto di ingresso** del sistema e l'**orchestratore della
+SAGA**. Ha due nature complementari:
+
+1. **Server HTTP.** Riceve le richieste degli utenti (`POST /` per creare un
+   ordine, `GET /{id}/saga-status` per interrogarne lo stato) sulla porta `8080`.
+2. **Coordinatore della transazione distribuita.** Reagisce agli eventi pubblicati
+   dagli altri servizi sul topic `saga-events` e fa avanzare — o compensare — la
+   SAGA, persistendone lo stato su MongoDB.
+
+La prima natura è sincrona e di breve durata (una richiesta, una risposta); la
+seconda è asincrona e può durare l'intero ciclo di vita di una consegna. Le due
+sono cucite insieme dal `SagaOrchestrator`, condiviso tra l'handler HTTP e il task
+consumer Kafka.
+
+---
+
+## 2. Architettura interna
+
+.mermaid
+    graph TD
+        HTTP["HTTP Client"]
+        API["api.rs\nAxum handlers"]
+        SVC["service.rs\nOrderService"]
+        ORCH["orchestrator.rs\nSagaOrchestrator"]
+        REPO["repository.rs\nSagaRepository"]
+        CONS["consumer.rs\nKafka Consumer Task"]
+        MDB[("MongoDB\norder_sagas")]
+        K[["Kafka"]]
+
+        HTTP -->|"POST /\nGET /{id}/saga-status"| API
+        API --> SVC
+        SVC --> ORCH
+        ORCH --> REPO
+        REPO <--> MDB
+        ORCH -->|produce| K
+        K -->|consume| CONS
+        CONS --> ORCH
+
+**Lettura del diagramma.** Esistono **due percorsi di ingresso** verso il
+`SagaOrchestrator`, ed entrambi convergono su di esso:
+
+- *Percorso sincrono (HTTP):* `api.rs` riceve la richiesta, la passa a `service.rs`
+  (`OrderService`), che genera l'`order_id` e delega all'orchestratore l'avvio
+  della saga.
+- *Percorso asincrono (Kafka):* `consumer.rs` riceve gli eventi da `saga-events` e
+  li inoltra all'orchestratore tramite `handle_saga_event()`.
+
+L'orchestratore è quindi il **punto di convergenza**: usa il `SagaRepository` per
+leggere e scrivere lo stato su MongoDB, e il producer Kafka per pubblicare eventi e
+messaggi. Il fatto che `SagaOrchestrator` sia `Clone` (a basso costo, perché i suoi
+campi sono `Arc`-backed) è ciò che permette di condividerne un'istanza tra il
+router HTTP e il task consumer.
+
+---
+
+## 3. Modello dati — `SagaState`
+
+`SagaState` è il documento persistito nella collection `order_sagas`. Rappresenta
+*tutto* ciò che serve per sapere a che punto è una saga e per poterla compensare.
+
+```
+┌──────────────────────────────────────────┐
+│               SagaState                  │
+├──────────────────────────────────────────┤
+│ _id (saga_id)     : String               │  ← chiave MongoDB
+│ order_id          : String               │
+│ status            : SagaStatus           │
+│ current_step      : SagaStep             │
+│ completed_steps   : Vec<SagaStep>        │
+│ failure_reason    : Option<String>       │
+│ start_time        : DateTime<Utc>        │
+│ end_time          : Option<DateTime<Utc>>│
+├──────────────────────────────────────────┤
+│ customer_id       : String               │  ← dati ordine
+│ from_address      : String               │     copiati qui per
+│ to_address        : String               │     facilitare la
+│ package_weight    : f64                  │     compensazione
+│ requested_delivery_time: DateTime<Utc>   │     senza query extra
+│ max_delivery_time_minutes: i32           │
+├──────────────────────────────────────────┤
+│ delivery_id       : Option<String>       │  ← popolato a Step 2
+│ drone_id          : Option<String>       │  ← popolato a Step 3
+└──────────────────────────────────────────┘
+```
+
+Due scelte di modellazione meritano una spiegazione.
+
+**`saga_id` mappato su `_id`.** Il campo `saga_id` è annotato con
+`#[serde(rename = "_id")]`: diventa la *primary key* del documento MongoDB. Questo
+rende il `save()` per `saga_id` un upsert naturale sulla chiave primaria, senza
+indici aggiuntivi.
+
+**Dati dell'ordine duplicati nello stato.** `customer_id`, gli indirizzi, il peso e
+i tempi sono copiati dentro `SagaState` anche se nascono nell'`OrderMessage`. La
+ragione è la **compensazione**: quando una saga fallisce, l'orchestratore deve poter
+emettere gli eventi di compensazione (che richiedono questi dati) **senza dover
+interrogare altri servizi**. Tutto ciò che serve è già nello stato della saga. Il
+costo è una piccola ridondanza; il beneficio è l'autosufficienza della
+compensazione. I campi `delivery_id` e `drone_id` sono `Option` perché vengono
+popolati solo quando i rispettivi step si completano.
+
+---
+
+## 4. Macchina a stati — `SagaStatus`
+
+`SagaStatus` rappresenta lo **stato complessivo** della saga. Le transizioni sono
+guidate dai metodi di `SagaState` (`mark_step_completed`, `mark_failed`,
+`start_compensation`, `mark_compensated`).
+
+.mermaid
+    stateDiagram-v2
+        [*] --> Started : start_order_saga()
+
+        Started --> InProgress : mark_step_completed(OrderValidation)
+        Started --> Failed : mark_failed() [peso ≤ 0 o indirizzi vuoti]
+
+        InProgress --> InProgress : mark_step_completed(DeliveryScheduling)
+        InProgress --> Failed : mark_failed() [DeliverySchedulingFailed]
+        InProgress --> Failed : mark_failed() [DroneAssignmentFailed]
+        InProgress --> Completed : mark_step_completed(DroneAssignment)
+
+        Failed --> Compensating : start_compensation()
+        Compensating --> Compensated : mark_compensated()
+        Compensated --> [*]
+        Completed --> [*]
+
+**Lettura del diagramma.** Una saga nasce `Started`. Se la validazione sincrona
+fallisce subito, passa direttamente a `Failed`. Altrimenti diventa `InProgress` e vi
+rimane mentre gli step intermedi si completano, fino a raggiungere `Completed`
+(successo) o `Failed` (un evento di fallimento). Da `Failed`, se ci sono step da
+annullare, si entra in `Compensating` e infine in `Compensated`. Gli stati
+`Completed` e `Compensated` sono **terminali**: hanno entrambi un `end_time`
+valorizzato e da essi non si esce.
+
+---
+
+## 5. Macchina a stati — `SagaStep`
+
+`SagaStep` indica *quale* step è in corso o è stato completato. Le varianti sono
+ordinate, e l'ordine è significativo.
+
+.mermaid
+    stateDiagram-v2
+        [*] --> OrderValidation : nuovo ordine
+        OrderValidation --> DeliveryScheduling : step 1 OK
+        DeliveryScheduling --> DroneAssignment : step 2 OK
+        DroneAssignment --> Completed : step 3 OK
+
+L'enum deriva `PartialOrd, Ord`, quindi le varianti sono confrontabili e ordinabili
+secondo l'ordine di dichiarazione: `OrderValidation < DeliveryScheduling <
+DroneAssignment < Completed`. Il metodo `next()` codifica la progressione lineare
+(`OrderValidation → DeliveryScheduling → DroneAssignment → Completed → None`).
+
+Questo ordine totale è ciò che rende elegante la compensazione:
+
+```rust
+pub fn steps_to_compensate(&self) -> Vec<SagaStep> {
+    let mut steps = self.completed_steps.clone();
+    steps.sort();      // ordine crescente: [OrderValidation, DeliveryScheduling, ...]
+    steps.reverse();   // ordine inverso:  [..., DeliveryScheduling, OrderValidation]
+    steps
+}
+```
+
+Se `completed_steps = [OrderValidation, DeliveryScheduling]`, allora `sort()` li
+lascia in ordine e `reverse()` produce `[DeliveryScheduling, OrderValidation]`: si
+compensa **prima la Delivery, poi l'Order** — esattamente l'ordine inverso a quello
+di esecuzione, come richiede il pattern SAGA.
+
+---
+
+## 6. Rete di Petri — Ciclo di vita della SAGA
+
+Una rete di Petri rende esplicita la natura **concorrente e a token** della saga:
+lo "stato corrente" è un token che si muove tra i posti al verificarsi delle
+transizioni (gli eventi).
+
+Notazione: **○** = posto (stato), **▬** = transizione (evento), **●** = token (stato corrente)
+
+.mermaid
+    flowchart LR
+        P0(("● p0\nOrdine\nricevuto"))
+        T0["t0: valida\nordine"]
+        P1(("p1\nOrdine\nvalidato"))
+        P_ERR1(("p_err1\nErrore\nvalidazione"))
+        T1["t1: invia a\nDelivery"]
+        P2(("p2\nIn attesa\nDeliveryScheduled"))
+        T2["t2: DeliveryScheduled\nricevuto"]
+        P3(("p3\nDelivery\nschedulata"))
+        P_ERR2(("p_err2\nErrore\nscheduling"))
+        T3["t3: DroneAssigned\nricevuto"]
+        P4(("p4\nSAGA\ncompletata"))
+        P_ERR3(("p_err3\nErrore\nassegnazione"))
+        T_COMP["t_comp:\ncompensa"]
+        P_COMP(("p_comp\nCompensato"))
+
+        P0 --> T0
+        T0 -->|"peso > 0\nindirizzi OK"| P1
+        T0 -->|"dati non\nvalidi"| P_ERR1
+        P1 --> T1
+        T1 --> P2
+        P2 -->|"saga.delivery_scheduled"| T2
+        P2 -->|"saga.delivery_scheduling_failed"| P_ERR2
+        T2 --> P3
+        P3 -->|"saga.drone_assigned"| T3
+        P3 -->|"saga.drone_assignment_failed"| P_ERR3
+        T3 --> P4
+        P_ERR2 --> T_COMP
+        P_ERR3 --> T_COMP
+        T_COMP --> P_COMP
+
+**Lettura del diagramma.** Il token parte in `p0` (ordine ricevuto). La transizione
+`t0` (validazione) è l'unica **sincrona**, eseguita durante la richiesta HTTP: porta
+il token in `p1` se i dati sono validi, oppure nel posto d'errore `p_err1`. Le
+transizioni successive (`t2`, `t3`) sono **asincrone**: scattano solo all'arrivo del
+corrispondente evento Kafka. I posti `p2` e `p3` rappresentano l'attesa: la saga è
+"ferma" lì finché non arriva `DeliveryScheduled` o `DroneAssigned`. Un fallimento in
+qualunque step intermedio porta il token in un posto d'errore, da cui la transizione
+`t_comp` lo conduce a `p_comp` (compensato). Si noti che dai posti d'errore parte
+sempre la compensazione: è il modo in cui la rete modella il rollback.
+
+---
+
+## 7. Diagramma di sequenza — Happy Path
+
+.mermaid
+    sequenceDiagram
+        actor Client
+        participant API as api.rs
+        participant SVC as service.rs
+        participant ORCH as orchestrator.rs
+        participant REPO as repository.rs
+        participant K as Kafka
+        participant CONS as consumer.rs
+
+        Client->>API: POST / {customer_id, from, to, weight, time, max_minutes}
+        API->>SVC: create_order(...)
+        SVC->>SVC: order_id = Uuid::new_v4()
+        SVC->>ORCH: start_order_saga(order_id, ...)
+        ORCH->>ORCH: saga_id = Uuid::new_v4()
+        ORCH->>ORCH: SagaState::new(STARTED, step=OrderValidation)
+        ORCH->>REPO: save(saga) [upsert]
+        ORCH->>ORCH: validate_order()
+        Note over ORCH: Controlli sincroni: peso > 0, indirizzi non vuoti
+        ORCH->>REPO: save(saga) [step=DeliveryScheduling, IN_PROGRESS]
+        ORCH->>K: produce order-requests (OrderMessage, key=order_id)
+        ORCH-->>SVC: Ok(saga_id)
+        SVC-->>API: Ok(OrderResponse)
+        API-->>Client: 201 {order_id, saga_id, status: "SAGA_STARTED"}
+
+        Note over CONS,K: Asincrono – dopo la risposta HTTP
+        K-->>CONS: DeliveryScheduled event
+        CONS->>ORCH: handle_saga_event(DeliveryScheduled)
+        ORCH->>REPO: find_by_order_id → saga
+        ORCH->>REPO: save(saga) [delivery_id set, step=DroneAssignment]
+        CONS->>K: commit offset
+
+        K-->>CONS: DroneAssigned event
+        CONS->>ORCH: handle_saga_event(DroneAssigned)
+        ORCH->>REPO: find_by_order_id → saga
+        ORCH->>REPO: save(saga) [drone_id set, step=Completed, COMPLETED]
+        ORCH->>K: produce saga.completed
+        CONS->>K: commit offset
+
+**Lettura del diagramma.** La prima metà (fino al `201`) è interamente sincrona e
+avviene dentro la richiesta HTTP: si noti che `validate_order()` e la pubblicazione
+su `order-requests` accadono *prima* della risposta al client. La seconda metà è il
+ciclo asincrono guidato da Kafka: per ogni evento il consumer chiama
+`handle_saga_event`, l'orchestratore recupera la saga per `order_id`, aggiorna lo
+stato, e *solo dopo il successo* il consumer committa l'offset. La pubblicazione di
+`OrderCompleted` chiude il flusso.
+
+---
+
+## 8. Diagramma di sequenza — Compensazione
+
+.mermaid
+    sequenceDiagram
+        participant CONS as consumer.rs
+        participant ORCH as orchestrator.rs
+        participant REPO as repository.rs
+        participant K as Kafka
+
+        Note over CONS: DroneAssignmentFailed ricevuto (step 3)
+        CONS->>ORCH: handle_saga_event(DroneAssignmentFailed)
+        ORCH->>REPO: find_by_order_id → saga
+        ORCH->>REPO: save(saga) [FAILED]
+        ORCH->>REPO: save(saga) [COMPENSATING]
+
+        Note over ORCH: steps_to_compensate() = [DroneAssignment, DeliveryScheduling, OrderValidation]
+
+        ORCH->>K: produce saga.compensate.drone (CompensateDrone)
+        ORCH->>K: produce saga.compensate_delivery (CompensateDelivery)
+        ORCH->>K: produce saga.compensate_order (CompensateOrder)
+
+        Note over ORCH: Solo dopo tutti i publish con successo (?)
+        ORCH->>REPO: save(saga) [COMPENSATED]
+        ORCH->>K: produce saga.cancelled (OrderCancelled)
+
+**Lettura del diagramma.** Ricevuto `DroneAssignmentFailed`, l'orchestratore marca
+la saga `FAILED` e poi `COMPENSATING`, calcola gli step da compensare in ordine
+inverso e itera emettendo un evento di compensazione per ciascuno. L'uso
+dell'operatore `?` su ogni `publish_event` significa che **se anche una sola
+pubblicazione fallisce, la funzione ritorna `Err` e la saga non viene marcata
+`COMPENSATED`**: l'offset Kafka non sarà committato e l'evento di fallimento verrà
+rielaborato, riprovando la compensazione. Solo quando *tutte* le compensazioni sono
+state pubblicate con successo la saga diventa `COMPENSATED` e viene emesso
+l'`OrderCancelled` finale.
+
+---
+
+## 9. Gestione del commit nel consumer
+
+> [NOTE!]
+> Il consumer dell'Order Service usa il **commit manuale** degli offset Kafka come
+> equivalente dell'`ack`/`nack` di AMQP. La semantica completa (at-least-once,
+> poison pill) è in [Messaging Layer (Kafka)](kafka.qd).
+
+.mermaid
+    flowchart TD
+        A["Messaggio ricevuto\nda saga-events"]
+        B{Deserializzazione\nSagaEvent}
+        C["handle_saga_event()"]
+        D{Esito}
+        E["commit_message()"]
+        F["NON committa\n(Kafka rielabora)"]
+        G["commit_message()\n(skip poison pill)"]
+
+        A --> B
+        B -->|"Ok(event)"| C
+        B -->|"Err: malformato"| G
+        C --> D
+        D -->|"Ok(())"| E
+        D -->|"Err: errore handler"| F
+
+        style G fill:#fdd
+        style F fill:#fdd
+        style E fill:#dfd
+
+**Lettura del diagramma.** Tre esiti possibili. (1) *Successo*: l'handler ritorna
+`Ok`, si committa l'offset — il messaggio è elaborato. (2) *Errore dell'handler*
+(es. MongoDB irraggiungibile, errore transiente): **non** si committa, così Kafka
+ridistribuirà il messaggio a un prossimo poll, riprovando — l'equivalente di
+`nack(requeue=true)`. (3) *Messaggio malformato* (poison pill, JSON che non
+deserializzerà mai): si committa per **saltarlo**, perché rielaborarlo
+ciclerebbe all'infinito — l'equivalente di `nack(requeue=false)`. La distinzione tra
+i casi (2) e (3) è cruciale: un errore transiente *merita* un retry, un messaggio
+corrotto *no*.
+
+---
+
+## 10. Reference dei moduli
+
+### `main.rs` — wiring e avvio
+
+`main.rs` assembla tutte le dipendenze e avvia il servizio. In ordine:
+
+- **MongoDB.** Legge `MONGODB_URI` (default `mongodb://localhost:27017`), apre la
+  connessione, seleziona il database `order_service` e costruisce il
+  `SagaRepository`.
+- **Kafka producer.** Configurato con `acks=all` (durabilità massima: il leader e
+  tutte le repliche in-sync devono confermare la scrittura) e
+  `message.timeout.ms=5000`.
+- **Kafka consumer.** `group.id=order-service`, `auto.offset.reset=earliest` (al
+  primo avvio legge dall'inizio del topic), `enable.auto.commit=false` (commit
+  **manuale**, dopo l'elaborazione — la chiave dell'at-least-once).
+- **Metriche.** Crea un `prometheus::Registry`, lo passa al `SagaOrchestrator`
+  (che vi registra le `SagaMetrics`) e a `HttpMetrics`.
+- **Avvio del consumer.** `consumer::start(...)` sottoscrive il topic e spawna il
+  task di consumo in background.
+- **Router HTTP.** Le rotte applicative (`/`, `/{orderId}/saga-status`, `/health`)
+  hanno stato `Arc<OrderService>`; la rotta `/metrics` ha stato `Registry` e viene
+  unita con `.merge()` (perché ha uno stato diverso). Sopra a tutto, il middleware
+  `track_metrics` conta ogni risposta per status code.
+- **Graceful shutdown.** `axum::serve(...).with_graceful_shutdown(shutdown_signal())`
+  attende `CTRL+C` (SIGINT) e termina dopo aver completato le richieste in corso.
+
+> [NOTE!]
+> **Perché producer e consumer separati?** In Kafka producer e consumer sono client
+> distinti con configurazioni diverse (il producer si preoccupa di `acks`, il
+> consumer di `group.id` e commit). Tenerli separati permette di pubblicare eventi
+> senza che l'eventuale lentezza del consumo (back-pressure) interferisca.
+
+### `service.rs` — `OrderService` e DTO
+
+Strato di servizio sottile. `OrderService::create_order(...)` genera l'`order_id`
+(UUID v4) e delega a `orchestrator.start_order_saga(...)`, restituendo un
+`OrderResponse { order_id, saga_id, status: "SAGA_STARTED" }`.
+`get_order_status(...)` inoltra a `orchestrator.get_saga_by_order_id(...)`.
+
+Il modulo definisce anche i DTO HTTP:
+- `CreateOrderRequest` — il body della `POST /`. `requested_delivery_time` è
+  `Option<DateTime<Utc>>`: se omesso, l'handler usa `now + 2h` come default.
+- `SagaStatusResponse` — la risposta della `GET /{id}/saga-status`, con gli enum
+  resi come stringhe (`format!("{:?}", ...)`).
+
+### `orchestrator.rs` — `SagaOrchestrator` e `SagaMetrics`
+
+Il cuore della logica. Lo struct è `Clone` (campi `Arc`-backed: `repo`, `metrics`,
+`producer`).
+
+| Metodo | Visibilità | Ruolo |
+|---|---|---|
+| `new(repo, producer, registry)` | pub | Costruisce l'orchestratore e registra le metriche |
+| `metrics()` | pub | Espone `Arc<SagaMetrics>` |
+| `get_saga_by_order_id(order_id)` | pub | Lookup per l'handler `saga-status` |
+| `start_order_saga(...)` | pub | **Entry point**: crea la saga, la salva, incrementa `started`, esegue lo Step 1 |
+| `validate_order(saga)` | priv | **Step 1**: controlla peso e indirizzi; in caso OK marca lo step e pubblica su `order-requests` |
+| `handle_saga_event(event)` | pub | **Dispatcher**: instrada l'evento al gestore corretto (con ramo `_ => Ok(())` per gli eventi ignorati) |
+| `on_delivery_scheduled(...)` | priv | Step 2 OK: registra `delivery_id`, avanza lo step |
+| `on_drone_assigned(...)` | priv | Step 3 OK: registra `drone_id`, avanza, chiama `complete_saga` |
+| `complete_saga(saga)` | priv | Marca `Completed`, osserva la durata (istogramma), pubblica `OrderCompleted` |
+| `handle_validation_failure(...)` | priv | Step 1 fallito: marca `Failed`, pubblica `OrderValidationFailed`, annulla l'ordine |
+| `on_delivery_failed(...)` / `on_drone_failed(...)` | priv | Step 2/3 falliti: marca `Failed`, avvia la compensazione |
+| `compensate_saga(saga)` | priv | Itera `steps_to_compensate()` emettendo le compensazioni, poi marca `Compensated` |
+| `cancel_order(...)` | priv | Pubblica `OrderCancelled` (evento terminale) |
+| `publish_event(key, event)` | priv | Pubblica un `SagaEvent` su `saga-events` |
+| `publish_to_topic(topic, key, msg)` | priv | Helper generico: serializza in JSON e produce con `key` come chiave di partizione |
+
+**Dettaglio di `validate_order()`.** I controlli sono volutamente semplici e
+sincroni: `package_weight <= 0.0` → "Peso pacco non valido"; `from_address` o
+`to_address` vuoti → "Indirizzi mancanti". In caso di fallimento, delega a
+`handle_validation_failure`. Altrimenti costruisce l'`OrderMessage` dai dati della
+saga e lo pubblica su `order-requests` con chiave `order_id`.
+
+**`SagaMetrics`.** Aggrega i counter e l'istogramma usati dagli SLO (vedi
+[Osservabilità & SLO](slo.qd)): `started`, `completed`, `failed`, `compensated`
+(tutti `IntCounter`) e `duration_seconds` (`Histogram` con bucket
+`[1.0, 2.5, 5.0, 10.0, 15.0, 30.0]`, dove il bucket `15.0` è quello su cui si legge
+l'SLI di latenza). Tutte le metriche sono registrate nel `Registry` passato a `new`.
+
+### `saga.rs` — `SagaState`, `SagaStatus`, `SagaStep`
+
+Già descritti nelle sezioni 3–5. I metodi di mutazione sono:
+- `mark_step_completed(step)` — aggiunge lo step a `completed_steps`, avanza
+  `current_step` con `next()` e aggiorna `status` (a `Completed` se il prossimo step
+  è `Completed`, altrimenti `InProgress`, con `end_time` valorizzato nel caso
+  terminale).
+- `mark_failed(reason)` — `status = Failed`, registra la `failure_reason`, fissa
+  `end_time`.
+- `start_compensation()` — `status = Compensating`.
+- `mark_compensated()` — `status = Compensated`, fissa `end_time`.
+- `steps_to_compensate()` — gli step completati in ordine inverso.
+- `needs_compensation()` — `true` se la saga è `Failed` **e** ha almeno uno step
+  completato (un fallimento di validazione, senza step completati, non richiede
+  compensazione).
+
+### `repository.rs` — `SagaRepository` (MongoDB)
+
+Wrapper sulla collection `order_sagas`. È `Clone` perché il `Collection<T>` del
+driver MongoDB è già `Arc`-backed internamente (la connessione è condivisa).
+
+| Metodo | Ritorno | Note |
+|---|---|---|
+| `save(state)` | `Result<()>` | `replace_one` con `upsert(true)` su `_id = saga_id`: inserisce o sostituisce |
+| `find_by_id(saga_id)` | `Result<Option<SagaState>>` | Lookup per chiave primaria |
+| `find_by_order_id(order_id)` | `Result<Option<SagaState>>` | **Chiave di correlazione** usata dall'orchestratore sugli eventi |
+| `find_by_status(status)` | `Result<Vec<SagaState>>` | Scansione per stato (serializza l'enum in BSON) |
+
+Tutti i metodi usano `anyhow::Context` per arricchire gli errori con un messaggio
+descrittivo (es. "MongoDB save SagaState fallito"), facilitando la diagnosi.
+
+### `consumer.rs` — task consumer Kafka
+
+`start(consumer, orchestrator)` sottoscrive il topic `saga-events`, poi spawna un
+`tokio::task` con il loop di consumo. Il loop chiama `consumer.recv().await` (il
+*pull* di Kafka), gestisce il payload vuoto (tombstone → commit e skip),
+deserializza in `SagaEvent` e instrada a `handle_saga_event`. La gestione del
+commit segue la logica della sezione 9. Non servono wildcard di routing: il consumer
+riceve *tutti* gli eventi del topic e l'orchestratore ignora quelli che non lo
+riguardano tramite il ramo `_ => Ok(())`.
+
+### `http_metrics.rs` — middleware di disponibilità
+
+Espone un unico counter etichettato `http_requests_total{status="..."}`. Il
+middleware `track_metrics` (registrato con `from_fn_with_state`) esegue l'handler,
+legge lo status code della risposta e incrementa il counter per quel codice. L'SLI
+di disponibilità HTTP si calcola poi in PromQL come rapporto tra risposte non-5xx e
+totali (vedi [Osservabilità & SLO](slo.qd)).
+
+### `api.rs` — handler HTTP
+
+Quattro handler Axum, descritti in dettaglio nella sezione 11. Tutti gli handler
+applicativi hanno stato `Arc<OrderService>`; `metrics` ha stato `Registry`.
+
+---
+
+## 11. API Reference
+
+Porta: **8080**
+
+### `POST /`
+Crea un nuovo ordine e avvia la SAGA.
+
+**Request body:**
+```json
+{
+  "customer_id": "cust-123",
+  "from_address": "Via Roma 1, Milano",
+  "to_address": "Via Dante 5, Milano",
+  "package_weight": 2.5,
+  "requested_delivery_time": "2026-04-10T14:00:00Z",
+  "max_delivery_time_minutes": 30
+}
+```
+`requested_delivery_time` è **opzionale**: se omesso, l'handler usa `now + 2h`.
+
+**Response `201 Created`:**
+```json
+{
+  "order_id": "550e8400-...",
+  "saga_id":  "f47ac10b-...",
+  "status":   "SAGA_STARTED"
+}
+```
+**Response `500`:** corpo `{ "error": "..." }` se l'avvio della saga fallisce (es.
+MongoDB irraggiungibile).
+
+### `GET /{orderId}/saga-status`
+Restituisce lo stato corrente della SAGA per un ordine.
+
+**Response `200`:**
+```json
+{
+  "saga_id":         "f47ac10b-...",
+  "order_id":        "550e8400-...",
+  "status":          "Completed",
+  "current_step":    "Completed",
+  "completed_steps": ["OrderValidation", "DeliveryScheduling", "DroneAssignment"],
+  "failure_reason":  null,
+  "start_time":      "2026-04-10T14:00:00Z",
+  "end_time":        "2026-04-10T14:01:05Z"
+}
+```
+**Response `404`:** nessuna saga trovata per quell'`order_id`.
+**Response `500`:** errore di lettura da MongoDB.
+
+### `GET /health`
+**Response `200`:** `Order Service is running`
+
+### `GET /metrics`
+Espone le metriche Prometheus in formato text exposition
+(`Content-Type: text/plain; version=0.0.4`). Dettagli in
+[Osservabilità & SLO](slo.qd).

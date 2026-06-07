@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <link href="../lib/katex/katex.min.css" rel="stylesheet">
+    <script src="../lib/katex/katex.min.js" defer="true"></script>
+    <script>capabilities.math = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="osservabilità-amp-slo--misurazione-dei-livelli-di-servizio" data-depth="1"><a href="#osservabilità-amp-slo--misurazione-dei-livelli-di-servizio">Osservabilità &amp; SLO — Misurazione dei livelli di servizio</a><ol><li data-target-id="_1-teoria--sli-slo-error-budget" data-depth="2"><a href="#_1-teoria--sli-slo-error-budget">1. Teoria — SLI, SLO, Error Budget</a></li><li data-target-id="_2-i-quattro-slo-definiti" data-depth="2"><a href="#_2-i-quattro-slo-definiti">2. I quattro SLO definiti</a><ol><li data-target-id="slo-aggiuntivi-estensione" data-depth="3"><a href="#slo-aggiuntivi-estensione">SLO aggiuntivi (estensione)</a></li></ol></li><li data-target-id="_3-strumentazione-nel-codice" data-depth="2"><a href="#_3-strumentazione-nel-codice">3. Strumentazione nel codice</a></li><li data-target-id="_4-esposizione--endpoint-metrics" data-depth="2"><a href="#_4-esposizione--endpoint-metrics">4. Esposizione — endpoint /metrics</a></li><li data-target-id="_5-raccolta--deployment-di-prometheus" data-depth="2"><a href="#_5-raccolta--deployment-di-prometheus">5. Raccolta — deployment di Prometheus</a></li><li data-target-id="_6-query-promql-degli-sli" data-depth="2"><a href="#_6-query-promql-degli-sli">6. Query PromQL degli SLI</a><ol><li data-target-id="sli-1--saga-success-rate" data-depth="3"><a href="#sli-1--saga-success-rate">SLI 1 — Saga success rate</a></li><li data-target-id="sli-2--frazione-di-saga-sotto-i-15s" data-depth="3"><a href="#sli-2--frazione-di-saga-sotto-i-15s">SLI 2 — Frazione di saga sotto i 15s</a></li><li data-target-id="sli-3--disponibilità-http-non-5xx" data-depth="3"><a href="#sli-3--disponibilità-http-non-5xx">SLI 3 — Disponibilità HTTP (non-5xx)</a></li><li data-target-id="sli-4--successo-di-assegnazione-drone" data-depth="3"><a href="#sli-4--successo-di-assegnazione-drone">SLI 4 — Successo di assegnazione drone</a></li><li data-target-id="latenza-p95-diagnostica" data-depth="3"><a href="#latenza-p95-diagnostica">Latenza p95 (diagnostica)</a></li><li data-target-id="due-insidie-promql-incontrate" data-depth="3"><a href="#due-insidie-promql-incontrate">Due insidie PromQL incontrate</a></li></ol></li><li data-target-id="_7-report-automatico-degli-slo" data-depth="2"><a href="#_7-report-automatico-degli-slo">7. Report automatico degli SLO</a></li><li data-target-id="_8-pipeline-completa" data-depth="2"><a href="#_8-pipeline-completa">8. Pipeline completa</a></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="il-sistema-oggi" data-decorative="">Il sistema oggi</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common (libreria)</a></li><li><a href="../order">Order Service</a></li><li><a href="../delivery">Delivery Service</a></li><li><a href="../drone">Drone Service</a></li><li><a href="../agent">Flotta ad Agenti (BDI)</a></li></ul><h2 id="infrastruttura-amp-operabilità" data-decorative="">Infrastruttura &amp; operabilità</h2><ul><li><a href="../kafka">Messaging Layer (Kafka)</a></li><li><a href="../k8s">Deployment Kubernetes</a></li><li><a href="../slo" aria-current="page">Osservabilità &amp; SLO</a></li></ul><h2 id="appendice" data-decorative="">Appendice</h2><ul><li><a href="../evoluzione">Evoluzione del progetto</a></li><li><a href="../conclusioni">Conclusioni</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="osservabilità-amp-slo--misurazione-dei-livelli-di-servizio" data-depth="1"><a href="#osservabilità-amp-slo--misurazione-dei-livelli-di-servizio">Osservabilità &amp; SLO — Misurazione dei livelli di servizio</a><ol><li data-target-id="_1-teoria--sli-slo-error-budget" data-depth="2"><a href="#_1-teoria--sli-slo-error-budget">1. Teoria — SLI, SLO, Error Budget</a></li><li data-target-id="_2-i-quattro-slo-definiti" data-depth="2"><a href="#_2-i-quattro-slo-definiti">2. I quattro SLO definiti</a><ol><li data-target-id="slo-aggiuntivi-estensione" data-depth="3"><a href="#slo-aggiuntivi-estensione">SLO aggiuntivi (estensione)</a></li></ol></li><li data-target-id="_3-strumentazione-nel-codice" data-depth="2"><a href="#_3-strumentazione-nel-codice">3. Strumentazione nel codice</a></li><li data-target-id="_4-esposizione--endpoint-metrics" data-depth="2"><a href="#_4-esposizione--endpoint-metrics">4. Esposizione — endpoint /metrics</a></li><li data-target-id="_5-raccolta--deployment-di-prometheus" data-depth="2"><a href="#_5-raccolta--deployment-di-prometheus">5. Raccolta — deployment di Prometheus</a></li><li data-target-id="_6-query-promql-degli-sli" data-depth="2"><a href="#_6-query-promql-degli-sli">6. Query PromQL degli SLI</a><ol><li data-target-id="sli-1--saga-success-rate" data-depth="3"><a href="#sli-1--saga-success-rate">SLI 1 — Saga success rate</a></li><li data-target-id="sli-2--frazione-di-saga-sotto-i-15s" data-depth="3"><a href="#sli-2--frazione-di-saga-sotto-i-15s">SLI 2 — Frazione di saga sotto i 15s</a></li><li data-target-id="sli-3--disponibilità-http-non-5xx" data-depth="3"><a href="#sli-3--disponibilità-http-non-5xx">SLI 3 — Disponibilità HTTP (non-5xx)</a></li><li data-target-id="sli-4--successo-di-assegnazione-drone" data-depth="3"><a href="#sli-4--successo-di-assegnazione-drone">SLI 4 — Successo di assegnazione drone</a></li><li data-target-id="latenza-p95-diagnostica" data-depth="3"><a href="#latenza-p95-diagnostica">Latenza p95 (diagnostica)</a></li><li data-target-id="due-insidie-promql-incontrate" data-depth="3"><a href="#due-insidie-promql-incontrate">Due insidie PromQL incontrate</a></li></ol></li><li data-target-id="_7-report-automatico-degli-slo" data-depth="2"><a href="#_7-report-automatico-degli-slo">7. Report automatico degli SLO</a></li><li data-target-id="_8-pipeline-completa" data-depth="2"><a href="#_8-pipeline-completa">8. Pipeline completa</a></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><blockquote><p>[NOTE!]
+Definizione di <strong>2 SLO</strong> (Service Level Objective) richiesti, estesi a <strong>4</strong>, con i
+relativi <strong>SLI</strong> (Service Level Indicator), e implementazione della loro
+<strong>misurazione</strong> tramite Prometheus. Le metriche sono esposte dai servizi su
+<span class="codespan-content"><code>/metrics</code></span> e raccolte da un Prometheus interno al cluster.</p></blockquote><h1 class="page-break" id="osservabilità-amp-slo--misurazione-dei-livelli-di-servizio">Osservabilità &amp; SLO — Misurazione dei livelli di servizio</h1><h2 id="_1-teoria--sli-slo-error-budget">1. Teoria — SLI, SLO, Error Budget</h2><p>Per ragionare in modo rigoroso sulla qualità del servizio servono tre concetti
+distinti, spesso confusi tra loro.</p><table><thead><tr><th>Termine</th><th>Cos&rsquo;è</th><th>Esempio</th></tr></thead><tbody><tr><td><strong>SLI</strong></td><td><em>Indicatore</em>: una misura numerica raccolta</td><td>rapporto saga completate / saga totali</td></tr><tr><td><strong>SLO</strong></td><td><em>Obiettivo</em>: una soglia sull&rsquo;SLI in una finestra temporale</td><td>&rdquo;≥ 95% di saga completate su 30 giorni&rdquo;</td></tr><tr><td><strong>SLA</strong></td><td><em>Accordo</em>: contratto con penali (non richiesto qui)</td><td>rimborso se disponibilità &lt; 99%</td></tr></tbody></table><p>Un <strong>SLI</strong> è la <em>misura</em>: un numero che descrive oggettivamente come si sta
+comportando il sistema. Un <strong>SLO</strong> è l&rsquo;<em>obiettivo</em>: la soglia che ci si impegna a
+rispettare su quell&rsquo;SLI, in una data finestra temporale. Un <strong>SLA</strong> è l&rsquo;<em>accordo
+contrattuale</em> costruito sopra a uno SLO, con penali — non rilevante per questo
+progetto, ma utile a completare il quadro.</p><p>Un buon SLI è quasi sempre un <strong>rapporto <span class="codespan-content"><code>good / total</code></span></strong>, naturalmente compreso tra
+0 e 1:</p><p>$<formula>\text{SLI} = \frac{\text{eventi buoni}}{\text{eventi validi}}</formula>$</p><p>La forma a rapporto ha un vantaggio pratico: è autonormalizzante (sempre tra 0 e 1) e
+indipendente dal volume di traffico, quindi confrontabile direttamente con la soglia
+dello SLO.</p><p>L&rsquo;<strong>error budget</strong> è il complemento dello SLO: <span class="codespan-content"><code>100% &minus; SLO</code></span>. È la quantità di
+fallimento <em>ammessa</em> prima di dover intervenire. Per uno SLO al 95%, l&rsquo;error budget è
+il 5%: si possono &ldquo;spendere&rdquo; fino al 5% di fallimenti senza violare l&rsquo;obiettivo.
+Questo è il motivo per cui l&rsquo;obiettivo non è (quasi) mai il 100%: inseguire la
+perfezione assoluta è infinitamente costoso e operativamente inutile. L&rsquo;error budget
+trasforma l&rsquo;affidabilità da assoluto morale a risorsa gestibile.</p><hr /><h2 id="_2-i-quattro-slo-definiti">2. I quattro SLO definiti</h2><p>L&rsquo;assignment richiede almeno due SLO; ne sono stati definiti quattro, per coprire
+entrambi i servizi con interfaccia osservabile e i due archetipi fondamentali di SLI.</p><blockquote><p><strong>SLO 1 — Affidabilità (availability-style).</strong>
+≥ <strong>95%</strong> delle saga d&rsquo;ordine si completa con successo su finestra mobile di 30 giorni.
+<strong>SLI:</strong> <span class="codespan-content"><code>completed / (completed + failed + compensated)</code></span>
+<strong>Error budget:</strong> 5% delle saga può fallire o essere compensata.</p></blockquote><blockquote><p><strong>SLO 2 — Latenza.</strong>
+≥ <strong>90%</strong> delle saga si completa entro <strong>15 secondi</strong>.
+<strong>SLI:</strong> <span class="codespan-content"><code>bucket{le=&quot;15.0&quot;} / count</code></span>
+<strong>Error budget:</strong> 10% può eccedere i 15s (copre la coda di cold-start).</p></blockquote><blockquote><p>La scelta di queste due coppie copre entrambi gli archetipi fondamentali di SLI:
+<strong>disponibilità</strong> (SLO 1) e <strong>latenza</strong> (SLO 2).</p></blockquote><h3 id="slo-aggiuntivi-estensione">SLO aggiuntivi (estensione)</h3><blockquote><p><strong>SLO 3 — Disponibilità HTTP.</strong>
+≥ <strong>99%</strong> delle risposte HTTP dell&rsquo;Order Service non è 5xx.
+<strong>SLI:</strong> <span class="codespan-content"><code>1 &minus; (5xx / totale)</code></span> — i 4xx (es. <span class="codespan-content"><code>422</code></span>) <strong>non</strong> contano come fallimento
+del servizio (sono errori del client, non del server).
+<em>Misurato dal middleware Axum <span class="codespan-content"><code>http_metrics.rs</code></span>, che conta ogni risposta per status code.</em></p></blockquote><blockquote><p><strong>SLO 4 — Successo di assegnazione drone.</strong>
+≥ <strong>90%</strong> delle richieste di consegna è accettata dalla flotta.
+<strong>SLI:</strong> <span class="codespan-content"><code>assigned / (assigned + refused)</code></span>
+<em>Incrementato in <span class="codespan-content"><code>DroneFleet::dispatch_order</code></span> in base alla decisione <span class="codespan-content"><code>deliberate()</code></span>
+dell&rsquo;agente; il caso &ldquo;nessun drone disponibile&rdquo; conta come rifiuto.</em></p></blockquote><hr /><h2 id="_3-strumentazione-nel-codice">3. Strumentazione nel codice</h2><p>Le metriche della SAGA vivono in <span class="codespan-content"><code>order/src/orchestrator.rs</code></span>, nella struct
+<span class="codespan-content"><code>SagaMetrics</code></span>, registrate in un <span class="codespan-content"><code>prometheus::Registry</code></span> creato in <span class="codespan-content"><code>main.rs</code></span>. Quelle
+HTTP in <span class="codespan-content"><code>http_metrics.rs</code></span>, quelle del drone in <span class="codespan-content"><code>drone/src/metrics.rs</code></span>.</p><table><thead><tr><th>Metrica</th><th>Tipo Prometheus</th><th>Incrementata in</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>order_saga_started_total</code></span></td><td>Counter</td><td><span class="codespan-content"><code>start_order_saga()</code></span></td></tr><tr><td><span class="codespan-content"><code>order_saga_completed_total</code></span></td><td>Counter</td><td><span class="codespan-content"><code>complete_saga()</code></span></td></tr><tr><td><span class="codespan-content"><code>order_saga_failed_total</code></span></td><td>Counter</td><td><span class="codespan-content"><code>handle_validation_failure</code></span> / <span class="codespan-content"><code>on_*_failed</code></span></td></tr><tr><td><span class="codespan-content"><code>order_saga_compensated_total</code></span></td><td>Counter</td><td><span class="codespan-content"><code>compensate_saga()</code></span></td></tr><tr><td><span class="codespan-content"><code>order_saga_duration_seconds</code></span></td><td>Histogram</td><td><span class="codespan-content"><code>complete_saga()</code></span> (<span class="codespan-content"><code>.observe()</code></span>)</td></tr><tr><td><span class="codespan-content"><code>http_requests_total{status}</code></span></td><td>CounterVec</td><td>middleware <span class="codespan-content"><code>track_metrics</code></span> (Order Service)</td></tr><tr><td><span class="codespan-content"><code>drone_assignment_assigned_total</code></span></td><td>Counter</td><td><span class="codespan-content"><code>DroneFleet::dispatch_order</code></span> (Drone Service)</td></tr><tr><td><span class="codespan-content"><code>drone_assignment_refused_total</code></span></td><td>Counter</td><td><span class="codespan-content"><code>DroneFleet::dispatch_order</code></span> (Drone Service)</td></tr></tbody></table><p>La distinzione tra i tipi è importante. Un <strong>Counter</strong> è monotòno crescente: conta
+occorrenze (quante saga sono iniziate, completate, fallite). Un <strong>Histogram</strong>
+campiona una distribuzione: ogni <span class="codespan-content"><code>observe(valore)</code></span> incrementa i bucket appropriati.
+Un <strong>CounterVec</strong> è un counter con dimensioni (label): <span class="codespan-content"><code>http_requests_total</code></span> ha una
+serie distinta per ogni status code.</p><p>L&rsquo;istogramma <span class="codespan-content"><code>order_saga_duration_seconds</code></span> usa bucket espliciti che <strong>straddleano</strong>
+(attraversano) la soglia SLO di 15 secondi:</p><pre><code>buckets = [1.0, 2.5, 5.0, 10.0, 15.0, 30.0]</code></pre><blockquote><p>Il bucket <span class="codespan-content"><code>15.0</code></span> è <strong>obbligatorio</strong>: l&rsquo;SLI di latenza si legge direttamente da
+<span class="codespan-content"><code>bucket{le=&quot;15.0&quot;} / count</code></span>. Senza un bucket esattamente a 15s, non si potrebbe
+calcolare la frazione di saga sotto la soglia.</p></blockquote><p>Un Histogram si espande in più serie temporali: una serie <span class="codespan-content"><code>_bucket</code></span> per ogni soglia
+(cumulativa: <span class="codespan-content"><code>le</code></span> = &ldquo;less than or equal&rdquo;, quindi <span class="codespan-content"><code>bucket{le=&quot;15.0&quot;}</code></span> conta <em>tutte</em> le
+osservazioni ≤ 15s), più <span class="codespan-content"><code>_sum</code></span> e <span class="codespan-content"><code>_count</code></span>. Il bucket <span class="codespan-content"><code>+Inf</code></span> coincide sempre con
+<span class="codespan-content"><code>_count</code></span> (tutte le osservazioni sono ≤ infinito).</p><hr /><h2 id="_4-esposizione--endpoint-metrics">4. Esposizione — endpoint <span class="codespan-content"><code>/metrics</code></span></h2><p>Ogni servizio espone le metriche su <span class="codespan-content"><code>/metrics</code></span>, serializzandole nel formato testuale
+di esposizione Prometheus:</p><pre><code class="language-rust">let metric_families = registry.gather();
+let mut buffer = Vec::new();
+TextEncoder::new().encode(&amp;metric_families, &amp;mut buffer).unwrap();
+([(header::CONTENT_TYPE, &quot;text/plain; version=0.0.4&quot;)], buffer)</code></pre><p><span class="codespan-content"><code>registry.gather()</code></span> raccoglie tutte le metriche registrate; il <span class="codespan-content"><code>TextEncoder</code></span> le
+serializza nel formato che Prometheus si aspetta. La rotta è montata con uno stato
+dedicato (il <span class="codespan-content"><code>Registry</code></span>) e unita al router principale via <span class="codespan-content"><code>.merge()</code></span>, perché lo stato
+delle altre rotte è diverso (<span class="codespan-content"><code>Arc&lt;OrderService&gt;</code></span> o <span class="codespan-content"><code>Arc&lt;DroneEventStore&gt;</code></span>).</p><hr /><h2 id="_5-raccolta--deployment-di-prometheus">5. Raccolta — deployment di Prometheus</h2><p>Prometheus gira nel cluster (<span class="codespan-content"><code>k8s/prometheus.yml</code></span>) con configurazione <strong>statica</strong>:
+una ConfigMap montata come file, più un Deployment e un Service.</p><figure><pre class="mermaid">graph LR
+    subgraph ns[&quot;namespace: droneflow&quot;]
+        OS[&quot;order-service:8080\n/metrics&quot;]
+        DRS[&quot;drone-service:8082\n/metrics&quot;]
+        P[&quot;prometheus:9090\n(scrape ogni 15s)&quot;]
+        CM[&quot;ConfigMap\nprometheus-config\n(prometheus.yml)&quot;]
+    end
+    CM --&gt;|&quot;volume mount\n/etc/prometheus&quot;| P
+    P --&gt;|&quot;scrape&quot;| OS
+    P --&gt;|&quot;scrape&quot;| DRS</pre></figure><p><strong>Lettura del diagramma.</strong> Prometheus adotta il modello <strong>pull</strong>: è lui che, ogni 15
+secondi, interroga (<span class="codespan-content"><code>scrape</code></span>) l&rsquo;endpoint <span class="codespan-content"><code>/metrics</code></span> di ogni target configurato — non
+sono i servizi a inviare le metriche. La lista dei target è nella ConfigMap
+<span class="codespan-content"><code>prometheus-config</code></span>, montata come <strong>volume</strong> (non come variabile d&rsquo;ambiente): ogni
+chiave della ConfigMap diventa un file, quindi la chiave <span class="codespan-content"><code>prometheus.yml</code></span> appare in
+<span class="codespan-content"><code>/etc/prometheus/prometheus.yml</code></span>, dove l&rsquo;immagine <span class="codespan-content"><code>prom/prometheus</code></span> la legge di
+default.</p><pre><code class="language-yaml">scrape_configs:
+  - job_name: &quot;order-service&quot;
+    static_configs:
+      - targets: [&quot;order-service:8080&quot;]   # DNS interno del Service
+  - job_name: &quot;drone-service&quot;
+    static_configs:
+      - targets: [&quot;drone-service:8082&quot;]</code></pre><p>I target sono i nomi DNS interni dei Service Kubernetes: Prometheus li risolve
+all&rsquo;interno del cluster e ne fa lo scrape direttamente.</p><hr /><h2 id="_6-query-promql-degli-sli">6. Query PromQL degli SLI</h2><p>Ogni SLI è una query PromQL che restituisce un valore 0..1, confrontabile con il
+target dello SLO.</p><h3 id="sli-1--saga-success-rate">SLI 1 — Saga success rate</h3><pre><code class="language-promql">order_saga_completed_total
+  / (order_saga_completed_total + order_saga_failed_total + order_saga_compensated_total)</code></pre><p>Frazione di saga concluse con successo sul totale delle saga <em>terminate</em> (completate,
+fallite o compensate). Il denominatore esclude volutamente le saga ancora in corso:
+si misura l&rsquo;esito, non il lavoro in sospeso.</p><h3 id="sli-2--frazione-di-saga-sotto-i-15s">SLI 2 — Frazione di saga sotto i 15s</h3><pre><code class="language-promql">order_saga_duration_seconds_bucket{le=&quot;15.0&quot;}
+  / ignoring(le) order_saga_duration_seconds_count</code></pre><p>Numeratore: numero di osservazioni con durata ≤ 15s (il bucket cumulativo).
+Denominatore: numero totale di osservazioni. Il rapporto è la frazione di saga sotto
+la soglia. La clausola <span class="codespan-content"><code>ignoring(le)</code></span> è necessaria perché il <span class="codespan-content"><code>_bucket</code></span> ha la label
+extra <span class="codespan-content"><code>le</code></span> e il <span class="codespan-content"><code>_count</code></span> no: senza, il vector matching non troverebbe corrispondenza
+(vedi le insidie sotto).</p><h3 id="sli-3--disponibilità-http-non-5xx">SLI 3 — Disponibilità HTTP (non-5xx)</h3><pre><code class="language-promql">1 - (sum(http_requests_total{status=~&quot;5..&quot;}) or vector(0)) / sum(http_requests_total)</code></pre><p>Uno meno la frazione di risposte 5xx. Il <span class="codespan-content"><code>status=~&quot;5..&quot;</code></span> è una regex che cattura tutti
+gli status 5xx. <span class="codespan-content"><code>or vector(0)</code></span> evita un risultato vuoto quando non ci sono ancora
+risposte 5xx (in quel caso <span class="codespan-content"><code>sum(...)</code></span> non produrrebbe alcuna serie, e l&rsquo;intera
+espressione sarebbe vuota invece di valere 1).</p><h3 id="sli-4--successo-di-assegnazione-drone">SLI 4 — Successo di assegnazione drone</h3><pre><code class="language-promql">drone_assignment_assigned_total
+  / (drone_assignment_assigned_total + drone_assignment_refused_total)</code></pre><p>Frazione di richieste accettate dalla flotta sul totale delle richieste valutate.</p><h3 id="latenza-p95-diagnostica">Latenza p95 (diagnostica)</h3><pre><code class="language-promql">histogram_quantile(0.95, rate(order_saga_duration_seconds_bucket[5m]))</code></pre><p>Stima il 95° percentile della durata sulle osservazioni degli ultimi 5 minuti. È una
+metrica diagnostica complementare (non uno SLO): risponde a &ldquo;qual è la latenza che il
+95% delle saga non supera?&rdquo;.</p><h3 id="due-insidie-promql-incontrate">Due insidie PromQL incontrate</h3><table><thead><tr><th>Insidia</th><th>Sintomo</th><th>Causa</th><th>Fix</th></tr></thead><tbody><tr><td><strong>Vector matching</strong></td><td>divisione → risultato vuoto</td><td><span class="codespan-content"><code>_bucket</code></span> ha la label extra <span class="codespan-content"><code>le</code></span>, <span class="codespan-content"><code>_count</code></span> no → nessun match</td><td><span class="codespan-content"><code>/ ignoring(le)</code></span></td></tr><tr><td><strong><span class="codespan-content"><code>le</code></span> è una stringa</strong></td><td><span class="codespan-content"><code>bucket{le=&quot;15&quot;}</code></span> → vuoto</td><td>la crate Rust serializza i bucket float con il decimale: <span class="codespan-content"><code>&quot;15.0&quot;</code></span></td><td>usare <span class="codespan-content"><code>le=&quot;15.0&quot;</code></span></td></tr></tbody></table><blockquote><p><span class="codespan-content"><code>histogram_quantile(..., rate(...[5m]))</code></span> restituisce <span class="codespan-content"><code>NaN</code></span> se non ci sono
+osservazioni negli ultimi 5 minuti: il <span class="codespan-content"><code>rate</code></span> è 0 su tutti i bucket. È atteso in
+assenza di traffico recente, non un errore.</p></blockquote><hr /><h2 id="_7-report-automatico-degli-slo">7. Report automatico degli SLO</h2><p>Lo script <span class="codespan-content"><code>generate-slo-report.ps1</code></span> (root del progetto) interroga Prometheus per ogni
+SLI, lo confronta con il target dello SLO, calcola l&rsquo;<strong>error budget consumato</strong> e
+genera un report Markdown in <span class="codespan-content"><code>reports/</code></span>.</p><pre><code class="language-powershell">.\generate-slo-report.ps1
+# -&gt; reports/slo-report-&lt;timestamp&gt;.md  +  reports/slo-report-latest.md</code></pre><p>Lo script apre un <span class="codespan-content"><code>kubectl port-forward</code></span> verso <span class="codespan-content"><code>svc/prometheus</code></span>, esegue le query
+PromQL dei quattro SLO (le stesse della sezione 6, codificate in un array di
+<span class="codespan-content"><code>pscustomobject</code></span>), e per ciascuno determina lo stato (<span class="codespan-content"><code>MET</code></span> / <span class="codespan-content"><code>BREACHED</code></span> / <span class="codespan-content"><code>NO DATA</code></span>)
+e l&rsquo;error budget consumato. Il report contiene: una tabella di compliance (target vs
+misurato vs stato vs budget), uno snapshot delle metriche grezze, e le query PromQL
+usate.</p><p>L&rsquo;<strong>error budget consumato</strong> è calcolato come:</p><p>$<formula>\text{budget consumato} = \frac{1 - \text{misurato}}{1 - \text{target}}</formula>$</p><p>cioè il fallimento effettivo diviso il fallimento ammesso. Oltre il 100% lo SLO è
+violato: si è speso più budget di quanto disponibile. Lo script lo logga anche a
+schermo come tabella, oltre a scriverlo su file (con <span class="codespan-content"><code>slo-report-latest.md</code></span> sempre
+aggiornato all&rsquo;ultima esecuzione).</p><hr /><h2 id="_8-pipeline-completa">8. Pipeline completa</h2><pre><code>codice Rust  (.inc() / .observe())
+  &rarr; endpoint /metrics  (formato esposizione Prometheus)
+    &rarr; Prometheus  (scrape order-service:8080 e drone-service:8082 ogni 15s)
+      &rarr; PromQL  (calcola gli SLI, confrontati con gli SLO)
+        &rarr; generate-slo-report.ps1  (compliance + error budget &rarr; Markdown)</code></pre><p>Ogni livello aggiunge un grado di astrazione: dal singolo incremento di un counter nel
+codice, all&rsquo;aggregazione temporale di Prometheus, al calcolo dell&rsquo;SLI in PromQL, fino
+al report leggibile dall&rsquo;uomo. È la catena che trasforma un evento di runtime in una
+misura oggettiva della qualità del servizio.</p>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

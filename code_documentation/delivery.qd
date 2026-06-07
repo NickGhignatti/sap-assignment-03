@@ -1,0 +1,221 @@
+.docname {Code Docs}
+.include {docs}
+
+# Delivery Service — Documentazione Tecnica
+
+## 1. Responsabilità
+
+Il Delivery Service è il **servizio di coordinamento intermedio** della pipeline.
+È il più semplice dei tre: ha un'unica responsabilità e nessuno stato persistente.
+
+Riceve gli ordini *validati* dall'Order Service (sul topic `order-requests`), assegna
+a ciascuno un piano di consegna generando un `delivery_id`, e lo inoltra al Drone
+Service (sul topic `drone-requests`), notificando contestualmente l'orchestratore
+SAGA dell'avvenuta schedulazione (con un evento `DeliveryScheduled` su `saga-events`).
+
+Non espone **alcuna interfaccia HTTP**: la sua unica interfaccia è Kafka. È un
+servizio *puramente event-driven*, e questo ne semplifica enormemente il ciclo di
+vita (nessun server da avviare, nessuna porta, nessun health check HTTP).
+
+---
+
+## 2. Architettura interna
+
+.mermaid
+    graph LR
+        K_IN[["Kafka\norder-requests"]]
+        CONS["consumer.rs\nKafka Consumer Task"]
+        SVC["service.rs\nDeliveryService"]
+        K_OUT_D[["Kafka\ndrone-requests"]]
+        K_OUT_S[["Kafka\nsaga-events"]]
+
+        K_IN -->|"OrderMessage"| CONS
+        CONS --> SVC
+        SVC -->|"OrderMessage"| K_OUT_D
+        SVC -->|"DeliveryScheduled"| K_OUT_S
+
+**Lettura del diagramma.** Il flusso è strettamente lineare: un `OrderMessage`
+entra da `order-requests`, viene gestito dal task consumer (`consumer.rs`), passato
+al `DeliveryService` (`service.rs`), che produce due messaggi in uscita — l'ordine
+verso `drone-requests` e l'evento `DeliveryScheduled` verso `saga-events`. Non c'è
+alcun database nel diagramma perché il servizio è **stateless**: l'unico "stato" è
+il `delivery_id` generato per ogni ordine, che viene immediatamente incluso nel
+messaggio in uscita e non necessita di persistenza locale.
+
+---
+
+## 3. Flusso interno — `DeliveryService::schedule()`
+
+.mermaid
+    flowchart TD
+        A["OrderMessage ricevuto"]
+        B["delivery_id = Uuid::new_v4()"]
+        C["publish_to_topic\ndrone-requests\nOrderMessage\nkey = order_id"]
+        D["publish_to_topic\nsaga-events\nDeliveryScheduled\nkey = order_id"]
+        E["Ok(())"]
+
+        A --> B --> C --> D --> E
+
+**Lettura del diagramma.** Il metodo `schedule()` è una sequenza di quattro passi
+senza rami: genera il `delivery_id`, inoltra l'ordine al Drone Service, pubblica
+l'evento di avanzamento per l'orchestratore, ritorna `Ok`. Entrambe le
+pubblicazioni usano `order_id` come **chiave di partizione**: questo garantisce che
+il messaggio per il drone e l'evento per l'orchestratore (relativi allo stesso
+ordine) finiscano nella stessa partizione e siano consumati nell'ordine in cui sono
+stati prodotti. L'uso di `?` su entrambe le `publish_to_topic` significa che, se una
+pubblicazione fallisce, l'intero `schedule()` ritorna `Err` e — come si vede nella
+sezione 5 — l'offset non viene committato.
+
+### Perché il `saga_id` è vuoto in `DeliveryScheduled`?
+
+```rust
+SagaEvent::DeliveryScheduled {
+    saga_id: String::new(),  // intenzionalmente vuoto
+    order_id: order.order_id.clone(),
+    delivery_id,
+    timestamp: Utc::now(),
+}
+```
+
+Il Delivery Service **non conosce il `saga_id`**: l'`OrderMessage` che riceve non lo
+contiene (è un dettaglio interno dell'Order Service). Lascia quindi il campo vuoto.
+L'orchestratore, ricevendo l'evento, ignora il `saga_id` e recupera la saga tramite
+`find_by_order_id(order_id)` — l'`order_id` è la **chiave di correlazione naturale**
+di tutto il sistema, presente in ogni messaggio. Questo disaccoppia il Delivery
+Service dai dettagli interni della SAGA: gli basta propagare l'`order_id`.
+
+---
+
+## 4. Diagramma di sequenza
+
+.mermaid
+    sequenceDiagram
+        participant K as Kafka
+        participant CONS as consumer.rs
+        participant SVC as service.rs
+
+        K->>CONS: OrderMessage da order-requests
+        CONS->>CONS: deserializza OrderMessage
+
+        alt order_id vuoto
+            CONS->>K: commit offset — scarta (poison pill)
+        else errore transiente in schedule()
+            CONS->>SVC: schedule(order)
+            SVC-->>CONS: Err(e)
+            CONS->>CONS: NON committa — Kafka rielabora
+        else successo
+            CONS->>SVC: schedule(order)
+            SVC->>SVC: delivery_id = Uuid::new_v4()
+            SVC->>K: produce drone-requests (OrderMessage)
+            SVC->>K: produce saga-events (DeliveryScheduled)
+            SVC-->>CONS: Ok(())
+            CONS->>K: commit offset
+        end
+
+**Lettura del diagramma.** Il consumer distingue tre esiti, esattamente come gli
+altri servizi (vedi [Messaging Layer (Kafka)](kafka.qd)). Un `order_id` vuoto o un
+JSON malformato sono *poison pill*: il messaggio non diventerà mai valido, quindi si
+committa per saltarlo. Un errore *transiente* dentro `schedule()` (es. broker
+momentaneamente irraggiungibile) **non** viene committato, così Kafka lo
+rielaborerà. Solo il successo porta al commit dell'offset.
+
+---
+
+## 5. Strategia di commit Kafka
+
+| Caso | Comportamento | Motivazione |
+|---|---|---|
+| Payload vuoto (tombstone) | `commit` + skip | I tombstone sono cancellazioni intenzionali, mai da rielaborare |
+| Deserializzazione fallita | `commit` + skip | Messaggio malformato — rielaborarlo ciclerebbe all'infinito |
+| `order_id` vuoto | `commit` + skip | Il messaggio non diventerà mai valido (poison pill) |
+| Errore in `schedule()` (transiente) | **no commit** | Es. broker irraggiungibile — Kafka rielabora |
+| Successo | `commit` | Messaggio elaborato correttamente |
+
+Il commit è eseguito in modalità `CommitMode::Async` (fire-and-forget, throughput
+più alto). Non committare equivale al `nack(requeue=true)` di AMQP; committare per
+saltare equivale al `nack(requeue=false)`.
+
+---
+
+## 6. Rete di Petri — Ciclo di vita del messaggio
+
+.mermaid
+    flowchart LR
+        P0(("● p0\nMessaggio\nin coda"))
+        T0["t0: consume\norder-requests"]
+        P1(("p1\nMessaggio\nletto"))
+        T_VAL["t_val: valida\norder_id"]
+        P2(("p2\nOrdine\nvalido"))
+        P_INV(("p_inv\nOrdine\nnon valido"))
+        T_PUB1["t_pub1: publish\ndrone-requests"]
+        P3(("p3\ndrone-requests\naggiornata"))
+        T_PUB2["t_pub2: publish\nDeliveryScheduled"]
+        P4(("p4\nSAGA\nnotificata"))
+        T_ACK["t_ack: commit"]
+        T_SKIP["t_skip: commit\n(skip)"]
+        P_END(("p_end\nDone"))
+
+        P0 --> T0 --> P1
+        P1 --> T_VAL
+        T_VAL -->|"valido"| P2
+        T_VAL -->|"non valido"| P_INV
+        P_INV --> T_SKIP --> P_END
+        P2 --> T_PUB1 --> P3
+        P3 --> T_PUB2 --> P4
+        P4 --> T_ACK --> P_END
+
+**Lettura del diagramma.** Il token (un messaggio) parte in coda (`p0`), viene letto
+(`t0`) e validato (`t_val`). Un ordine non valido va in `p_inv` e da lì viene
+saltato con un commit. Un ordine valido attraversa le due pubblicazioni (`t_pub1`,
+`t_pub2`) e termina con il commit dell'offset (`t_ack`). I due rami convergono nel
+posto terminale `p_end`: in entrambi i casi l'offset avanza, ma per ragioni diverse
+(elaborato vs. saltato).
+
+---
+
+## 7. Reference dei moduli
+
+### `main.rs` — wiring e avvio
+
+`main.rs` è minimale, coerentemente con la semplicità del servizio:
+
+- **Kafka producer.** `acks=all`, `message.timeout.ms=5000` — condiviso dal
+  `DeliveryService` per pubblicare sia su `drone-requests` sia su `saga-events`.
+- **Kafka consumer.** `group.id=delivery-service` (cursore indipendente da quello
+  dell'Order Service sui topic), `auto.offset.reset=earliest`,
+  `enable.auto.commit=false`.
+- **Nessuna dichiarazione di topologia.** A differenza di AMQP (dove servivano
+  `exchange_declare`/`queue_declare`), in Kafka i topic sono creati automaticamente
+  alla prima produzione (`KAFKA_AUTO_CREATE_TOPICS_ENABLE=true`). Il `main` si limita
+  a costruire il `DeliveryService` e avviare il consumer.
+- **Graceful shutdown.** Non essendoci un server HTTP, il `main` attende
+  semplicemente `tokio::signal::ctrl_c()` e termina. Questo dà al loop di consumo il
+  tempo di completare l'eventuale messaggio in elaborazione prima dell'uscita.
+
+> [NOTE!]
+> **Statelessness e scaling orizzontale.** Poiché il Delivery Service non ha stato,
+> avviarne più repliche è banale: condividono il `group.id=delivery-service`, e
+> Kafka distribuisce automaticamente le partizioni di `order-requests` tra di esse.
+> Ogni partizione è assegnata a una sola replica alla volta, quindi non c'è rischio
+> di doppia elaborazione di uno stesso ordine. Nessuna modifica al codice è
+> necessaria per scalare.
+
+### `service.rs` — `DeliveryService`
+
+| Membro | Descrizione |
+|---|---|
+| `DeliveryService { producer }` | Struct `Clone` (il `FutureProducer` è `Arc`-backed) |
+| `new(producer)` | Costruttore |
+| `schedule(order)` | Genera `delivery_id`, pubblica su `drone-requests` e `saga-events` (vedi §3) |
+| `publish_to_topic(topic, key, msg)` | Helper privato: serializza in JSON e produce con `key`, timeout 5s |
+
+Le costanti del modulo (`SAGA_EVENTS_TOPIC`, `DRONE_REQUESTS_TOPIC`) sostituiscono
+i vecchi nomi di coda/exchange AMQP.
+
+### `consumer.rs` — task consumer Kafka
+
+`start(consumer, svc)` sottoscrive `order-requests` e spawna il loop di consumo in
+un `tokio::task`. Per ogni messaggio: gestisce il payload vuoto, deserializza in
+`OrderMessage`, applica il *guard* `order.order_id.is_empty()` (skip in caso di
+`order_id` vuoto), e in caso valido chiama `svc.schedule(order)`. La gestione del
+commit segue la tabella della sezione 5.

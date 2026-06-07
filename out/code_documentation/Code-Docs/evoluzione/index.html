@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="evoluzione-del-progetto" data-depth="1"><a href="#evoluzione-del-progetto">Evoluzione del progetto</a><ol><li data-target-id="_1-da-rabbitmqamqp-a-apache-kafka" data-depth="2"><a href="#_1-da-rabbitmqamqp-a-apache-kafka">1. Da RabbitMQ/AMQP a Apache Kafka</a><ol><li data-target-id="i-cambiamenti-concettuali-principali" data-depth="3"><a href="#i-cambiamenti-concettuali-principali">I cambiamenti concettuali principali</a></li></ol></li><li data-target-id="_2-da-droneservice-imperativo-a-flotta-di-agenti-bdi" data-depth="2"><a href="#_2-da-droneservice-imperativo-a-flotta-di-agenti-bdi">2. Da DroneService imperativo a flotta di agenti BDI</a><ol><li data-target-id="cosa-è-cambiato-e-cosa-no" data-depth="3"><a href="#cosa-è-cambiato-e-cosa-no">Cosa è cambiato e cosa no</a></li></ol></li><li data-target-id="_3-sintesi" data-depth="2"><a href="#_3-sintesi">3. Sintesi</a></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="il-sistema-oggi" data-decorative="">Il sistema oggi</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common (libreria)</a></li><li><a href="../order">Order Service</a></li><li><a href="../delivery">Delivery Service</a></li><li><a href="../drone">Drone Service</a></li><li><a href="../agent">Flotta ad Agenti (BDI)</a></li></ul><h2 id="infrastruttura-amp-operabilità" data-decorative="">Infrastruttura &amp; operabilità</h2><ul><li><a href="../kafka">Messaging Layer (Kafka)</a></li><li><a href="../k8s">Deployment Kubernetes</a></li><li><a href="../slo">Osservabilità &amp; SLO</a></li></ul><h2 id="appendice" data-decorative="">Appendice</h2><ul><li><a href="../evoluzione" aria-current="page">Evoluzione del progetto</a></li><li><a href="../conclusioni">Conclusioni</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="evoluzione-del-progetto" data-depth="1"><a href="#evoluzione-del-progetto">Evoluzione del progetto</a><ol><li data-target-id="_1-da-rabbitmqamqp-a-apache-kafka" data-depth="2"><a href="#_1-da-rabbitmqamqp-a-apache-kafka">1. Da RabbitMQ/AMQP a Apache Kafka</a><ol><li data-target-id="i-cambiamenti-concettuali-principali" data-depth="3"><a href="#i-cambiamenti-concettuali-principali">I cambiamenti concettuali principali</a></li></ol></li><li data-target-id="_2-da-droneservice-imperativo-a-flotta-di-agenti-bdi" data-depth="2"><a href="#_2-da-droneservice-imperativo-a-flotta-di-agenti-bdi">2. Da DroneService imperativo a flotta di agenti BDI</a><ol><li data-target-id="cosa-è-cambiato-e-cosa-no" data-depth="3"><a href="#cosa-è-cambiato-e-cosa-no">Cosa è cambiato e cosa no</a></li></ol></li><li data-target-id="_3-sintesi" data-depth="2"><a href="#_3-sintesi">3. Sintesi</a></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><h1 class="page-break" id="evoluzione-del-progetto">Evoluzione del progetto</h1><blockquote><p>[NOTE!]
+Questa pagina racconta <strong>come</strong> DroneFlow è arrivato alla sua forma attuale. Le
+altre pagine descrivono il sistema <em>com&rsquo;è oggi</em>; qui si documenta <em>com&rsquo;era</em> e
+<em>perché è cambiato</em>. È materiale d&rsquo;appendice: utile a capire le motivazioni delle
+scelte architetturali, non necessario a usare o estendere il sistema.</p></blockquote><p>Il progetto ha attraversato tre trasformazioni architetturali principali, ognuna
+motivata da un requisito dell&rsquo;assignment:</p><ol><li><strong>Transport layer</strong>: da RabbitMQ/AMQP a Apache Kafka.</li><li><strong>Drone Service</strong>: da servizio imperativo a flotta di agenti BDI.</li><li><strong>Deployment &amp; osservabilità</strong>: da <span class="codespan-content"><code>docker-compose</code></span> a Kubernetes con SLO misurati.</li></ol><p>Le prime due sono raccontate qui in dettaglio. La terza è descritta nelle pagine
+<a href="../k8s">Deployment Kubernetes</a> e <a href="../slo">Osservabilità &amp; SLO</a>, che sono già di
+natura &ldquo;estensione&rdquo;.</p><hr /><h2 id="_1-da-rabbitmqamqp-a-apache-kafka">1. Da RabbitMQ/AMQP a Apache Kafka</h2><p>La versione iniziale del sistema usava <strong>RabbitMQ</strong> come message broker, con il
+protocollo AMQP e la crate <span class="codespan-content"><code>lapin</code></span>. La riprogettazione ha sostituito l&rsquo;intero
+<strong>transport layer</strong> con <strong>Apache Kafka</strong> (crate <span class="codespan-content"><code>rdkafka</code></span>), lasciando invariata la
+business logic: orchestrazione SAGA, compensazione, modelli dati e persistenza
+MongoDB non sono cambiati.</p><table><thead><tr><th>Layer</th><th>v1 (AMQP)</th><th>v2 (Kafka)</th><th>Modificato?</th></tr></thead><tbody><tr><td>Crate di trasporto</td><td><span class="codespan-content"><code>lapin 2</code></span></td><td><span class="codespan-content"><code>rdkafka 0.37</code></span></td><td>✅</td></tr><tr><td>Broker</td><td>RabbitMQ 3</td><td>Kafka 3.8 (KRaft, no Zookeeper)</td><td>✅</td></tr><tr><td>Topologia messaggi</td><td>Exchange topic + routing keys</td><td>Topic flat + message key</td><td>✅</td></tr><tr><td>Modello consumer</td><td>Push (il broker chiama il servizio)</td><td>Pull (<span class="codespan-content"><code>consumer.recv().await</code></span>)</td><td>✅</td></tr><tr><td>Acknowledgement</td><td><span class="codespan-content"><code>basic_ack</code></span> / <span class="codespan-content"><code>basic_nack</code></span></td><td><span class="codespan-content"><code>commit_message</code></span> / no-commit</td><td>✅</td></tr><tr><td>Business logic</td><td>Saga orchestration, compensazione</td><td>Invariata</td><td>⬛</td></tr><tr><td>Modelli dati</td><td><span class="codespan-content"><code>SagaEvent</code></span>, <span class="codespan-content"><code>DroneEvent</code></span>, <span class="codespan-content"><code>OrderMessage</code></span></td><td>Invariati</td><td>⬛</td></tr><tr><td>Persistenza MongoDB</td><td>Stato saga, event sourcing</td><td>Invariata</td><td>⬛</td></tr><tr><td>API HTTP</td><td><span class="codespan-content"><code>POST /order</code></span>, endpoint stato drone</td><td>Invariate</td><td>⬛</td></tr></tbody></table><h3 id="i-cambiamenti-concettuali-principali">I cambiamenti concettuali principali</h3><p><strong>Da routing key a chiave di partizione.</strong> In AMQP, un <em>topic exchange</em> instradava i
+messaggi alle code in base a una <em>routing key</em> (es. <span class="codespan-content"><code>saga.compensate.drone</code></span>): era il
+broker a filtrare. In Kafka non esiste questo meccanismo: ogni consumer riceve
+<em>tutti</em> i messaggi del topic a cui è sottoscritto, e il filtraggio avviene in codice
+applicativo (un <span class="codespan-content"><code>match</code></span> sul tipo di evento). La &ldquo;chiave&rdquo; in Kafka ha un ruolo
+diverso: determina la <strong>partizione</strong> e quindi l&rsquo;ordinamento, non l&rsquo;instradamento. Il
+sistema usa <span class="codespan-content"><code>order_id</code></span> come chiave per garantire l&rsquo;ordinamento per-ordine (vedi
+<a href="kafka.qd)">Messaging Layer</a>.</p><p><strong>Da push a pull.</strong> In AMQP il broker <em>spingeva</em> i messaggi al consumer. In Kafka il
+consumer <em>tira</em> (<span class="codespan-content"><code>recv().await</code></span>): chiede attivamente il prossimo messaggio. Questo dà
+al consumer il pieno controllo sul ritmo di consumo.</p><p><strong>Da ack/nack a commit di offset.</strong> L&rsquo;<span class="codespan-content"><code>basic_ack</code></span> di AMQP confermava un singolo
+messaggio; in Kafka si committa l&rsquo;<em>offset</em> (la posizione nel log). La semantica
+at-least-once si ottiene committando solo dopo l&rsquo;elaborazione riuscita. La
+corrispondenza:</p><table><thead><tr><th>AMQP</th><th>Kafka</th><th>Significato</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>basic_ack</code></span></td><td><span class="codespan-content"><code>commit_message</code></span> (dopo successo)</td><td>Messaggio elaborato</td></tr><tr><td><span class="codespan-content"><code>basic_nack(requeue=true)</code></span></td><td>non committare</td><td>Errore transiente, rielabora</td></tr><tr><td><span class="codespan-content"><code>basic_nack(requeue=false)</code></span></td><td>committa per saltare</td><td>Poison pill, scarta</td></tr></tbody></table><p><strong>Eliminazione delle dichiarazioni di topologia.</strong> In AMQP ogni servizio doveva
+dichiarare exchange e code all&rsquo;avvio (<span class="codespan-content"><code>exchange_declare</code></span>, <span class="codespan-content"><code>queue_declare</code></span>), in modo
+idempotente. In Kafka, con <span class="codespan-content"><code>KAFKA_AUTO_CREATE_TOPICS_ENABLE=true</code></span>, i topic nascono
+alla prima produzione: il codice di bootstrap si semplifica.</p><blockquote><p>[NOTE!]
+Una traccia di questa storia è ancora visibile nei commenti del codice sorgente,
+che spesso annotano &ldquo;questo sostituisce X di AMQP&rdquo; — un aiuto per chi conosceva la
+versione precedente.</p></blockquote><hr /><h2 id="_2-da-droneservice-imperativo-a-flotta-di-agenti-bdi">2. Da <span class="codespan-content"><code>DroneService</code></span> imperativo a flotta di agenti BDI</h2><p>La versione iniziale del Drone Service era un <strong>servizio imperativo</strong>: un&rsquo;unica
+struct <span class="codespan-content"><code>DroneService</code></span> con una mappa condivisa <span class="codespan-content"><code>InFlightMap</code></span> (<span class="codespan-content"><code>Arc&lt;Mutex&lt;HashMap&lt;...&gt;&gt;&gt;</code></span>)
+che teneva traccia dei droni in volo, e metodi (<span class="codespan-content"><code>start_delivery</code></span>, <span class="codespan-content"><code>settle_arrived</code></span>,
+<span class="codespan-content"><code>compensate</code></span>) che applicavano direttamente la logica con <span class="codespan-content"><code>if</code></span> sparsi.</p><p>La riprogettazione ha adottato un approccio <strong>agent-oriented</strong> (modello BDI —
+Belief/Desire/Intention): il <span class="codespan-content"><code>DroneService</code></span> imperativo è stato sostituito da una
+<strong>flotta di agenti autonomi</strong> (<span class="codespan-content"><code>DroneFleet</code></span>), ognuno dei quali ragiona sul proprio
+stato interno per decidere se accettare, rifiutare o completare una consegna.</p><table><thead><tr><th>Aspetto</th><th>v2 (service imperativo)</th><th>v3 (agent-based)</th><th>Modificato?</th></tr></thead><tbody><tr><td>Unità di esecuzione</td><td><span class="codespan-content"><code>DroneService</code></span> singolo</td><td><span class="codespan-content"><code>DroneFleet</code></span> di <span class="codespan-content"><code>DroneAgent</code></span></td><td>✅</td></tr><tr><td>Decisione di consegna</td><td><span class="codespan-content"><code>if</code></span> sparsi nel service</td><td><span class="codespan-content"><code>deliberate()</code></span> sulle belief</td><td>✅</td></tr><tr><td>Stato del drone</td><td><span class="codespan-content"><code>InFlightMap</code></span> condivisa</td><td><span class="codespan-content"><code>DroneBeliefs</code></span> per agente</td><td>✅</td></tr><tr><td>Selezione del drone</td><td>implicita (uno solo)</td><td><span class="codespan-content"><code>AssignmentStrategy</code></span> (strategy pattern)</td><td>✅</td></tr><tr><td>Esecuzione azioni</td><td>chiamate dirette</td><td>piano <span class="codespan-content"><code>Vec&lt;DroneDesire&gt;</code></span> eseguito da <span class="codespan-content"><code>execute()</code></span></td><td>✅</td></tr><tr><td>Event Sourcing su MongoDB</td><td>invariato</td><td>invariato</td><td>⬛</td></tr><tr><td>Integrazione Kafka</td><td>invariata</td><td>invariata</td><td>⬛</td></tr><tr><td>Modelli <span class="codespan-content"><code>DroneEvent</code></span> / <span class="codespan-content"><code>SagaEvent</code></span></td><td>invariati</td><td>invariati</td><td>⬛</td></tr></tbody></table><h3 id="cosa-è-cambiato-e-cosa-no">Cosa è cambiato e cosa no</h3><p>Il cambiamento è stato <strong>interno</strong> al Drone Service: il protocollo Kafka (topic,
+<span class="codespan-content"><code>SagaEvent</code></span>) e l&rsquo;event sourcing sono rimasti identici. È cambiato <em>chi</em> prende le
+decisioni e <em>come</em>:</p><ul><li>Lo <strong>stato</strong> è passato da una mappa globale condivisa (<span class="codespan-content"><code>InFlightMap</code></span>) a una belief
+base <strong>privata per agente</strong> (<span class="codespan-content"><code>DroneBeliefs</code></span>). Non c&rsquo;è più un lock condiviso sullo
+stato dei droni: ogni agente è isolato.</li><li>La <strong>decisione</strong> è passata da <span class="codespan-content"><code>if</code></span> imperativi nel service a un metodo
+<span class="codespan-content"><code>deliberate()</code></span> che legge le belief e produce un&rsquo;intenzione — separando il
+ragionamento (cosa fare) dall&rsquo;azione (come farlo).</li><li>La <strong>selezione</strong> del drone, prima implicita (ce n&rsquo;era uno solo, di fatto), è ora
+esplicita e intercambiabile tramite lo Strategy pattern (<span class="codespan-content"><code>AssignmentStrategy</code></span>,
+con <span class="codespan-content"><code>RoundRobinStrategy</code></span> in produzione).</li></ul><p>L&rsquo;architettura ad agenti è documentata in <a href="../agent">Flotta ad Agenti (BDI)</a>.</p><blockquote><p>[NOTE!]
+La struct imperativa <span class="codespan-content"><code>DroneService</code></span> è <strong>ancora presente</strong> nel file
+<span class="codespan-content"><code>drone/src/service.rs</code></span>, conservata per riferimento storico. Il <span class="codespan-content"><code>main.rs</code></span> del Drone
+Service <strong>non la usa</strong>: istanzia la <span class="codespan-content"><code>DroneFleet</code></span>. L&rsquo;unico elemento del modulo ancora
+referenziato dal resto del codice è la costante <span class="codespan-content"><code>SAGA_EVENTS_TOPIC</code></span>.</p></blockquote><hr /><h2 id="_3-sintesi">3. Sintesi</h2><p>Ogni trasformazione ha rispettato lo stesso principio: <strong>cambiare un livello alla
+volta, lasciando stabile il contratto verso gli altri</strong>. La migrazione a Kafka non ha
+toccato la business logic; la riprogettazione ad agenti non ha toccato il protocollo
+Kafka. Questa disciplina — resa possibile dalla centralizzazione dei tipi in
+<a href="../common"><span class="codespan-content"><code>common</code></span></a> e dal disaccoppiamento via eventi — è ciò che ha permesso di
+far evolvere il sistema in modo incrementale e verificabile.</p>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

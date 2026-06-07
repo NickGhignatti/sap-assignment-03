@@ -1,0 +1,16 @@
+###! Il sistema oggi
+- [Architettura](architettura.qd)
+- [Common (libreria)](common.qd)
+- [Order Service](order.qd)
+- [Delivery Service](delivery.qd)
+- [Drone Service](drone.qd)
+- [Flotta ad Agenti (BDI)](agent.qd)
+
+##! Infrastruttura & operabilità
+- [Messaging Layer (Kafka)](kafka.qd)
+- [Deployment Kubernetes](k8s.qd)
+- [Osservabilità & SLO](slo.qd)
+
+##! Appendice
+- [Evoluzione del progetto](evoluzione.qd)
+- [Conclusioni](conclusioni.qd)

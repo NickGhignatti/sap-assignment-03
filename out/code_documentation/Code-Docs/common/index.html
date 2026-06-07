@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="common--libreria-condivisa" data-depth="1"><a href="#common--libreria-condivisa">Common — Libreria Condivisa</a><ol><li data-target-id="_1-scopo" data-depth="2"><a href="#_1-scopo">1. Scopo</a></li><li data-target-id="_2-ordermessage--il-messaggio-drsquoordine" data-depth="2"><a href="#_2-ordermessage--il-messaggio-drsquoordine">2. OrderMessage — il messaggio d&rsquo;ordine</a><ol><li data-target-id="decisioni-di-design" data-depth="3"><a href="#decisioni-di-design">Decisioni di design</a></li></ol></li><li data-target-id="_3-sagaevent--gli-eventi-della-transazione-distribuita" data-depth="2"><a href="#_3-sagaevent--gli-eventi-della-transazione-distribuita">3. SagaEvent — gli eventi della transazione distribuita</a><ol><li data-target-id="eventi-di-avanzamento-successo" data-depth="3"><a href="#eventi-di-avanzamento-successo">Eventi di avanzamento (successo)</a></li><li data-target-id="eventi-di-fallimento" data-depth="3"><a href="#eventi-di-fallimento">Eventi di fallimento</a></li><li data-target-id="eventi-di-compensazione" data-depth="3"><a href="#eventi-di-compensazione">Eventi di compensazione</a></li><li data-target-id="esempio-json-serializzato" data-depth="3"><a href="#esempio-json-serializzato">Esempio JSON serializzato</a></li><li data-target-id="metodi-helper" data-depth="3"><a href="#metodi-helper">Metodi helper</a></li></ol></li><li data-target-id="_4-droneevent--gli-eventi-di-event-sourcing-del-drone" data-depth="2"><a href="#_4-droneevent--gli-eventi-di-event-sourcing-del-drone">4. DroneEvent — gli eventi di Event Sourcing del drone</a><ol><li data-target-id="il-campo-version" data-depth="3"><a href="#il-campo-version">Il campo version</a></li><li data-target-id="metodi-helper-2" data-depth="3"><a href="#metodi-helper-2">Metodi helper</a></li><li data-target-id="perché-due-campi-temporali-su-alcuni-eventi" data-depth="3"><a href="#perché-due-campi-temporali-su-alcuni-eventi">Perché due campi temporali su alcuni eventi?</a></li></ol></li><li data-target-id="_5-serializzazione--schema-complessivo" data-depth="2"><a href="#_5-serializzazione--schema-complessivo">5. Serializzazione — schema complessivo</a><ol><li data-target-id="i-test-come-specifica-eseguibile" data-depth="3"><a href="#i-test-come-specifica-eseguibile">I test come specifica eseguibile</a></li></ol></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="il-sistema-oggi" data-decorative="">Il sistema oggi</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common" aria-current="page">Common (libreria)</a></li><li><a href="../order">Order Service</a></li><li><a href="../delivery">Delivery Service</a></li><li><a href="../drone">Drone Service</a></li><li><a href="../agent">Flotta ad Agenti (BDI)</a></li></ul><h2 id="infrastruttura-amp-operabilità" data-decorative="">Infrastruttura &amp; operabilità</h2><ul><li><a href="../kafka">Messaging Layer (Kafka)</a></li><li><a href="../k8s">Deployment Kubernetes</a></li><li><a href="../slo">Osservabilità &amp; SLO</a></li></ul><h2 id="appendice" data-decorative="">Appendice</h2><ul><li><a href="../evoluzione">Evoluzione del progetto</a></li><li><a href="../conclusioni">Conclusioni</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="common--libreria-condivisa" data-depth="1"><a href="#common--libreria-condivisa">Common — Libreria Condivisa</a><ol><li data-target-id="_1-scopo" data-depth="2"><a href="#_1-scopo">1. Scopo</a></li><li data-target-id="_2-ordermessage--il-messaggio-drsquoordine" data-depth="2"><a href="#_2-ordermessage--il-messaggio-drsquoordine">2. OrderMessage — il messaggio d&rsquo;ordine</a><ol><li data-target-id="decisioni-di-design" data-depth="3"><a href="#decisioni-di-design">Decisioni di design</a></li></ol></li><li data-target-id="_3-sagaevent--gli-eventi-della-transazione-distribuita" data-depth="2"><a href="#_3-sagaevent--gli-eventi-della-transazione-distribuita">3. SagaEvent — gli eventi della transazione distribuita</a><ol><li data-target-id="eventi-di-avanzamento-successo" data-depth="3"><a href="#eventi-di-avanzamento-successo">Eventi di avanzamento (successo)</a></li><li data-target-id="eventi-di-fallimento" data-depth="3"><a href="#eventi-di-fallimento">Eventi di fallimento</a></li><li data-target-id="eventi-di-compensazione" data-depth="3"><a href="#eventi-di-compensazione">Eventi di compensazione</a></li><li data-target-id="esempio-json-serializzato" data-depth="3"><a href="#esempio-json-serializzato">Esempio JSON serializzato</a></li><li data-target-id="metodi-helper" data-depth="3"><a href="#metodi-helper">Metodi helper</a></li></ol></li><li data-target-id="_4-droneevent--gli-eventi-di-event-sourcing-del-drone" data-depth="2"><a href="#_4-droneevent--gli-eventi-di-event-sourcing-del-drone">4. DroneEvent — gli eventi di Event Sourcing del drone</a><ol><li data-target-id="il-campo-version" data-depth="3"><a href="#il-campo-version">Il campo version</a></li><li data-target-id="metodi-helper-2" data-depth="3"><a href="#metodi-helper-2">Metodi helper</a></li><li data-target-id="perché-due-campi-temporali-su-alcuni-eventi" data-depth="3"><a href="#perché-due-campi-temporali-su-alcuni-eventi">Perché due campi temporali su alcuni eventi?</a></li></ol></li><li data-target-id="_5-serializzazione--schema-complessivo" data-depth="2"><a href="#_5-serializzazione--schema-complessivo">5. Serializzazione — schema complessivo</a><ol><li data-target-id="i-test-come-specifica-eseguibile" data-depth="3"><a href="#i-test-come-specifica-eseguibile">I test come specifica eseguibile</a></li></ol></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><h1 class="page-break" id="common--libreria-condivisa">Common — Libreria Condivisa</h1><h2 id="_1-scopo">1. Scopo</h2><p><span class="codespan-content"><code>common</code></span> è una libreria Rust (una <em>crate</em> senza binario) che espone i <strong>tipi
+condivisi</strong> tra i tre microservizi. È il <strong>contratto</strong> del sistema: ogni messaggio
+che viaggia su Kafka è una di queste strutture, serializzata in JSON.</p><p>Il motivo per cui questi tipi vivono in un&rsquo;unica libreria, invece di essere
+duplicati in ogni servizio, è la <strong>sicurezza a tempo di compilazione</strong>. Se l&rsquo;Order
+Service producesse un <span class="codespan-content"><code>OrderMessage</code></span> e il Delivery Service ne avesse una
+definizione anche solo leggermente diversa, la deserializzazione fallirebbe a
+runtime, in produzione, in modo silenzioso e difficile da diagnosticare.
+Centralizzando i tipi, il compilatore garantisce che produttore e consumatore
+parlino <em>esattamente</em> la stessa lingua: un cambiamento al formato di un messaggio
+non compila finché tutti i servizi non sono aggiornati.</p><pre><code class="language-rust">// common/src/lib.rs &mdash; l'intera superficie pubblica della crate
+pub mod events;
+pub mod messages;
+
+pub use events::{DroneEvent, SagaEvent};
+pub use messages::OrderMessage;</code></pre><p>Il <span class="codespan-content"><code>lib.rs</code></span> si limita a dichiarare i due moduli e a <strong>ri-esportarne</strong> i tre tipi
+principali. Grazie al <span class="codespan-content"><code>pub use</code></span>, i servizi scrivono <span class="codespan-content"><code>use common::OrderMessage</code></span>
+invece di <span class="codespan-content"><code>use common::messages::OrderMessage</code></span>: il percorso d&rsquo;import è più corto e
+indipendente dall&rsquo;organizzazione interna dei moduli.</p><pre><code>common/src/
+├── lib.rs          &larr; re-export pubblico di events e messages
+├── events.rs       &larr; SagaEvent, DroneEvent (+ test di serializzazione)
+└── messages.rs     &larr; OrderMessage</code></pre><hr /><h2 id="_2-ordermessage--il-messaggio-drsquoordine">2. <span class="codespan-content"><code>OrderMessage</code></span> — il messaggio d&rsquo;ordine</h2><p><span class="codespan-content"><code>OrderMessage</code></span> è il DTO (Data Transfer Object) che descrive <em>cosa</em> va consegnato e
+<em>dove</em>. Viaggia su due topic: <span class="codespan-content"><code>order-requests</code></span> (Order → Delivery) e <span class="codespan-content"><code>drone-requests</code></span>
+(Delivery → Drone). È sempre lo stesso ordine che attraversa la pipeline.</p><pre><code class="language-rust">#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrderMessage {
+    pub order_id: String,
+    pub customer_id: String,
+    pub from_address: String,
+    pub to_address: String,
+    pub package_weight: f64,
+    pub requested_delivery_time: DateTime&lt;Utc&gt;,
+    pub max_delivery_time_minutes: i32,
+}</code></pre><table><thead><tr><th>Campo</th><th>Tipo</th><th>Significato</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>order_id</code></span></td><td><span class="codespan-content"><code>String</code></span></td><td>UUID dell&rsquo;ordine — chiave di correlazione di tutto il sistema</td></tr><tr><td><span class="codespan-content"><code>customer_id</code></span></td><td><span class="codespan-content"><code>String</code></span></td><td>Identificativo del cliente</td></tr><tr><td><span class="codespan-content"><code>from_address</code></span></td><td><span class="codespan-content"><code>String</code></span></td><td>Indirizzo di partenza</td></tr><tr><td><span class="codespan-content"><code>to_address</code></span></td><td><span class="codespan-content"><code>String</code></span></td><td>Indirizzo di destinazione</td></tr><tr><td><span class="codespan-content"><code>package_weight</code></span></td><td><span class="codespan-content"><code>f64</code></span></td><td>Peso del pacco (kg) — confrontato con <span class="codespan-content"><code>MAX_PAYLOAD_WEIGHT</code></span> dall&rsquo;agente</td></tr><tr><td><span class="codespan-content"><code>requested_delivery_time</code></span></td><td><span class="codespan-content"><code>DateTime&lt;Utc&gt;</code></span></td><td>Orario di consegna richiesto</td></tr><tr><td><span class="codespan-content"><code>max_delivery_time_minutes</code></span></td><td><span class="codespan-content"><code>i32</code></span></td><td>Finestra massima di consegna (minuti) — usata per il vincolo di deadline</td></tr></tbody></table><h3 id="decisioni-di-design">Decisioni di design</h3><p><strong>Costruttore <span class="codespan-content"><code>::new()</code></span> con <span class="codespan-content"><code>impl Into&lt;String&gt;</code></span>.</strong> Tutti i campi stringa del
+costruttore accettano <span class="codespan-content"><code>impl Into&lt;String&gt;</code></span>:</p><pre><code class="language-rust">pub fn new(
+    order_id: impl Into&lt;String&gt;,
+    customer_id: impl Into&lt;String&gt;,
+    // ...
+) -&gt; Self</code></pre><p>Questo permette di chiamare <span class="codespan-content"><code>OrderMessage::new(&quot;abc&quot;, &quot;cust-1&quot;, ...)</code></span> passando
+direttamente literal <span class="codespan-content"><code>&amp;str</code></span> <em>oppure</em> <span class="codespan-content"><code>String</code></span> già posseduti, senza <span class="codespan-content"><code>.to_string()</code></span>
+ridondanti. La conversione è <em>zero-cost</em> quando si passa già un <span class="codespan-content"><code>String</code></span> (Rust la
+ottimizza a un semplice spostamento di proprietà).</p><p><strong><span class="codespan-content"><code>PartialEq</code></span> basato solo su <span class="codespan-content"><code>order_id</code></span>.</strong> L&rsquo;uguaglianza tra due <span class="codespan-content"><code>OrderMessage</code></span> è
+definita confrontando <strong>esclusivamente</strong> l&rsquo;<span class="codespan-content"><code>order_id</code></span>:</p><pre><code class="language-rust">impl PartialEq for OrderMessage {
+    fn eq(&amp;self, other: &amp;Self) -&gt; bool {
+        self.order_id == other.order_id
+    }
+}</code></pre><p>Due messaggi che si riferiscono allo stesso ordine sono considerati equivalenti
+anche se altri campi differiscono. Questa scelta è coerente con il dominio: un
+ordine <em>è</em> la sua identità, non l&rsquo;insieme dei suoi attributi in un dato istante.</p><p><strong><span class="codespan-content"><code>Display</code></span> per i log.</strong> L&rsquo;implementazione di <span class="codespan-content"><code>Display</code></span> produce una riga leggibile
+che omette <span class="codespan-content"><code>requested_delivery_time</code></span> per brevità — utile nei log di tracing senza
+appesantirli con timestamp ridondanti (già presenti nel formato del log stesso).</p><hr /><h2 id="_3-sagaevent--gli-eventi-della-transazione-distribuita">3. <span class="codespan-content"><code>SagaEvent</code></span> — gli eventi della transazione distribuita</h2><p><span class="codespan-content"><code>SagaEvent</code></span> è l&rsquo;enum che modella <strong>ogni evento</strong> scambiato sul topic <span class="codespan-content"><code>saga-events</code></span>.
+È una <em>tagged union</em> serializzata con <span class="codespan-content"><code>#[serde(tag = &quot;type&quot;)]</code></span>: nel JSON viene
+inserito automaticamente un campo <span class="codespan-content"><code>&quot;type&quot;</code></span> che identifica la variante, permettendo
+la deserializzazione corretta anche se le varianti hanno campi diversi.</p><pre><code class="language-rust">#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = &quot;type&quot;)]
+pub enum SagaEvent {
+    #[serde(rename = &quot;ORDER_SAGA_STARTED&quot;)]
+    OrderSagaStarted { /* ... */ },
+    // ...
+}</code></pre><figure><pre class="mermaid">graph LR
+    SE[&quot;SagaEvent&quot;]
+    SE --&gt; A[&quot;OrderSagaStarted&quot;]
+    SE --&gt; B[&quot;OrderValidated&quot;]
+    SE --&gt; C[&quot;DeliveryScheduled&quot;]
+    SE --&gt; D[&quot;DroneAssigned&quot;]
+    SE --&gt; E[&quot;OrderCompleted&quot;]
+    SE --&gt; F[&quot;OrderValidationFailed&quot;]
+    SE --&gt; G[&quot;DeliverySchedulingFailed&quot;]
+    SE --&gt; H[&quot;DroneAssignmentFailed&quot;]
+    SE --&gt; I[&quot;OrderCancelled&quot;]
+    SE --&gt; J[&quot;CompensateOrder&quot;]
+    SE --&gt; K[&quot;CompensateDelivery&quot;]
+    SE --&gt; L[&quot;CompensateDrone&quot;]</pre></figure><p>L&rsquo;enum ha <strong>12 varianti</strong>, raggruppabili per ruolo nel ciclo di vita della SAGA:</p><h3 id="eventi-di-avanzamento-successo">Eventi di avanzamento (successo)</h3><table><thead><tr><th>Variante</th><th><span class="codespan-content"><code>type</code></span> JSON</th><th>Pubblicato da</th><th>Significato</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>OrderSagaStarted</code></span></td><td><span class="codespan-content"><code>ORDER_SAGA_STARTED</code></span></td><td>—</td><td>Saga avviata (evento di audit; porta tutti i campi dell&rsquo;ordine)</td></tr><tr><td><span class="codespan-content"><code>OrderValidated</code></span></td><td><span class="codespan-content"><code>ORDER_VALIDATED</code></span></td><td>—</td><td>Step 1 superato (audit)</td></tr><tr><td><span class="codespan-content"><code>DeliveryScheduled</code></span></td><td><span class="codespan-content"><code>DELIVERY_SCHEDULED</code></span></td><td>Delivery</td><td>Step 2 completato; porta <span class="codespan-content"><code>delivery_id</code></span></td></tr><tr><td><span class="codespan-content"><code>DroneAssigned</code></span></td><td><span class="codespan-content"><code>DRONE_ASSIGNED</code></span></td><td>Drone</td><td>Step 3 completato; porta <span class="codespan-content"><code>drone_id</code></span></td></tr><tr><td><span class="codespan-content"><code>OrderCompleted</code></span></td><td><span class="codespan-content"><code>ORDER_COMPLETED</code></span></td><td>Order</td><td>SAGA conclusa con successo</td></tr></tbody></table><h3 id="eventi-di-fallimento">Eventi di fallimento</h3><table><thead><tr><th>Variante</th><th><span class="codespan-content"><code>type</code></span> JSON</th><th>Pubblicato da</th><th>Significato</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>OrderValidationFailed</code></span></td><td><span class="codespan-content"><code>ORDER_VALIDATION_FAILED</code></span></td><td>Order</td><td>Step 1 fallito; porta <span class="codespan-content"><code>reason</code></span></td></tr><tr><td><span class="codespan-content"><code>DeliverySchedulingFailed</code></span></td><td><span class="codespan-content"><code>DELIVERY_SCHEDULING_FAILED</code></span></td><td>(Delivery)</td><td>Step 2 fallito; porta <span class="codespan-content"><code>reason</code></span></td></tr><tr><td><span class="codespan-content"><code>DroneAssignmentFailed</code></span></td><td><span class="codespan-content"><code>DRONE_ASSIGNMENT_FAILED</code></span></td><td>Drone</td><td>Step 3 fallito; porta <span class="codespan-content"><code>reason</code></span></td></tr><tr><td><span class="codespan-content"><code>OrderCancelled</code></span></td><td><span class="codespan-content"><code>ORDER_CANCELLED</code></span></td><td>Order</td><td>Ordine annullato (evento terminale)</td></tr></tbody></table><h3 id="eventi-di-compensazione">Eventi di compensazione</h3><table><thead><tr><th>Variante</th><th><span class="codespan-content"><code>type</code></span> JSON</th><th>Pubblicato da</th><th>Consumato da</th><th>Campi aggiuntivi</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>CompensateOrder</code></span></td><td><span class="codespan-content"><code>COMPENSATE_ORDER</code></span></td><td>Order</td><td>—</td><td><span class="codespan-content"><code>reason</code></span></td></tr><tr><td><span class="codespan-content"><code>CompensateDelivery</code></span></td><td><span class="codespan-content"><code>COMPENSATE_DELIVERY</code></span></td><td>Order</td><td>—</td><td><span class="codespan-content"><code>delivery_id</code></span>, <span class="codespan-content"><code>reason</code></span></td></tr><tr><td><span class="codespan-content"><code>CompensateDrone</code></span></td><td><span class="codespan-content"><code>COMPENSATE_DRONE</code></span></td><td>Order</td><td>Drone</td><td><span class="codespan-content"><code>drone_id</code></span>, <span class="codespan-content"><code>reason</code></span></td></tr></tbody></table><p>Tutte le varianti condividono i campi <span class="codespan-content"><code>saga_id</code></span>, <span class="codespan-content"><code>order_id</code></span> e <span class="codespan-content"><code>timestamp</code></span>; le
+varianti di fallimento e compensazione aggiungono <span class="codespan-content"><code>reason</code></span>; alcune portano
+identificativi specifici (<span class="codespan-content"><code>delivery_id</code></span>, <span class="codespan-content"><code>drone_id</code></span>).</p><h3 id="esempio-json-serializzato">Esempio JSON serializzato</h3><pre><code class="language-json">{
+  &quot;type&quot;: &quot;DELIVERY_SCHEDULED&quot;,
+  &quot;saga_id&quot;: &quot;&quot;,
+  &quot;order_id&quot;: &quot;a1b2-...&quot;,
+  &quot;delivery_id&quot;: &quot;c3d4-...&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-10T14:00:00Z&quot;
+}</code></pre><p>Il campo <span class="codespan-content"><code>&quot;type&quot;</code></span> è inserito da <span class="codespan-content"><code>serde</code></span> grazie a <span class="codespan-content"><code>#[serde(tag = &quot;type&quot;)]</code></span>, e il suo
+valore deriva dall&rsquo;attributo <span class="codespan-content"><code>#[serde(rename = &quot;...&quot;)]</code></span> di ciascuna variante (es.
+<span class="codespan-content"><code>DELIVERY_SCHEDULED</code></span> invece del nome Rust <span class="codespan-content"><code>DeliveryScheduled</code></span>). In deserializzazione,
+<span class="codespan-content"><code>serde</code></span> legge prima <span class="codespan-content"><code>&quot;type&quot;</code></span>, poi sa quale variante istanziare e quali campi
+aspettarsi.</p><h3 id="metodi-helper">Metodi helper</h3><p>Estrarre <span class="codespan-content"><code>order_id</code></span> o <span class="codespan-content"><code>saga_id</code></span> da un <span class="codespan-content"><code>SagaEvent</code></span> richiederebbe un <span class="codespan-content"><code>match</code></span> su tutte
+le 12 varianti a ogni call site. Per evitarlo, l&rsquo;enum offre due accessor:</p><table><thead><tr><th>Metodo</th><th>Ritorno</th><th>Descrizione</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>order_id()</code></span></td><td><span class="codespan-content"><code>&amp;str</code></span></td><td>Estrae <span class="codespan-content"><code>order_id</code></span> da qualsiasi variante</td></tr><tr><td><span class="codespan-content"><code>saga_id()</code></span></td><td><span class="codespan-content"><code>&amp;str</code></span></td><td>Estrae <span class="codespan-content"><code>saga_id</code></span> da qualsiasi variante</td></tr></tbody></table><p>Entrambi usano un <span class="codespan-content"><code>match</code></span> <strong>esaustivo</strong> che sfrutta l&rsquo;<em>or-pattern</em> di Rust
+(<span class="codespan-content"><code>A { order_id, .. } | B { order_id, .. } | ...</code></span>) per legare il campo comune in
+un&rsquo;unica braccia. L&rsquo;esaustività è garantita dal compilatore: se si aggiungesse una
+nuova variante senza aggiornare questi metodi, il codice non compilerebbe. È così
+che l&rsquo;orchestratore, ricevendo un evento qualsiasi, ne ricava l&rsquo;<span class="codespan-content"><code>order_id</code></span> per
+correlarlo alla saga giusta.</p><hr /><h2 id="_4-droneevent--gli-eventi-di-event-sourcing-del-drone">4. <span class="codespan-content"><code>DroneEvent</code></span> — gli eventi di Event Sourcing del drone</h2><p><span class="codespan-content"><code>DroneEvent</code></span> modella gli eventi del <strong>ciclo di vita di un drone</strong>. A differenza di
+<span class="codespan-content"><code>SagaEvent</code></span> (che è effimero, un messaggio di coordinamento), ogni <span class="codespan-content"><code>DroneEvent</code></span> è un
+<strong>fatto immutabile persistito su MongoDB</strong>: insieme, gli eventi di un drone
+costituiscono il suo <em>event log</em>, da cui lo stato corrente è sempre ricostruibile
+(pattern Event Sourcing — vedi <a href="drone.qd)">Drone Service</a>.</p><pre><code class="language-rust">#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = &quot;type&quot;)]
+pub enum DroneEvent {
+    Created    { /* tutti i campi dell'ordine + version */ },
+    Dispatched { drone_id, order_id, dispatch_time, timestamp, version },
+    Delivered  { drone_id, order_id, delivery_time,  timestamp, version },
+    Returned   { drone_id, order_id, return_time,    timestamp, version },
+}</code></pre><figure><pre class="mermaid">graph LR
+    DE[&quot;DroneEvent&quot;]
+    DE --&gt; C[&quot;Created\n(v=0)\nTutti i campi ordine&quot;]
+    DE --&gt; D[&quot;Dispatched\n(v=1)\ndispatch_time&quot;]
+    DE --&gt; DL[&quot;Delivered\n(v=2)\ndelivery_time&quot;]
+    DE --&gt; R[&quot;Returned\n(v=3)\nreturn_time&quot;]</pre></figure><p>Le quattro varianti rappresentano le quattro tappe di una consegna, nell&rsquo;ordine in
+cui avvengono. <span class="codespan-content"><code>Created</code></span> è speciale: è l&rsquo;unica a portare <em>tutti</em> i dati dell&rsquo;ordine
+(indirizzi, peso, cliente…), perché è l&rsquo;evento <em>genesi</em> da cui si ricostruisce lo
+stato; le altre tre portano solo gli identificativi e il timestamp semantico della
+loro azione.</p><h3 id="il-campo-version">Il campo <span class="codespan-content"><code>version</code></span></h3><p>Ogni variante porta un campo <span class="codespan-content"><code>version: u64</code></span> che rappresenta la <strong>posizione
+dell&rsquo;evento nel log del drone</strong> (0, 1, 2, 3…). Viene calcolato chiamando
+<span class="codespan-content"><code>DroneEventStore::count_events_for_drone()</code></span> <em>prima</em> di ogni inserimento: il nuovo
+evento prende come versione il numero di eventi già presenti. Questo garantisce un
+ordinamento cronologico stabile dei documenti su MongoDB, indipendente dall&rsquo;ordine
+fisico di scrittura, e permette di ricostruire lo stato applicando gli eventi
+ordinati per <span class="codespan-content"><code>version</code></span> crescente.</p><h3 id="metodi-helper-2">Metodi helper</h3><table><thead><tr><th>Metodo</th><th>Ritorno</th><th>Descrizione</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>drone_id()</code></span></td><td><span class="codespan-content"><code>&amp;str</code></span></td><td>ID del drone</td></tr><tr><td><span class="codespan-content"><code>order_id()</code></span></td><td><span class="codespan-content"><code>&amp;str</code></span></td><td>ID dell&rsquo;ordine associato</td></tr><tr><td><span class="codespan-content"><code>version()</code></span></td><td><span class="codespan-content"><code>u64</code></span></td><td>Posizione nell&rsquo;event log</td></tr><tr><td><span class="codespan-content"><code>event_type()</code></span></td><td><span class="codespan-content"><code>&amp;'static str</code></span></td><td>Stringa descrittiva (es. <span class="codespan-content"><code>&quot;DRONE_CREATED&quot;</code></span>)</td></tr><tr><td><span class="codespan-content"><code>timestamp()</code></span></td><td><span class="codespan-content"><code>DateTime&lt;Utc&gt;</code></span></td><td>Momento di creazione dell&rsquo;evento</td></tr></tbody></table><p>Come per <span class="codespan-content"><code>SagaEvent</code></span>, questi accessor usano <span class="codespan-content"><code>match</code></span> esaustivi con or-pattern,
+così il codice del Drone Service può lavorare su un <span class="codespan-content"><code>DroneEvent</code></span> generico senza
+distinguere la variante quando non serve (per esempio per ordinare o loggare).</p><h3 id="perché-due-campi-temporali-su-alcuni-eventi">Perché due campi temporali su alcuni eventi?</h3><p><span class="codespan-content"><code>Dispatched</code></span>, <span class="codespan-content"><code>Delivered</code></span> e <span class="codespan-content"><code>Returned</code></span> hanno sia un <span class="codespan-content"><code>timestamp</code></span> sia un campo
+semantico (<span class="codespan-content"><code>dispatch_time</code></span>, <span class="codespan-content"><code>delivery_time</code></span>, <span class="codespan-content"><code>return_time</code></span>). La distinzione è
+concettuale: il <span class="codespan-content"><code>timestamp</code></span> è il momento in cui l&rsquo;evento è stato <strong>scritto nel
+log</strong>; il campo semantico è il momento in cui l&rsquo;<strong>azione si è verificata</strong> nel
+dominio. In questo progetto i due coincidono (vengono entrambi impostati a
+<span class="codespan-content"><code>Utc::now()</code></span> al momento della scrittura), ma la separazione è una buona pratica per
+sistemi in cui gli eventi possono essere registrati in ritardo rispetto al fatto
+che descrivono.</p><hr /><h2 id="_5-serializzazione--schema-complessivo">5. Serializzazione — schema complessivo</h2><p>Tutti e tre i tipi attraversano la stessa pipeline: da struttura Rust a byte JSON
+in produzione, e viceversa in consumo.</p><pre><code>┌──────────────┐   serde_json::to_vec   ┌────────────────┐
+│  Rust struct │ ─────────────────────▶ │  JSON bytes    │
+│  o variant   │                        │  (+ &quot;type&quot; tag │
+│              │                        │   per gli enum)│
+└──────────────┘                        └────────────────┘
+                                               │
+                                       Kafka message payload
+                                               │
+┌──────────────┐ serde_json::from_slice ┌────────────────┐
+│  Rust struct │ ◀───────────────────── │  JSON bytes    │
+│  o variant   │                        └────────────────┘
+└──────────────┘</code></pre><p>Per gli enum (<span class="codespan-content"><code>SagaEvent</code></span>, <span class="codespan-content"><code>DroneEvent</code></span>) il discriminante <span class="codespan-content"><code>&quot;type&quot;</code></span> permette a
+<span class="codespan-content"><code>serde</code></span> di sapere quale variante istanziare senza ambiguità. Per la struct
+<span class="codespan-content"><code>OrderMessage</code></span> non serve alcun tag: la forma è fissa.</p><h3 id="i-test-come-specifica-eseguibile">I test come specifica eseguibile</h3><p>Il modulo <span class="codespan-content"><code>events.rs</code></span> include due test che documentano e verificano il contratto di
+serializzazione:</p><pre><code class="language-rust">#[test]
+fn saga_event_serializes_with_type_field() {
+    let event = SagaEvent::OrderValidated { /* ... */ };
+    let json = serde_json::to_string(&amp;event).unwrap();
+    assert!(json.contains(&quot;\&quot;type\&quot;:\&quot;ORDER_VALIDATED\&quot;&quot;));
+    assert!(json.contains(&quot;\&quot;order_id\&quot;:\&quot;o1\&quot;&quot;));
+}
+
+#[test]
+fn drone_event_round_trip() {
+    let event = DroneEvent::Created { /* ... */ };
+    let json = serde_json::to_string(&amp;event).unwrap();
+    let decoded: DroneEvent = serde_json::from_str(&amp;json).unwrap();
+    assert_eq!(decoded.drone_id(), &quot;d1&quot;);
+    assert_eq!(decoded.event_type(), &quot;DRONE_CREATED&quot;);
+}</code></pre><p>Il primo verifica che il campo <span class="codespan-content"><code>&quot;type&quot;</code></span> venga effettivamente emesso con il nome
+<em>rinominato</em> (<span class="codespan-content"><code>ORDER_VALIDATED</code></span>). Il secondo verifica il <em>round-trip</em>: serializzare
+e poi deserializzare restituisce un valore equivalente, con la variante corretta.
+Questi test sono la garanzia minima che il contratto resti stabile nel tempo.</p>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>
