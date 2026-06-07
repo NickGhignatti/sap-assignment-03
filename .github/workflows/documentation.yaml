@@ -15,7 +15,9 @@ jobs:
     strategy:
       matrix:
         document:
+          - approach
           - pos
+          - cos
           - stakeholder
           - methodology
           - wbs
@@ -24,6 +26,10 @@ jobs:
           - project_charter
           - rbs
           - sow
+          - risk
+          - gantt
+          - monitoring
+          - closing
     steps:
       - name: Checkout
         uses: actions/checkout@v4 # Note: bumped to v4 (latest), v6 does not exist yet

@@ -1,4 +1,4 @@
-.docname {pos}
+.docname {project_charter}
 .doctype {paged}
 .doclang {Italian}
 .theme {paperwhite} layout:{latex}
@@ -19,7 +19,7 @@
 | Campo                       | Valore                                             |
 |-----------------------------|----------------------------------------------------|
 | **Nome progetto**           | DroneFlow — Servizio di Consegna Pacchi con Droni  |
-| **Project No.**             | SAP-02                                             |
+| **Project No.**             | SAP-03                                             |
 | **Project Manager**         | (studente)                                         |
 | **Sponsor / Committente**   | Corso di Project Management — Università di Bologna|
 | **Data di emissione**       | Aprile 2026                                        |
@@ -84,7 +84,7 @@ Il progetto è considerato un successo se, alla data di consegna:
 - Tracciamento in tempo reale dello stato della consegna.
 - Gestione automatica dei fallimenti con annullamento ordinato delle operazioni.
 - Storico permanente degli eventi di ogni consegna.
-- Documentazione PM (7 documenti).
+- Documentazione di Project Management completa, organizzata sui cinque process group PMBOK (scoping, planning, execution, monitoring & controlling, closing).
 
 ### Escluso (Out of Scope)
 - Gestione dei pagamenti e fatturazione.
