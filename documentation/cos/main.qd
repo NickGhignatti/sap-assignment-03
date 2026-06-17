@@ -1,0 +1,77 @@
+.docname {cos}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Conditions of Satisfaction (CoS)
+
+> Accordo negoziato tra committente e Project Manager che chiarisce, prima di impegnarsi nel
+> progetto, cosa significhi davvero "successo". Risolve il dilemma *client wants vs client needs*
+> e costituisce l'input del Project Overview Statement (POS).
+
+---
+
+| Campo           | Valore                                             |
+|-----------------|----------------------------------------------------|
+| **Progetto**    | DroneFlow — Servizio di Consegna Pacchi con Droni  |
+| **Project No.** | SAP-03                                             |
+| **Redatto da**  | Ghignatti Nicolò                                   |
+| **Versione**    | 1.0 — Aprile 2026                                  |
+
+---
+
+## 1. Il dilemma "Wants vs Needs"
+
+> *"What your client wants may not be what your client needs. Your job is to make sure that what
+> they want is what they need and that you will deliver what they need."*
+
+La CoS è il processo con cui PM e committente convergono, tramite un ciclo **richiesta →
+chiarimento → risposta → accordo**, su una definizione condivisa e verificabile del risultato.
+
+---
+
+## 2. Ciclo di negoziazione (richiesta ↔ risposta)
+
+| # | Il committente chiede (*want*)                  | Bisogno reale emerso (*need*)                                   | Condizione concordata |
+|---|--------------------------------------------------|------------------------------------------------------------------|-----------------------|
+| 1 | "Consegne veloci"                                | Garanzia *verificabile* di una finestra temporale massima        | Tempo massimo dichiarato dall'utente e rispettato (≥95%) |
+| 2 | "Sapere dov'è il pacco"                           | Tracciabilità di *stato* in tempo reale, più che posizione GPS   | Stato consultabile per tutta la consegna via tracking ID |
+| 3 | "Che funzioni sempre"                            | Nessuno stato bloccato in caso di problema, non zero guasti      | Annullamento ordinato con notifica e risorse liberate |
+| 4 | "Tutto automatico"                               | Nessun intervento manuale dalla richiesta alla consegna          | Pipeline validazione→assegnazione→consegna senza operatori |
+| 5 | "Storico delle consegne"                         | Audit affidabile e ricostruibile, non semplice log               | Storico immutabile con timestamp, ricostruzione dello stato |
+
+---
+
+## 3. Condizioni di Satisfaction concordate (sintesi)
+
+Il progetto è considerato soddisfacente se e solo se:
+
+1. Ogni richiesta valida è accettata, validata e assegnata a un drone **automaticamente**.
+2. L'utente può **tracciare lo stato** della consegna in ogni momento tramite l'identificativo.
+3. In caso di impossibilità, il sistema **annulla in modo ordinato** e informa l'utente: nessuno
+   stato resta bloccato.
+4. Ogni consegna produce uno **storico immutabile** consultabile e ricostruibile.
+5. La **gestione del progetto** è documentata, coerente e tracciabile (requisito del committente PM).
+
+---
+
+## 4. Esclusioni concordate (per evitare aspettative implicite)
+
+Per gestire le aspettative, è stato concordato esplicitamente **cosa NON** fa il prototipo:
+pagamenti, autenticazione avanzata, UI grafica, integrazione con hardware reale, routing
+geografico, gestione meteo/ostacoli, notifiche push. Questi confini sono recepiti nel POS e nel
+Project Charter (*out of scope*).
+
+---
+
+## 5. Esito
+
+Le CoS sono state validate nel **Project Scoping Meeting** (Settimana 1) e hanno costituito la
+base per la redazione del POS. Ogni criterio di successo del POS è tracciabile a una condizione
+di questo documento.

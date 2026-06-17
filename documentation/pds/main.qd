@@ -1,4 +1,4 @@
-.docname {pos}
+.docname {pds}
 .doctype {paged}
 .doclang {Italian}
 .theme {paperwhite} layout:{latex}
@@ -119,7 +119,7 @@ non un requisito funzionale diretto per l'utente.)*
 | CS3 | Stato della consegna consultabile in ogni momento                | API di tracking risponde con stato aggiornato durante tutta la consegna | 100%     |
 | CS4 | Storico eventi del drone coerente con l'evoluzione reale         | Tutti gli eventi (partenza, arrivo, rientro) presenti e ordinati        | 100%     |
 | CS5 | Annullamento ordinato in caso di fallimento                      | Demo con fallimento simulato → nessun dato bloccato, utente informato   | 100%     |
-| CS6 | Documentazione PM completa e coerente con la proposal            | 7 documenti presenti, in italiano, coerenti tra loro                    | ✓        |
+| CS6 | Documentazione PM completa e coerente con la proposal            | Tutti i documenti dei cinque process group presenti, in italiano, coerenti tra loro | ✓        |
 
 ---
 
@@ -164,7 +164,7 @@ non un requisito funzionale diretto per l'utente.)*
 - Il sistema è realizzato come insieme di servizi indipendenti che comunicano in modo
   asincrono, per garantire scalabilità e isolamento dei guasti.
 - I dati di ogni consegna sono persistiti su database non relazionale (MongoDB).
-- La comunicazione tra i componenti interni avviene tramite message broker (RabbitMQ).
+- La comunicazione tra i componenti interni avviene in modo asincrono tramite un event streaming platform / message broker (Apache Kafka).
 - Il linguaggio di implementazione è Rust (edizione 2024).
 - La coordinazione di operazioni distribuite in caso di fallimento segue il pattern SAGA.
 - Lo storico degli eventi del drone è implementato tramite Event Sourcing.

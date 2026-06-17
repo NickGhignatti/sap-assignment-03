@@ -1,4 +1,4 @@
-.docname {pos}
+.docname {sow}
 .doctype {paged}
 .doclang {Italian}
 .theme {paperwhite} layout:{latex}
@@ -188,8 +188,11 @@ una consegna, consultabile a posteriori.
 
 **Cosa fornisce**: la documentazione PM completa del progetto.
 
-**Contenuto**: POS, PDS, Project Charter, Business Case, SOW, RBS, WBS — tutti in italiano,
-coerenti con la proposal di progetto originale.
+**Contenuto**: l'insieme dei documenti dei cinque process group PMBOK — Conditions of
+Satisfaction, POS, Project Charter, Business Case, SOW, RBS, Stakeholder Register (scoping);
+PDS, WBS, stime, network diagram e Gantt, Risk Register (planning); verbali di kick-off e
+work package (execution); status report e Issues Log (monitoring & controlling); rapporto
+finale e lessons learned (closing) — tutti in italiano e coerenti con la proposal originale.
 
 ---
 
@@ -197,7 +200,7 @@ coerenti con la proposal di progetto originale.
 
 | Obiettivo del corso                              | Come DroneFlow lo realizza                                          |
 |--------------------------------------------------|---------------------------------------------------------------------|
-| Applicazione del project management              | 7 documenti PM prodotti e coerenti con la proposta di progetto      |
+| Applicazione del project management              | Documentazione PM dei 5 process group prodotta e coerente con la proposta |
 | Progettazione di un servizio reale               | Servizio con utente, ciclo di vita, tracciabilità, gestione errori  |
 | Gestione della complessità distribuita           | Coordinamento automatico di più componenti con garanzie di coerenza |
 
@@ -212,4 +215,4 @@ Il SOW si considera soddisfatto quando:
 - [ ] Un fallimento simulato produce l'annullamento ordinato con stato coerente.
 - [ ] Lo storico eventi di una consegna completata contiene tutti gli eventi attesi.
 - [ ] La ricostruzione dello stato da storico è coerente con l'osservazione in tempo reale.
-- [ ] I 7 documenti PM sono presenti, in italiano, e coerenti tra loro.
+- [ ] I documenti PM dei cinque process group sono presenti, in italiano, e coerenti tra loro.
