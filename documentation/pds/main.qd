@@ -164,6 +164,7 @@ non un requisito funzionale diretto per l'utente.)*
 - Il sistema è realizzato come insieme di servizi indipendenti che comunicano in modo
   asincrono, per garantire scalabilità e isolamento dei guasti.
 - La comunicazione tra i componenti interni avviene in modo asincrono tramite un event streaming platform / message broker (Apache Kafka).
+- I dati di ogni consegna (stato delle saga ed event store dei droni) sono persistiti su database non relazionale (MongoDB).
 - Il linguaggio di implementazione è Rust (edizione 2024).
 - La coordinazione di operazioni distribuite in caso di fallimento segue il pattern SAGA.
 - Lo storico degli eventi del drone è implementato tramite Event Sourcing.

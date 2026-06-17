@@ -141,7 +141,7 @@ Posizionamento dei rischi (ID nelle celle); il colore indica la fascia di esposi
 ## 6. Piani di risposta dettagliati (rischi a media-alta esposizione)
 
 ### RK-02 — Slittamento sulla scadenza d'esame (Exp. 15) · *Mitigate*
-- **Azioni**: pianificazione su Gantt con milestone settimanali; buffer del 15% sulle stime;
+- **Azioni**: pianificazione su Gantt con milestone settimanali; buffer del 25% sulle stime;
   consegna dell'elaborato prevista con margine rispetto al vincolo "una settimana prima
   dell'orale"; revisione di avanzamento al termine di ogni sprint.
 - **Contingenza**: se a 3 settimane dalla scadenza il cammino critico è in ritardo, si applica
@@ -176,7 +176,7 @@ Posizionamento dei rischi (ID nelle celle); il colore indica la fascia di esposi
 
 ## 7. Monitoraggio dei rischi
 
-Il Risk Register è un **documento vivo**: viene rivisto al termine di ogni sprint durante il
-**Project Status Meeting**. I rischi che si concretizzano vengono trasferiti nell'**Issues Log**.
+Il Risk Register è un **documento vivo**: viene rivisto al termine di ogni sprint durante
+l'**auto-revisione di avanzamento (status review)**. I rischi che si concretizzano vengono trasferiti nell'**Issues Log**.
 Le variazioni di esposizione e i nuovi rischi emersi sono registrati aggiornando questo
 documento e, se impattano lo scope, la **Scope Bank**.

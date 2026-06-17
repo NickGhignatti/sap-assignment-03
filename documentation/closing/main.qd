@@ -56,7 +56,7 @@ ordinato e storico immutabile.
 |--------------|-----------------|-----------------|-------------|
 | Tempi        | 10 settimane    | ~10 settimane   | In linea (buffer assorbito su EDA) |
 | Scope        | Tutti i *Must*  | Tutti i *Must*  | Nessun taglio sui Must |
-| Costi        | ~120–130 ore    | In linea        | Trascurabile |
+| Costi        | ~130 ore        | In linea        | Trascurabile |
 | Qualità      | Criteri CS1–CS6 | Tutti soddisfatti | — |
 
 ### 2.3 Rischi concretizzati
@@ -72,7 +72,8 @@ issue IS-02/IS-03 ma sono stati gestiti senza impatto sul cammino critico, grazi
   rilasci incompleti si è rivelato decisivo (mitigazione efficace di RK-04).
 - **Distinzione requisiti vs vincoli tecnici**: ha mantenuto la documentazione coerente e
   difendibile.
-- **Buffer del 15% sul cammino critico**: ha assorbito gli imprevisti tecnici.
+- **Buffer del 25% sul cammino critico**: ha assorbito gli imprevisti tecnici e i periodi di
+  minore disponibilità.
 
 ### Cosa migliorare (improve)
 - **Sottostima iniziale della complessità EDA/SAGA**: in futuro prevedere uno *spike* tecnico

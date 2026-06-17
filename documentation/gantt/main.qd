@@ -93,26 +93,35 @@ Tra i percorsi possibili dalla partenza alla fine, il più lungo è:
 
 ---
 
-## 6. Milestone (allineate al Project Charter)
+## 6. Milestone (raffinate rispetto al Project Charter)
 
-| Milestone | Descrizione                                   | Attività collegata | Sett. |
-|-----------|-----------------------------------------------|--------------------|-------|
-| M1        | Requisiti di servizio definiti e approvati    | A                  | 1     |
-| M2        | Architettura di sistema decisa                | B                  | 2     |
-| M3        | Ricezione e validazione richiesta             | D                  | 4     |
-| M4        | Assegnazione automatica drone                 | F                  | 6     |
-| M5        | Tracciamento stato consegna                   | F                  | 6     |
-| M6        | Gestione fallimenti e annullamento ordinato   | E/F (SAGA)         | 6     |
-| M7        | Storico consegne consultabile (Event Sourcing)| F                  | 6     |
-| M8        | Test end-to-end (happy path + fallimento)     | I                  | 9     |
-| M9        | Documentazione PM completa                    | J                  | 10    |
-| M10       | Revisione finale e consegna                   | J                  | 10    |
+| Milestone | Descrizione                                   | Attività collegata | Sett. (Gantt) | Sett. (Charter) |
+|-----------|-----------------------------------------------|--------------------|:-------------:|:---------------:|
+| M1        | Requisiti di servizio definiti e approvati    | A                  | 1             | 1               |
+| M2        | Architettura di sistema decisa                | B                  | 2             | 2               |
+| M3        | Ricezione e validazione richiesta             | D                  | 4             | 4               |
+| M4        | Assegnazione automatica drone                 | F                  | 6             | 6               |
+| M5        | Tracciamento stato consegna                   | F                  | 6             | 8               |
+| M6        | Gestione fallimenti e annullamento ordinato   | E/F (SAGA)         | 6             | 9               |
+| M7        | Storico consegne consultabile (Event Sourcing)| F                  | 6             | 10              |
+| M8        | Test end-to-end (happy path + fallimento)     | I                  | 9             | 11              |
+| M9        | Documentazione PM completa                    | J                  | 10            | 11              |
+| M10       | Revisione finale e consegna                   | J                  | 10            | 12              |
+
+> **Perché differiscono dal Charter (progressive elaboration)**: le date del Project Charter sono
+> una stima *top-down* preliminare, prodotta in fase di **Initiating** quando le dipendenze non
+> erano ancora note. Le date qui sopra sono invece **derivate dal network di dipendenze
+> Finish-to-Start** in fase di **Planning**. Poiché M4–M7 dipendono tutte dal completamento del
+> *drone service* (attività F, fine settimana 6) — è lì che diventano disponibili tracciamento,
+> SAGA ed Event Sourcing — nel piano dettagliato si **addensano alla settimana 6**, mentre le
+> settimane 7–10 sono dedicate a deployment K8s, SLO/SLI, testing e documentazione. La differenza
+> non è un errore ma il normale **raffinamento delle stime** passando da Initiating a Planning.
 
 ---
 
 ## 7. Gestione dello scostamento (collegamento al Monitoring)
 
-L'avanzamento reale è confrontato con questa **baseline** durante i Project Status Meeting.
+L'avanzamento reale è confrontato con questa **baseline** durante le auto-revisioni di avanzamento (status review) di fine sprint.
 Gli scostamenti sul cammino critico generano un **variance report**; se un ritardo erode il
 buffer, si applica il piano di contingenza RK-02 (de-scoping delle funzionalità *Could/Should*
 secondo priorità MoSCoW, a protezione dei *Must*).

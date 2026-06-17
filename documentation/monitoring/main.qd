@@ -83,6 +83,6 @@ Ogni richiesta è valutata rispetto al POS prima di essere accettata.
 
 ## 4. Cadenza di controllo
 
-A fine di ogni sprint si tiene il **Project Status Meeting**: revisione di status report, issues
-log, scope bank e Risk Register. Gli scostamenti che erodono il buffer attivano il piano di
+A fine di ogni sprint si tiene l'**auto-revisione di avanzamento (status review)**: revisione di
+status report, issues log, scope bank e Risk Register. Gli scostamenti che erodono il buffer attivano il piano di
 contingenza definito nell'Analisi dei Rischi (de-scoping MoSCoW a protezione dei *Must*).
