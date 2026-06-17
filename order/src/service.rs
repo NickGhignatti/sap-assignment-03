@@ -29,6 +29,7 @@ impl OrderService {
         package_weight: f64,
         requested_delivery_time: DateTime<Utc>,
         max_delivery_time_minutes: i32,
+        trace_id: &str,
     ) -> Result<OrderResponse> {
         let order_id = Uuid::new_v4().to_string();
 
@@ -42,6 +43,7 @@ impl OrderService {
                 package_weight,
                 requested_delivery_time,
                 max_delivery_time_minutes,
+                trace_id,
             )
             .await?;
 

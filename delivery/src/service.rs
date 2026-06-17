@@ -28,7 +28,7 @@ impl DeliveryService {
     /// 2. Forward the `OrderMessage` to the Drone Service via `drone-requests`.
     /// 3. Publish `DeliveryScheduled` on `saga-events` so the orchestrator
     ///    can advance to Step 3 (drone assignment).
-    pub async fn schedule(&self, order: OrderMessage) -> Result<()> {
+    pub async fn schedule(&self, order: OrderMessage, trace_id: &str) -> Result<()> {
         let delivery_id = Uuid::new_v4().to_string();
 
         info!(
@@ -39,7 +39,7 @@ impl DeliveryService {
         // Forward the full order to the Drone Service.
         // Key = order_id ensures all messages for the same order go to the
         // same partition on drone-requests, preserving ordering.
-        self.publish_to_topic(DRONE_REQUESTS_TOPIC, &order.order_id.clone(), &order)
+        self.publish_to_topic(DRONE_REQUESTS_TOPIC, &order.order_id.clone(), &order, trace_id)
             .await?;
 
         // Notify the SAGA orchestrator that delivery scheduling succeeded.
@@ -51,7 +51,7 @@ impl DeliveryService {
         };
         // Same key → same partition as the drone-requests message above.
         // The orchestrator will process these in order.
-        self.publish_to_topic(SAGA_EVENTS_TOPIC, &order.order_id, &event)
+        self.publish_to_topic(SAGA_EVENTS_TOPIC, &order.order_id, &event, trace_id)
             .await?;
 
         info!(
@@ -69,11 +69,16 @@ impl DeliveryService {
         topic: &str,
         key: &str,
         msg: &T,
+        trace_id: &str,
     ) -> Result<()> {
         let payload = serde_json::to_vec(msg)?;
         self.producer
             .send(
-                FutureRecord::to(topic).key(key).payload(payload.as_slice()),
+                // .headers(...) carries the trace id forward for distributed tracing.
+                FutureRecord::to(topic)
+                    .key(key)
+                    .payload(payload.as_slice())
+                    .headers(common::trace::trace_headers(trace_id)),
                 Timeout::After(Duration::from_secs(5)),
             )
             .await

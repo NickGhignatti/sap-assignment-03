@@ -6,7 +6,7 @@ use rdkafka::{
     consumer::{CommitMode, Consumer, StreamConsumer},
     message::Message,
 };
-use tracing::{error, info, warn};
+use tracing::{Instrument, error, info, warn};
 
 /// Subscribe to the saga-events topic, then spawn a task that drives the
 /// consumer loop. The task runs until the process exits.
@@ -33,7 +33,20 @@ pub async fn start(consumer: StreamConsumer, orchestrator: SagaOrchestrator) -> 
 
                     match serde_json::from_slice::<SagaEvent>(payload) {
                         Ok(event) => {
-                            match orchestrator.handle_saga_event(event).await {
+                            // Continue the distributed trace: read the id the producer
+                            // attached as a Kafka header and run the handler inside a span
+                            // carrying it, so every log line correlates to this order.
+                            let trace_id = common::trace::trace_id_or_new(msg.headers());
+                            let span = tracing::info_span!(
+                                "saga_event",
+                                %trace_id,
+                                order_id = %event.order_id()
+                            );
+                            let outcome = orchestrator
+                                .handle_saga_event(event, &trace_id)
+                                .instrument(span)
+                                .await;
+                            match outcome {
                                 Ok(_) => {
                                     // Processing succeeded → commit the offset.
                                     // CommitMode::Async: fire-and-forget commit (higher throughput).

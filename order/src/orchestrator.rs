@@ -96,6 +96,7 @@ impl SagaOrchestrator {
         package_weight: f64,
         requested_delivery_time: chrono::DateTime<Utc>,
         max_delivery_time_minutes: i32,
+        trace_id: &str,
     ) -> Result<String> {
         let saga_id = Uuid::new_v4().to_string();
         let mut saga = SagaState::new(
@@ -112,23 +113,23 @@ impl SagaOrchestrator {
         self.repo.save(&saga).await?;
         self.metrics.started.inc();
         info!(saga_id, order_id, "SAGA avviata");
-        self.validate_order(&mut saga).await?;
+        self.validate_order(&mut saga, trace_id).await?;
         Ok(saga_id)
     }
 
     // ── Step 1: Order validation ──────────────────────────────────────────────
 
-    async fn validate_order(&self, saga: &mut SagaState) -> Result<()> {
+    async fn validate_order(&self, saga: &mut SagaState, trace_id: &str) -> Result<()> {
         info!(saga_id = saga.saga_id, "Step 1: validazione ordine");
 
         if saga.package_weight <= 0.0 {
             return self
-                .handle_validation_failure(saga, "Peso pacco non valido")
+                .handle_validation_failure(saga, "Peso pacco non valido", trace_id)
                 .await;
         }
         if saga.from_address.is_empty() || saga.to_address.is_empty() {
             return self
-                .handle_validation_failure(saga, "Indirizzi mancanti")
+                .handle_validation_failure(saga, "Indirizzi mancanti", trace_id)
                 .await;
         }
 
@@ -147,7 +148,7 @@ impl SagaOrchestrator {
 
         // Publish to order-requests topic; delivery service will consume it.
         // Key = order_id ensures partition affinity for this order's messages.
-        self.publish_to_topic(ORDER_REQUESTS_TOPIC, &saga.order_id, &order)
+        self.publish_to_topic(ORDER_REQUESTS_TOPIC, &saga.order_id, &order, trace_id)
             .await?;
 
         info!(
@@ -159,7 +160,7 @@ impl SagaOrchestrator {
 
     // ── Async event handler (called by the Kafka consumer) ────────────────────
 
-    pub async fn handle_saga_event(&self, event: SagaEvent) -> Result<()> {
+    pub async fn handle_saga_event(&self, event: SagaEvent, trace_id: &str) -> Result<()> {
         info!(order_id = event.order_id(), "Evento SAGA ricevuto");
 
         match event {
@@ -170,13 +171,13 @@ impl SagaOrchestrator {
             } => self.on_delivery_scheduled(&order_id, delivery_id).await,
             SagaEvent::DeliverySchedulingFailed {
                 order_id, reason, ..
-            } => self.on_delivery_failed(&order_id, reason).await,
+            } => self.on_delivery_failed(&order_id, reason, trace_id).await,
             SagaEvent::DroneAssigned {
                 order_id, drone_id, ..
-            } => self.on_drone_assigned(&order_id, drone_id).await,
+            } => self.on_drone_assigned(&order_id, drone_id, trace_id).await,
             SagaEvent::DroneAssignmentFailed {
                 order_id, reason, ..
-            } => self.on_drone_failed(&order_id, reason).await,
+            } => self.on_drone_failed(&order_id, reason, trace_id).await,
             _ => Ok(()),
         }
     }
@@ -197,7 +198,12 @@ impl SagaOrchestrator {
         Ok(())
     }
 
-    async fn on_drone_assigned(&self, order_id: &str, drone_id: String) -> Result<()> {
+    async fn on_drone_assigned(
+        &self,
+        order_id: &str,
+        drone_id: String,
+        trace_id: &str,
+    ) -> Result<()> {
         let Some(mut saga) = self.repo.find_by_order_id(order_id).await? else {
             warn!(order_id, "SAGA non trovata per DroneAssigned");
             return Ok(());
@@ -206,10 +212,10 @@ impl SagaOrchestrator {
         saga.mark_step_completed(SagaStep::DroneAssignment);
         self.repo.save(&saga).await?;
         info!(saga_id = saga.saga_id, drone_id, "Step 3 completato");
-        self.complete_saga(saga).await
+        self.complete_saga(saga, trace_id).await
     }
 
-    async fn complete_saga(&self, mut saga: SagaState) -> Result<()> {
+    async fn complete_saga(&self, mut saga: SagaState, trace_id: &str) -> Result<()> {
         saga.status = SagaStatus::Completed;
         saga.end_time = Some(Utc::now());
         self.repo.save(&saga).await?;
@@ -225,14 +231,19 @@ impl SagaOrchestrator {
             timestamp: Utc::now(),
         };
         // Key = order_id: all saga events for this order go to the same partition.
-        self.publish_event(&saga.order_id, &event).await?;
+        self.publish_event(&saga.order_id, &event, trace_id).await?;
         info!(saga_id = saga.saga_id, "SAGA completata con successo");
         Ok(())
     }
 
     // ── Failure paths ─────────────────────────────────────────────────────────
 
-    async fn handle_validation_failure(&self, saga: &mut SagaState, reason: &str) -> Result<()> {
+    async fn handle_validation_failure(
+        &self,
+        saga: &mut SagaState,
+        reason: &str,
+        trace_id: &str,
+    ) -> Result<()> {
         saga.mark_failed(reason);
         self.repo.save(saga).await?;
         self.metrics.failed.inc();
@@ -243,15 +254,20 @@ impl SagaOrchestrator {
             reason: reason.to_string(),
             timestamp: Utc::now(),
         };
-        self.publish_event(&saga.order_id, &event).await?;
+        self.publish_event(&saga.order_id, &event, trace_id).await?;
         error!(
             saga_id = saga.saga_id,
             reason, "SAGA fallita durante la validazione"
         );
-        self.cancel_order(saga, reason).await
+        self.cancel_order(saga, reason, trace_id).await
     }
 
-    async fn on_delivery_failed(&self, order_id: &str, reason: String) -> Result<()> {
+    async fn on_delivery_failed(
+        &self,
+        order_id: &str,
+        reason: String,
+        trace_id: &str,
+    ) -> Result<()> {
         let Some(mut saga) = self.repo.find_by_order_id(order_id).await? else {
             warn!(order_id, "SAGA non trovata per DeliverySchedulingFailed");
             return Ok(());
@@ -263,10 +279,10 @@ impl SagaOrchestrator {
             saga_id = saga.saga_id,
             reason, "SAGA fallita durante lo scheduling"
         );
-        self.compensate_saga(saga).await
+        self.compensate_saga(saga, trace_id).await
     }
 
-    async fn on_drone_failed(&self, order_id: &str, reason: String) -> Result<()> {
+    async fn on_drone_failed(&self, order_id: &str, reason: String, trace_id: &str) -> Result<()> {
         let Some(mut saga) = self.repo.find_by_order_id(order_id).await? else {
             warn!(order_id, "SAGA non trovata per DroneAssignmentFailed");
             return Ok(());
@@ -278,12 +294,12 @@ impl SagaOrchestrator {
             saga_id = saga.saga_id,
             reason, "SAGA fallita durante l'assegnazione del drone"
         );
-        self.compensate_saga(saga).await
+        self.compensate_saga(saga, trace_id).await
     }
 
     // ── Compensation ──────────────────────────────────────────────────────────
 
-    async fn compensate_saga(&self, mut saga: SagaState) -> Result<()> {
+    async fn compensate_saga(&self, mut saga: SagaState, trace_id: &str) -> Result<()> {
         info!(saga_id = saga.saga_id, "Avvio compensazione SAGA");
         saga.start_compensation();
         self.repo.save(&saga).await?;
@@ -300,6 +316,7 @@ impl SagaOrchestrator {
                             reason: saga.failure_reason.clone().unwrap_or_default(),
                             timestamp: Utc::now(),
                         },
+                        trace_id,
                     )
                     .await?;
                 }
@@ -313,6 +330,7 @@ impl SagaOrchestrator {
                             reason: saga.failure_reason.clone().unwrap_or_default(),
                             timestamp: Utc::now(),
                         },
+                        trace_id,
                     )
                     .await?;
                 }
@@ -325,6 +343,7 @@ impl SagaOrchestrator {
                             reason: saga.failure_reason.clone().unwrap_or_default(),
                             timestamp: Utc::now(),
                         },
+                        trace_id,
                     )
                     .await?;
                 }
@@ -338,10 +357,10 @@ impl SagaOrchestrator {
         info!(saga_id = saga.saga_id, "Compensazione completata");
 
         let reason = saga.failure_reason.clone().unwrap_or_default();
-        self.cancel_order(&saga, &reason).await
+        self.cancel_order(&saga, &reason, trace_id).await
     }
 
-    async fn cancel_order(&self, saga: &SagaState, reason: &str) -> Result<()> {
+    async fn cancel_order(&self, saga: &SagaState, reason: &str, trace_id: &str) -> Result<()> {
         self.publish_event(
             &saga.order_id,
             &SagaEvent::OrderCancelled {
@@ -350,6 +369,7 @@ impl SagaOrchestrator {
                 reason: reason.to_string(),
                 timestamp: Utc::now(),
             },
+            trace_id,
         )
         .await?;
         warn!(saga_id = saga.saga_id, reason, "Ordine annullato");
@@ -360,8 +380,10 @@ impl SagaOrchestrator {
 
     /// Publishes a SagaEvent to the saga-events topic.
     /// `key` should be the order_id — ensures partition affinity.
-    async fn publish_event(&self, key: &str, event: &SagaEvent) -> Result<()> {
-        self.publish_to_topic(SAGA_EVENTS_TOPIC, key, event).await
+    /// `trace_id` is propagated as a Kafka header for distributed tracing.
+    async fn publish_event(&self, key: &str, event: &SagaEvent, trace_id: &str) -> Result<()> {
+        self.publish_to_topic(SAGA_EVENTS_TOPIC, key, event, trace_id)
+            .await
     }
 
     /// Generic publish: serialise `msg` as JSON and send to `topic` with `key`.
@@ -370,6 +392,7 @@ impl SagaOrchestrator {
         topic: &str,
         key: &str,
         msg: &T,
+        trace_id: &str,
     ) -> Result<()> {
         let payload = serde_json::to_vec(msg)?;
 
@@ -377,9 +400,13 @@ impl SagaOrchestrator {
         // .to(topic)    → which topic to write to  (replaces exchange + routing key)
         // .key(key)     → partition affinity key    (replaces routing key's routing role)
         // .payload(...)  → message body             (same as before)
+        // .headers(...)  → trace id, propagated end-to-end for distributed tracing
         self.producer
             .send(
-                FutureRecord::to(topic).key(key).payload(payload.as_slice()),
+                FutureRecord::to(topic)
+                    .key(key)
+                    .payload(payload.as_slice())
+                    .headers(common::trace::trace_headers(trace_id)),
                 Timeout::After(Duration::from_secs(5)),
             )
             .await

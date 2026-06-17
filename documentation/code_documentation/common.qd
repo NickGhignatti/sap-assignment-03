@@ -22,21 +22,26 @@ non compila finché tutti i servizi non sono aggiornati.
 // common/src/lib.rs — l'intera superficie pubblica della crate
 pub mod events;
 pub mod messages;
+pub mod trace;
 
 pub use events::{DroneEvent, SagaEvent};
 pub use messages::OrderMessage;
 ```
 
-Il `lib.rs` si limita a dichiarare i due moduli e a **ri-esportarne** i tre tipi
-principali. Grazie al `pub use`, i servizi scrivono `use common::OrderMessage`
-invece di `use common::messages::OrderMessage`: il percorso d'import è più corto e
-indipendente dall'organizzazione interna dei moduli.
+Il `lib.rs` dichiara i tre moduli e **ri-esporta** i tre tipi dati principali.
+Grazie al `pub use`, i servizi scrivono `use common::OrderMessage` invece di
+`use common::messages::OrderMessage`: il percorso d'import è più corto e
+indipendente dall'organizzazione interna dei moduli. Il modulo `trace` non è
+ri-esportato: le sue funzioni si usano per percorso esplicito
+(`common::trace::trace_headers(...)`), perché sono utility di trasporto, non
+tipi del contratto dati.
 
 ```
 common/src/
-├── lib.rs          ← re-export pubblico di events e messages
+├── lib.rs          ← re-export pubblico di events, messages, trace
 ├── events.rs       ← SagaEvent, DroneEvent (+ test di serializzazione)
-└── messages.rs     ← OrderMessage
+├── messages.rs     ← OrderMessage (+ test di uguaglianza e round-trip)
+└── trace.rs        ← propagazione del trace id via header Kafka (+ test)
 ```
 
 ---
@@ -333,4 +338,59 @@ fn drone_event_round_trip() {
 Il primo verifica che il campo `"type"` venga effettivamente emesso con il nome
 *rinominato* (`ORDER_VALIDATED`). Il secondo verifica il *round-trip*: serializzare
 e poi deserializzare restituisce un valore equivalente, con la variante corretta.
-Questi test sono la garanzia minima che il contratto resti stabile nel tempo.
+Questi test sono la garanzia minima che il contratto resti stabile nel tempo. Anche
+`messages.rs` (uguaglianza per `order_id`, round-trip) e `trace.rs` (inject/extract
+dell'header) hanno test analoghi; la strategia complessiva è in [Testing & qualità](testing.qd).
+
+---
+
+## 6. `trace` — propagazione del trace id (distributed tracing)
+
+Il modulo `trace` è il supporto al **distributed tracing leggero**: un singolo
+identificativo di correlazione — il **trace id** — viene generato all'ingresso del
+sistema (l'API HTTP dell'Order Service) e propagato end-to-end tra i servizi
+attraverso un **header del messaggio Kafka** (`x-trace-id`). Ogni consumer lo
+estrae ed entra in uno *span* `tracing` che lo riporta, così i log strutturati di
+uno stesso ordine sono correlabili attraverso Order → Delivery → Drone.
+
+È la controparte Kafka-nativa della propagazione del trace context che in
+[assignment 02] era fornita da Micrometer Observation su AMQP: il broker non ha una
+nozione di traccia, quindi l'id viene trasportato esplicitamente in un header e
+ri-allegato a ogni pubblicazione a valle. La trattazione completa del flusso è in
+[Messaging Layer (Kafka)](kafka.qd).
+
+```rust
+pub const TRACE_ID_HEADER: &str = "x-trace-id";
+
+/// Conia un nuovo trace id (una volta per ordine, all'ingresso HTTP).
+pub fn new_trace_id() -> String { uuid::Uuid::new_v4().to_string() }
+
+/// Costruisce l'header Kafka da allegare a un record prodotto.
+pub fn trace_headers(trace_id: &str) -> OwnedHeaders { /* ... */ }
+
+/// Estrae il trace id dagli header di un messaggio consumato (se presente).
+pub fn extract_trace_id(headers: Option<&BorrowedHeaders>) -> Option<String> { /* ... */ }
+
+/// Come sopra, ma conia un id fresco quando l'header manca: non ritorna mai vuoto.
+pub fn trace_id_or_new(headers: Option<&BorrowedHeaders>) -> String { /* ... */ }
+```
+
+| Funzione | Ruolo |
+|---|---|
+| `new_trace_id()` | Conia un UUID v4. Usata **una sola volta**, all'ingresso HTTP dell'Order Service |
+| `trace_headers(id)` | Produce un `OwnedHeaders` con la chiave `x-trace-id`. Allegata ai `FutureRecord` dai produttori |
+| `extract_trace_id(h)` | Cerca l'header in un messaggio consumato; `None` se assente |
+| `trace_id_or_new(h)` | Estrae l'id o ne conia uno nuovo: garantisce che ogni span abbia sempre un id valido |
+
+**Perché in `common`?** L'header `x-trace-id` è, a tutti gli effetti, parte del
+*contratto di trasporto* tra i servizi: produttore e consumatore devono concordare
+sulla **stessa chiave** e sullo **stesso encoding**. Centralizzare la costante e le
+funzioni di inject/extract in `common` evita la deriva (tre copie che divergono) con
+lo stesso principio che motiva la centralizzazione dei tipi dati. Per questo `common`
+dipende ora da `rdkafka` (solo per i tipi `Header`/`Headers`) e da `uuid`.
+
+> [NOTE!]
+> A differenza dei tipi dati, le funzioni di `trace` non sono ri-esportate da
+> `lib.rs`: si usano per percorso esplicito (`common::trace::...`). È una scelta
+> stilistica — segnalano «questa è utility di trasporto», distinta dal contratto
+> dati vero e proprio.

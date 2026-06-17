@@ -413,7 +413,7 @@ Il cuore della logica. Lo struct è `Clone` (campi `Arc`-backed: `repo`, `metric
 | `get_saga_by_order_id(order_id)` | pub | Lookup per l'handler `saga-status` |
 | `start_order_saga(...)` | pub | **Entry point**: crea la saga, la salva, incrementa `started`, esegue lo Step 1 |
 | `validate_order(saga)` | priv | **Step 1**: controlla peso e indirizzi; in caso OK marca lo step e pubblica su `order-requests` |
-| `handle_saga_event(event)` | pub | **Dispatcher**: instrada l'evento al gestore corretto (con ramo `_ => Ok(())` per gli eventi ignorati) |
+| `handle_saga_event(event, trace_id)` | pub | **Dispatcher**: instrada l'evento al gestore corretto (con ramo `_ => Ok(())` per gli eventi ignorati); propaga il `trace_id` alle pubblicazioni a valle |
 | `on_delivery_scheduled(...)` | priv | Step 2 OK: registra `delivery_id`, avanza lo step |
 | `on_drone_assigned(...)` | priv | Step 3 OK: registra `drone_id`, avanza, chiama `complete_saga` |
 | `complete_saga(saga)` | priv | Marca `Completed`, osserva la durata (istogramma), pubblica `OrderCompleted` |
@@ -421,8 +421,8 @@ Il cuore della logica. Lo struct è `Clone` (campi `Arc`-backed: `repo`, `metric
 | `on_delivery_failed(...)` / `on_drone_failed(...)` | priv | Step 2/3 falliti: marca `Failed`, avvia la compensazione |
 | `compensate_saga(saga)` | priv | Itera `steps_to_compensate()` emettendo le compensazioni, poi marca `Compensated` |
 | `cancel_order(...)` | priv | Pubblica `OrderCancelled` (evento terminale) |
-| `publish_event(key, event)` | priv | Pubblica un `SagaEvent` su `saga-events` |
-| `publish_to_topic(topic, key, msg)` | priv | Helper generico: serializza in JSON e produce con `key` come chiave di partizione |
+| `publish_event(key, event, trace_id)` | priv | Pubblica un `SagaEvent` su `saga-events` |
+| `publish_to_topic(topic, key, msg, trace_id)` | priv | Helper generico: serializza in JSON e produce con `key` come chiave di partizione e `trace_id` come header `x-trace-id` |
 
 **Dettaglio di `validate_order()`.** I controlli sono volutamente semplici e
 sincroni: `package_weight <= 0.0` → "Peso pacco non valido"; `from_address` o
@@ -472,10 +472,13 @@ descrittivo (es. "MongoDB save SagaState fallito"), facilitando la diagnosi.
 `start(consumer, orchestrator)` sottoscrive il topic `saga-events`, poi spawna un
 `tokio::task` con il loop di consumo. Il loop chiama `consumer.recv().await` (il
 *pull* di Kafka), gestisce il payload vuoto (tombstone → commit e skip),
-deserializza in `SagaEvent` e instrada a `handle_saga_event`. La gestione del
-commit segue la logica della sezione 9. Non servono wildcard di routing: il consumer
-riceve *tutti* gli eventi del topic e l'orchestratore ignora quelli che non lo
-riguardano tramite il ramo `_ => Ok(())`.
+deserializza in `SagaEvent` e instrada a `handle_saga_event`. Prima di instradare,
+estrae il `trace_id` dall'header `x-trace-id` del messaggio ed esegue l'handler dentro
+uno span `tracing` che lo riporta, così i log dell'elaborazione restano correlati alla
+traccia dell'ordine (vedi [Messaging Layer — Distributed tracing](kafka.qd)). La
+gestione del commit segue la logica della sezione 9. Non servono wildcard di routing:
+il consumer riceve *tutti* gli eventi del topic e l'orchestratore ignora quelli che non
+lo riguardano tramite il ramo `_ => Ok(())`.
 
 ### `http_metrics.rs` — middleware di disponibilità
 

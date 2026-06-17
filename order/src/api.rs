@@ -9,6 +9,7 @@ use axum::{
 use chrono::Utc;
 use prometheus::{Encoder, Registry, TextEncoder};
 use std::sync::Arc;
+use tracing::Instrument;
 
 pub type AppState = Arc<OrderService>;
 
@@ -17,21 +18,30 @@ pub async fn create_order(
     State(svc): State<AppState>,
     Json(req): Json<CreateOrderRequest>,
 ) -> impl IntoResponse {
+    // The HTTP entry point mints the trace id that is then propagated
+    // end-to-end across the services through Kafka headers.
+    let trace_id = common::trace::new_trace_id();
     let delivery_time = req
         .requested_delivery_time
         .unwrap_or_else(|| Utc::now() + chrono::Duration::hours(2));
 
-    match svc
-        .create_order(
+    let span = tracing::info_span!("create_order", %trace_id);
+    let result = async {
+        svc.create_order(
             req.customer_id,
             req.from_address,
             req.to_address,
             req.package_weight,
             delivery_time,
             req.max_delivery_time_minutes,
+            &trace_id,
         )
         .await
-    {
+    }
+    .instrument(span)
+    .await;
+
+    match result {
         Ok(resp) => (StatusCode::CREATED, Json(resp)).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,

@@ -1,0 +1,121 @@
+.docname {Code Docs}
+.include {docs}
+
+# Testing & qualità
+
+> [NOTE!]
+> Questa pagina descrive la strategia di test del codice Rust: cosa è coperto, a
+> quale livello della *test pyramid*, e perché alcune scelte di design rendono il
+> dominio testabile senza infrastruttura. La verifica end-to-end del sistema
+> deployato è invece negli script descritti in [Deployment Kubernetes](k8s.qd).
+
+## 1. Filosofia
+
+La logica di **dominio** — la macchina a stati della SAGA, le belief dell'agente, la
+deliberazione BDI, i contratti dati — è separata dall'**I/O** (Kafka, MongoDB, HTTP).
+Questo permette di testarla con **unit test puri**: nessun broker, nessun database,
+nessun runtime di rete. I test girano in millisecondi con un semplice `cargo test` e
+sono deterministici.
+
+Dove la logica era inizialmente annidata nell'I/O, è stata **estratta** per renderla
+testabile. L'esempio principale è la deliberazione dell'agente: la catena di guardie
+che decide se accettare o rifiutare una consegna viveva dentro
+`DroneAgent::deliberate` (accoppiata a store e producer Kafka). È stata estratta in
+una funzione pura `intentions::deliberate(&DroneBeliefs) -> DroneIntention`, che
+l'agente ora si limita a invocare. Il *ragionamento* (puro, testabile) è così
+separato dall'*azione* (l'I/O in `execute`) — una separazione che riflette fedelmente
+la teoria BDI (vedi [Flotta ad Agenti](agent.qd)).
+
+---
+
+## 2. La piramide dei test in questo progetto
+
+.mermaid
+    flowchart TB
+        E["E2E / sistema\ntest-k8s.ps1, teste2e\n(create order → saga → drone)"]
+        I["Integrazione\nMongoDB / Kafka\n(coperta dagli script su cluster)"]
+        U["Unit (puri)\ncommon · order::saga · drone::beliefs · drone::intentions\ncargo test — 29 test"]
+
+        E --- I --- U
+
+| Livello | Dove | Come si esegue |
+|---|---|---|
+| **Unit (puri)** | `common`, `order::saga`, `drone::beliefs`, `drone::intentions` | `cargo test` (nessuna infrastruttura) |
+| **Integrazione** | persistenza MongoDB, produzione/consumo Kafka | implicita negli script su cluster |
+| **End-to-end** | flusso ordine→saga→drone | `test-k8s.ps1`, `teste2e` ([k8s.qd](k8s.qd)) |
+
+La base della piramide — i test unitari puri — è quella su cui si è investito di più,
+coerentemente con la forma classica: tanti test piccoli, veloci e stabili.
+
+---
+
+## 3. Cosa è coperto dai test unitari
+
+### `common` — i contratti dati e il trasporto
+
+| File | Test | Cosa verifica |
+|---|---|---|
+| `events.rs` | `saga_event_serializes_with_type_field`, `drone_event_round_trip` | il discriminante `"type"` e il round-trip JSON degli enum |
+| `messages.rs` | `equality_is_based_only_on_order_id`, `serde_round_trip_preserves_fields` | l'uguaglianza per `order_id` e la stabilità della serializzazione |
+| `trace.rs` | inject/extract dell'header, id non vuoto/unico, assenza header | il contratto di propagazione del trace id (vedi [Common](common.qd) §6) |
+
+### `order::saga` — la macchina a stati della SAGA
+
+I test coprono il cuore logico dell'orchestratore, senza toccare MongoDB né Kafka:
+
+- stato iniziale (`Started`, step `OrderValidation`, nessuno step completato);
+- la progressione `next()` degli step;
+- il completamento dopo i tre step (status `Completed`, `end_time` valorizzato);
+- `steps_to_compensate()` che restituisce gli step in **ordine inverso** di
+  completamento (proprietà chiave della compensazione SAGA);
+- `needs_compensation()`: vero solo se la saga è `Failed` **e** ha step completati
+  (un fallimento di validazione, senza step, non richiede compensazione).
+
+### `drone::beliefs` — la belief base dell'agente
+
+- una belief nuova è `Idle` e disponibile;
+- `from_order` calcola correttamente `can_carry_payload` (peso ≤ `MAX_PAYLOAD_WEIGHT`)
+  e `can_meet_deadline` (deadline > 0);
+- `update_dispatched` entra in `ExecutingDelivery` e fissa il `dispatch_time`;
+- `update_returned` / `update_compensated` riportano la belief a `Idle` disponibile;
+- `has_arrived` è vero **solo** se la fase è `ExecutingDelivery` e l'orario di arrivo
+  previsto è passato.
+
+### `drone::intentions` — deliberazione e pianificazione BDI
+
+- `deliberate`: `Idle` senza ordine; `AcceptDelivery` se fattibile; `RefuseDelivery`
+  per peso eccessivo o deadline non rispettabile;
+- `plan_for`: ogni intenzione mappa alla sequenza di azioni attesa
+  (`AcceptDelivery` → `[StoreCreated, PublishDroneAssigned, StoreDispatched]`,
+  `CompleteDelivery` → `[StoreDelivered, StoreReturned]`, ecc.).
+
+---
+
+## 4. Eseguire i test
+
+```bash
+# Tutti i test del workspace
+cargo test --workspace
+
+# Solo una crate
+cargo test -p common
+cargo test -p order
+cargo test -p drone
+```
+
+I test non richiedono Kafka, MongoDB o variabili d'ambiente: sono puri e
+deterministici. La verifica del sistema completo (con infrastruttura) si fa invece
+con gli script PowerShell su cluster k3d descritti in [Deployment Kubernetes](k8s.qd).
+
+---
+
+## 5. Cosa non è coperto da unit test (e perché)
+
+L'esecuzione delle azioni dell'agente (`DroneAgent::execute`), la persistenza
+(`DroneEventStore`), i consumer/producer Kafka e gli handler HTTP **non** hanno unit
+test dedicati: sono *adapter* di I/O, il cui valore si verifica solo contro
+l'infrastruttura reale. Testarli in isolamento richiederebbe mock pesanti che
+verificherebbero più il mock che il comportamento. Sono invece coperti **end-to-end**
+dagli script su cluster, che esercitano il flusso reale (ordine → SAGA → assegnazione
+drone → stato). È la stessa logica della *test pyramid*: poche verifiche di
+integrazione/E2E sopra una larga base di unit test puri.

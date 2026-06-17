@@ -6,7 +6,7 @@ use rdkafka::{
     consumer::{CommitMode, Consumer, StreamConsumer},
     message::Message,
 };
-use tracing::{error, info, warn};
+use tracing::{Instrument, error, info, warn};
 
 pub const DRONE_REQUESTS_TOPIC: &str = "drone-requests";
 
@@ -30,9 +30,18 @@ pub async fn start_order_consumer(
 
                     match serde_json::from_slice::<OrderMessage>(payload) {
                         Ok(order) => {
-                            info!(order_id = order.order_id, "Order received by Drone Service");
+                            // Continue the trace started by the Order Service.
+                            let trace_id = common::trace::trace_id_or_new(msg.headers());
+                            let order_id = order.order_id.clone();
+                            let span = tracing::info_span!("drone_order", %trace_id, %order_id);
+                            let outcome = async {
+                                info!("Order received by Drone Service");
+                                fleet.lock().await.dispatch_order(order, &trace_id).await
+                            }
+                            .instrument(span)
+                            .await;
 
-                            match fleet.lock().await.dispatch_order(order).await {
+                            match outcome {
                                 Ok(_) => {
                                     // ✅ Success → commit.
                                     if let Err(e) = consumer.commit_message(&msg, CommitMode::Async)
@@ -84,6 +93,8 @@ pub async fn start_compensation_consumer(
                         continue;
                     };
 
+                    // Continue the trace started by the Order Service.
+                    let trace_id = common::trace::trace_id_or_new(msg.headers());
                     match serde_json::from_slice::<SagaEvent>(payload) {
                         Ok(SagaEvent::CompensateDrone {
                             drone_id,
@@ -92,11 +103,21 @@ pub async fn start_compensation_consumer(
                             ..
                         }) => {
                             // This is the only event we act on.
-                            warn!(drone_id, saga_id, reason, "Drone compensation requested");
-                            if let Err(e) = fleet.lock().await.compensate(drone_id.clone()).await {
+                            let span =
+                                tracing::info_span!("drone_compensation", %trace_id, %drone_id);
+                            let outcome = async {
+                                warn!(saga_id, reason, "Drone compensation requested");
+                                fleet
+                                    .lock()
+                                    .await
+                                    .compensate(drone_id.clone(), &trace_id)
+                                    .await
+                            }
+                            .instrument(span)
+                            .await;
+                            if let Err(e) = outcome {
                                 error!("Compensation failed: {e}");
                             }
-                            info!(drone_id, "Drone compensation complete");
 
                             // Compensation is synchronous (no async work in compensate()),
                             // so we always commit — retrying a compensation would be

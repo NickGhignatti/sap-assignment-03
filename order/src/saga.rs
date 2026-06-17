@@ -130,3 +130,92 @@ impl SagaState {
         self.status == SagaStatus::Failed && !self.completed_steps.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn new_saga() -> SagaState {
+        SagaState::new(
+            "saga-1".into(),
+            "order-1".into(),
+            "cust".into(),
+            "from".into(),
+            "to".into(),
+            2.5,
+            Utc::now(),
+            30,
+        )
+    }
+
+    #[test]
+    fn starts_in_started_state_at_validation_step() {
+        let saga = new_saga();
+        assert_eq!(saga.status, SagaStatus::Started);
+        assert_eq!(saga.current_step, SagaStep::OrderValidation);
+        assert!(saga.completed_steps.is_empty());
+        assert!(saga.end_time.is_none());
+    }
+
+    #[test]
+    fn step_sequence_follows_next() {
+        assert_eq!(
+            SagaStep::OrderValidation.next(),
+            Some(SagaStep::DeliveryScheduling)
+        );
+        assert_eq!(
+            SagaStep::DeliveryScheduling.next(),
+            Some(SagaStep::DroneAssignment)
+        );
+        assert_eq!(
+            SagaStep::DroneAssignment.next(),
+            Some(SagaStep::Completed)
+        );
+        assert_eq!(SagaStep::Completed.next(), None);
+    }
+
+    #[test]
+    fn marking_all_steps_completes_the_saga() {
+        let mut saga = new_saga();
+
+        saga.mark_step_completed(SagaStep::OrderValidation);
+        assert_eq!(saga.status, SagaStatus::InProgress);
+        assert_eq!(saga.current_step, SagaStep::DeliveryScheduling);
+
+        saga.mark_step_completed(SagaStep::DeliveryScheduling);
+        assert_eq!(saga.status, SagaStatus::InProgress);
+        assert_eq!(saga.current_step, SagaStep::DroneAssignment);
+
+        saga.mark_step_completed(SagaStep::DroneAssignment);
+        assert_eq!(saga.status, SagaStatus::Completed);
+        assert_eq!(saga.current_step, SagaStep::Completed);
+        assert!(saga.end_time.is_some());
+        assert_eq!(saga.completed_steps.len(), 3);
+    }
+
+    #[test]
+    fn compensation_runs_in_reverse_completion_order() {
+        let mut saga = new_saga();
+        saga.mark_step_completed(SagaStep::OrderValidation);
+        saga.mark_step_completed(SagaStep::DeliveryScheduling);
+        // Completed in order [OrderValidation, DeliveryScheduling]
+        // → compensate in reverse: [DeliveryScheduling, OrderValidation]
+        assert_eq!(
+            saga.steps_to_compensate(),
+            vec![SagaStep::DeliveryScheduling, SagaStep::OrderValidation]
+        );
+    }
+
+    #[test]
+    fn needs_compensation_only_when_failed_with_completed_steps() {
+        let mut with_steps = new_saga();
+        with_steps.mark_step_completed(SagaStep::OrderValidation);
+        with_steps.mark_failed("boom");
+        assert!(with_steps.needs_compensation());
+
+        // A validation failure with no completed steps needs no compensation.
+        let mut no_steps = new_saga();
+        no_steps.mark_failed("invalid input");
+        assert!(!no_steps.needs_compensation());
+    }
+}

@@ -81,7 +81,7 @@ impl DroneFleet {
         }
     }
 
-    pub async fn dispatch_order(&mut self, order: OrderMessage) -> Result<()> {
+    pub async fn dispatch_order(&mut self, order: OrderMessage, trace_id: &str) -> Result<()> {
         let Some(idx) = self.strategy.select(&self.agents) else {
             // No idle drone = the fleet cannot serve this delivery → a refusal.
             self.metrics.refused.inc();
@@ -99,7 +99,8 @@ impl DroneFleet {
         }
 
         let plan = self.agents[idx].plan(goal);
-        self.agents[idx].execute(plan).await?;
+        // Propagate the inbound trace id onto any event the agent publishes.
+        self.agents[idx].execute(plan, trace_id).await?;
         Ok(())
     }
 
@@ -116,21 +117,26 @@ impl DroneFleet {
                 ) {
                     let intention = DroneIntention::CompleteDelivery { drone_id, order_id };
                     let plan = agent.plan(intention);
-                    agent.execute(plan).await?;
+                    // Scheduler-initiated: this completion is not triggered by an
+                    // inbound message, so we mint a fresh trace id for its logs.
+                    // (The completion plan only writes to the event store; it
+                    // publishes nothing, so no header actually leaves the service.)
+                    let trace_id = common::trace::new_trace_id();
+                    agent.execute(plan, &trace_id).await?;
                 }
             }
         }
         Ok(())
     }
 
-    pub async fn compensate(&mut self, drone_id: String) -> Result<()> {
+    pub async fn compensate(&mut self, drone_id: String, trace_id: &str) -> Result<()> {
         for agent in &mut self.agents {
             if agent.beliefs.drone_id.clone().unwrap_or_default() == drone_id.clone() {
                 let intention = DroneIntention::Compensate {
                     drone_id: drone_id.clone(),
                 };
                 let plan = agent.plan(intention);
-                agent.execute(plan).await?;
+                agent.execute(plan, trace_id).await?;
             }
         }
         Ok(())

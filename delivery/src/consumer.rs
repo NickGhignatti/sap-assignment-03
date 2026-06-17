@@ -6,7 +6,7 @@ use rdkafka::{
     consumer::{CommitMode, Consumer, StreamConsumer},
     message::Message,
 };
-use tracing::{error, info, warn};
+use tracing::{Instrument, error, info, warn};
 
 pub const ORDER_REQUESTS_TOPIC: &str = "order-requests";
 
@@ -39,12 +39,19 @@ pub async fn start(consumer: StreamConsumer, svc: DeliveryService) -> anyhow::Re
                                 continue;
                             }
 
-                            info!(
-                                order_id = order.order_id,
-                                "Order received by Delivery Service"
-                            );
+                            // Continue the trace started upstream by the Order Service.
+                            let trace_id = common::trace::trace_id_or_new(msg.headers());
+                            let order_id = order.order_id.clone();
+                            let span =
+                                tracing::info_span!("delivery_schedule", %trace_id, %order_id);
+                            let outcome = async {
+                                info!("Order received by Delivery Service");
+                                svc.schedule(order, &trace_id).await
+                            }
+                            .instrument(span)
+                            .await;
 
-                            match svc.schedule(order).await {
+                            match outcome {
                                 Ok(_) => {
                                     // Success → commit.
                                     if let Err(e) = consumer.commit_message(&msg, CommitMode::Async)

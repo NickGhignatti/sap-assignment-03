@@ -7,3 +7,6 @@ edition = "2024"
 chrono = { version = "0.4.44", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
+# Used by the `trace` module to inject/extract the trace id into Kafka headers.
+rdkafka = { version = "0.37", features = ["cmake-build", "tokio"] }
+uuid = { version = "1", features = ["v4"] }

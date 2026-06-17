@@ -10,6 +10,7 @@
 - [Messaging Layer (Kafka)](kafka.qd)
 - [Deployment Kubernetes](k8s.qd)
 - [Osservabilità & SLO](slo.qd)
+- [Testing & qualità](testing.qd)
 
 ##! Appendice
 - [Evoluzione del progetto](evoluzione.qd)

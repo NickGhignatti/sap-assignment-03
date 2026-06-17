@@ -55,3 +55,37 @@ impl std::fmt::Display for OrderMessage {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+
+    fn sample(order_id: &str) -> OrderMessage {
+        OrderMessage::new(order_id, "cust", "from", "to", 2.5, Utc::now(), 30)
+    }
+
+    #[test]
+    fn equality_is_based_only_on_order_id() {
+        let a = sample("same");
+        let mut b = sample("same");
+        // Different in every field except the order_id...
+        b.customer_id = "different".into();
+        b.package_weight = 99.0;
+        assert_eq!(a, b); // ...still equal: equality is keyed on order_id only.
+
+        let c = sample("other");
+        assert_ne!(a, c);
+    }
+
+    #[test]
+    fn serde_round_trip_preserves_fields() {
+        let original = sample("o-1");
+        let json = serde_json::to_string(&original).unwrap();
+        let decoded: OrderMessage = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded.order_id, "o-1");
+        assert_eq!(decoded.customer_id, "cust");
+        assert_eq!(decoded.package_weight, 2.5);
+        assert_eq!(decoded.max_delivery_time_minutes, 30);
+    }
+}

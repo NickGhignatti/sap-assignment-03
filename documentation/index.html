@@ -75,6 +75,35 @@
             margin: 24px auto 0;
         }
 
+        .section-label {
+            width: 100%;
+            max-width: 860px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 12px;
+            margin-top: 40px;
+        }
+
+        .section-label:first-of-type {
+            margin-top: 0;
+        }
+
+        .section-label-text {
+            font-size: 0.65rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+            font-weight: 300;
+            white-space: nowrap;
+        }
+
+        .section-label-line {
+            flex: 1;
+            height: 1px;
+            background: var(--rule);
+        }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -212,54 +241,67 @@
         <div class="rule"></div>
     </header>
 
+    <div class="section-label">
+        <span class="section-label-text">Software Architecture Platform</span>
+        <div class="section-label-line"></div>
+    </div>
+
     <div class="grid">
         <a href="./out/code_documentation/Code-Docs/" class="doc-card">
-            <span class="doc-number">CODE — 01</span>
+            <span class="doc-number">SAP — 01</span>
             <span class="doc-title">Code Documentation</span>
             <span class="doc-arrow">Apri</span>
         </a>
+    </div>
+
+    <div class="section-label">
+        <span class="section-label-text">Project Management</span>
+        <div class="section-label-line"></div>
+    </div>
+
+    <div class="grid">
         <a href="./out/pos.pdf" class="doc-card">
-            <span class="doc-number">DOC — 01</span>
+            <span class="doc-number">PM — 01</span>
             <span class="doc-title">Project Overview Statement</span>
             <span class="doc-arrow">Apri PDF</span>
         </a>
         <a href="./out/pds.pdf" class="doc-card">
-            <span class="doc-number">DOC — 02</span>
+            <span class="doc-number">PM — 02</span>
             <span class="doc-title">Project Definition Statement</span>
             <span class="doc-arrow">Apri PDF</span>
         </a>
         <a href="./out/project_charter.pdf" class="doc-card">
-            <span class="doc-number">DOC — 03</span>
+            <span class="doc-number">PM — 03</span>
             <span class="doc-title">Project Charter</span>
             <span class="doc-arrow">Apri PDF</span>
         </a>
         <a href="./out/business_case.pdf" class="doc-card">
-            <span class="doc-number">DOC — 04</span>
+            <span class="doc-number">PM — 04</span>
             <span class="doc-title">Business Case</span>
             <span class="doc-arrow">Apri PDF</span>
         </a>
         <a href="./out/stakeholder.pdf" class="doc-card">
-            <span class="doc-number">DOC — 05</span>
+            <span class="doc-number">PM — 05</span>
             <span class="doc-title">Stakeholder</span>
             <span class="doc-arrow">Apri PDF</span>
         </a>
         <a href="./out/sow.pdf" class="doc-card">
-            <span class="doc-number">DOC — 06</span>
+            <span class="doc-number">PM — 06</span>
             <span class="doc-title">Statement of Work</span>
             <span class="doc-arrow">Apri PDF</span>
         </a>
         <a href="./out/methodology.pdf" class="doc-card">
-            <span class="doc-number">DOC — 07</span>
+            <span class="doc-number">PM — 07</span>
             <span class="doc-title">Methodology</span>
             <span class="doc-arrow">Apri PDF</span>
         </a>
         <a href="./out/rbs.pdf" class="doc-card">
-            <span class="doc-number">DOC — 08</span>
+            <span class="doc-number">PM — 08</span>
             <span class="doc-title">Requirements Breakdown Structure</span>
             <span class="doc-arrow">Apri PDF</span>
         </a>
         <a href="./out/wbs.pdf" class="doc-card">
-            <span class="doc-number">DOC — 09</span>
+            <span class="doc-number">PM — 09</span>
             <span class="doc-title">Work Breakdown Structure</span>
             <span class="doc-arrow">Apri PDF</span>
         </a>

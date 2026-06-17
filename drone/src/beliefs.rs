@@ -105,3 +105,88 @@ impl DroneBeliefs {
             && Utc::now() >= self.expected_arrival_time.unwrap_or(Utc::now())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Duration;
+
+    fn order(weight: f64, max_minutes: i32, arrival: DateTime<Utc>) -> OrderMessage {
+        OrderMessage::new("o-1", "c-1", "from", "to", weight, arrival, max_minutes)
+    }
+
+    #[test]
+    fn new_beliefs_are_idle_and_available() {
+        let b = DroneBeliefs::new();
+        assert!(b.is_available);
+        assert_eq!(b.phase, AgentPhase::Idle);
+        assert!(b.current_order.is_none());
+        assert!(!b.can_carry_payload);
+    }
+
+    #[test]
+    fn from_order_accepts_payload_within_capacity() {
+        let b = DroneBeliefs::new().from_order(&order(50.0, 30, Utc::now()), Some("d-1".into()));
+        assert!(b.can_carry_payload);
+        assert!(b.can_meet_deadline);
+        assert!(!b.is_available);
+        assert_eq!(b.drone_id.as_deref(), Some("d-1"));
+    }
+
+    #[test]
+    fn from_order_rejects_overweight_payload() {
+        // 150 kg > MAX_PAYLOAD_WEIGHT (100)
+        let b = DroneBeliefs::new().from_order(&order(150.0, 30, Utc::now()), Some("d-1".into()));
+        assert!(!b.can_carry_payload);
+    }
+
+    #[test]
+    fn from_order_rejects_nonpositive_deadline() {
+        let b = DroneBeliefs::new().from_order(&order(10.0, 0, Utc::now()), Some("d-1".into()));
+        assert!(!b.can_meet_deadline);
+    }
+
+    #[test]
+    fn update_dispatched_enters_executing_phase() {
+        let b = DroneBeliefs::new()
+            .from_order(&order(10.0, 30, Utc::now()), Some("d-1".into()))
+            .update_dispatched();
+        assert_eq!(b.phase, AgentPhase::ExecutingDelivery);
+        assert!(b.dispatch_time.is_some());
+    }
+
+    #[test]
+    fn returning_and_compensating_reset_to_idle() {
+        let dispatched = DroneBeliefs::new()
+            .from_order(&order(10.0, 30, Utc::now()), Some("d-1".into()))
+            .update_dispatched();
+
+        let returned = dispatched.clone().update_returned();
+        assert!(returned.is_available);
+        assert_eq!(returned.phase, AgentPhase::Idle);
+
+        let compensated = dispatched.update_compensated();
+        assert!(compensated.is_available);
+        assert_eq!(compensated.phase, AgentPhase::Idle);
+    }
+
+    #[test]
+    fn has_arrived_only_when_executing_and_eta_passed() {
+        // Idle drone → not arrived.
+        assert!(!DroneBeliefs::new().has_arrived());
+
+        // Executing with ETA in the past → arrived.
+        let past = Utc::now() - Duration::minutes(1);
+        let arrived = DroneBeliefs::new()
+            .from_order(&order(10.0, 30, past), Some("d-1".into()))
+            .update_dispatched();
+        assert!(arrived.has_arrived());
+
+        // Executing with ETA in the future → not yet arrived.
+        let future = Utc::now() + Duration::hours(1);
+        let waiting = DroneBeliefs::new()
+            .from_order(&order(10.0, 30, future), Some("d-1".into()))
+            .update_dispatched();
+        assert!(!waiting.has_arrived());
+    }
+}

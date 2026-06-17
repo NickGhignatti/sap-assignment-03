@@ -247,3 +247,89 @@ i topic nascono al volo.
 > i consumer si sottoscrivono *prima* che il topic esista. Con l'auto-creazione
 > abilitata, il topic viene creato alla prima produzione e il consumer riprende
 > normalmente.
+
+---
+
+## 7. Distributed tracing — propagazione del trace id
+
+In AMQP (assignment 02) il trace context era propagato da Micrometer Observation, che
+si agganciava sia alle chiamate REST sia ai messaggi. In Kafka non esiste nulla di
+analogo "di serie": il broker trasporta byte e non ha alcuna nozione di traccia. La
+correlazione end-to-end è quindi ottenuta **a livello applicativo**, con un approccio
+leggero e senza infrastruttura aggiuntiva (nessun collector, nessun Jaeger).
+
+Il principio è semplice: un singolo **trace id** viene coniato all'ingresso del
+sistema e viaggia insieme a ogni messaggio come **header Kafka** `x-trace-id`. La
+logica condivisa vive nel modulo [`common::trace`](common.qd):
+
+| Lato | Cosa fa | Funzione di `common::trace` |
+|---|---|---|
+| **Ingresso HTTP** (Order `POST /`) | conia il trace id della richiesta | `new_trace_id()` |
+| **Produttore** | allega l'id come header al `FutureRecord` | `trace_headers(trace_id)` |
+| **Consumatore** | estrae l'id dall'header e apre uno span | `trace_id_or_new(msg.headers())` |
+
+Lato produttore, ogni `send` aggiunge l'header (qui l'helper dell'orchestratore):
+
+```rust
+FutureRecord::to(topic)
+    .key(key)                                       // partizione (order_id)
+    .payload(payload.as_slice())                    // corpo JSON
+    .headers(common::trace::trace_headers(trace_id)) // ← trace id end-to-end
+```
+
+Lato consumatore, l'id si estrae dagli header e si entra in uno span `tracing` che lo
+riporta su **tutti** i log emessi durante l'elaborazione del messaggio:
+
+```rust
+let trace_id = common::trace::trace_id_or_new(msg.headers());
+let span = tracing::info_span!("saga_event", %trace_id, order_id = %event.order_id());
+orchestrator.handle_saga_event(event, &trace_id).instrument(span).await
+```
+
+La regola di propagazione è: **l'id estratto da un messaggio in ingresso viene
+ri-allegato a ogni messaggio prodotto in conseguenza**. Così un unico trace id segue
+l'intera vita di un ordine attraverso i salti asincroni:
+
+.mermaid
+    flowchart LR
+        H["HTTP POST /\nnew_trace_id()"]
+        O["Order"]
+        OR["order-requests\nheader: x-trace-id"]
+        D["Delivery"]
+        DR["drone-requests\nheader: x-trace-id"]
+        DRN["Drone"]
+        SE["saga-events\nheader: x-trace-id"]
+
+        H --> O
+        O -->|"trace_headers"| OR --> D
+        D -->|"trace_headers"| DR --> DRN
+        D -->|"trace_headers"| SE
+        DRN -->|"trace_headers"| SE
+        SE -->|"trace_id_or_new"| O
+
+**Lettura del diagramma.** Il trace id nasce con la `POST /`. L'Order lo mette
+sull'`order-requests`; il Delivery lo legge e lo ripropaga sia su `drone-requests`
+(verso il Drone) sia su `saga-events` (verso l'orchestratore); il Drone lo legge dal
+suo ordine e lo riporta sui `saga-events` che pubblica. Ogni consumer, leggendo
+l'header, ritrova lo **stesso** id e lo scrive nei propri log: filtrando i log per
+`trace_id` si ricostruisce la cronologia completa di un ordine, esattamente come
+faceva il trace context su AMQP.
+
+**Dettagli e casi limite.**
+
+- La chiave di partizione (`order_id`) e l'header (`x-trace-id`) sono due cose
+  distinte: la prima decide *dove* finisce il messaggio (ordinamento), il secondo
+  *correla i log* — non influenza il routing.
+- `trace_id_or_new` conia un id fresco se l'header manca (es. un messaggio prodotto
+  da un client più vecchio o un tombstone): un consumer ha **sempre** un id con cui
+  loggare, non resta mai senza traccia.
+- Il completamento della consegna guidato dallo scheduler del Drone (`check_arrivals`)
+  non nasce da un messaggio in ingresso e non pubblica eventi Kafka: per i suoi log si
+  conia un trace id locale.
+
+> [NOTE!]
+> È un tracing **a correlazione**, non un tracing a span distribuiti completo (niente
+> parent/child span cross-servizio né latenze per-hop come in OpenTelemetry). È la
+> scelta deliberata: ripristina la correlabilità end-to-end persa nel passaggio da
+> AMQP a Kafka, restando senza nuova infrastruttura. L'evoluzione naturale sarebbe
+> esportare gli span via OTLP verso un collector.

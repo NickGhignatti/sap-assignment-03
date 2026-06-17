@@ -73,9 +73,14 @@ pub trait Agent {
     fn update_beliefs(&mut self, perception: Self::Perception);
     fn deliberate(&self) -> Self::Goal;
     fn plan(&self, goal: Self::Goal) -> Vec<DroneDesire>;
-    async fn execute(&mut self, actions: Vec<DroneDesire>) -> Result<()>;
+    async fn execute(&mut self, actions: Vec<DroneDesire>, trace_id: &str) -> Result<()>;
 }
 ```
+
+> Il parametro `trace_id` di `execute` è l'identificativo di correlazione end-to-end:
+> viene allegato come header Kafka a ogni evento che l'agente pubblica, così la
+> traccia di un ordine prosegue anche attraverso le decisioni del drone (vedi
+> [Messaging Layer — Distributed tracing](kafka.qd)).
 
 `DroneAgent` implementa `Agent` con `Perception = OrderMessage` e
 `Goal = DroneIntention`. La separazione tra `deliberate` (decide *cosa* fare,
@@ -161,23 +166,32 @@ situazione operativa.
 
 ## 4. Deliberazione — dalle belief all'intenzione
 
-`deliberate()` è il cuore decisionale: legge le belief (in sola lettura, `&self`) e
-sceglie un `DroneIntention`. La logica è una catena di guardie:
+La deliberazione è il cuore decisionale: legge le belief (in sola lettura) e
+sceglie un `DroneIntention`. La logica è una catena di guardie, estratta in una
+**funzione pura** `intentions::deliberate(&DroneBeliefs)` a cui `DroneAgent::deliberate`
+si limita a delegare. Tenere il ragionamento in una funzione pura (senza store né
+producer) lo rende **testabile in isolamento** (vedi [Testing & qualità](testing.qd)):
 
 ```rust
-fn deliberate(&self) -> DroneIntention {
-    match &self.beliefs.current_order {
+// drone/src/intentions.rs — pura, nessun I/O
+pub fn deliberate(beliefs: &DroneBeliefs) -> DroneIntention {
+    match &beliefs.current_order {
         None => DroneIntention::Idle,
         Some(order) => {
-            if !self.beliefs.can_carry_payload {
+            if !beliefs.can_carry_payload {
                 DroneIntention::RefuseDelivery { /* peso eccessivo */ }
-            } else if !self.beliefs.can_meet_deadline {
+            } else if !beliefs.can_meet_deadline {
                 DroneIntention::RefuseDelivery { /* deadline */ }
             } else {
                 DroneIntention::AcceptDelivery { order, drone_id }
             }
         }
     }
+}
+
+// drone/src/agent.rs — l'agente delega
+fn deliberate(&self) -> Self::Goal {
+    crate::intentions::deliberate(&self.beliefs)
 }
 ```
 
@@ -276,6 +290,11 @@ subito dopo la scrittura che la giustifica (`update_dispatched` dopo `Dispatched
 `update_returned` dopo `Returned`): è l'anello di retroazione del diagramma in §1.
 `RecordCompensation` è l'unica azione che **non** scrive un evento: la compensazione
 è un segnale di controllo, non un fatto di dominio da registrare.
+
+(3) Le due azioni che **pubblicano** su Kafka (`PublishDroneAssigned` e
+`PublishSagaEvent`) allegano al record l'header `x-trace-id` con il `trace_id`
+ricevuto da `execute`, propagando così la traccia dell'ordine anche sugli eventi
+emessi dal drone (vedi [Messaging Layer — Distributed tracing](kafka.qd)).
 
 ---
 

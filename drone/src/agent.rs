@@ -31,7 +31,9 @@ pub trait Agent {
     fn update_beliefs(&mut self, perception: Self::Perception);
     fn deliberate(&self) -> Self::Goal;
     fn plan(&self, goal: Self::Goal) -> Vec<DroneDesire>;
-    async fn execute(&mut self, actions: Vec<DroneDesire>) -> Result<()>;
+    /// `trace_id` is the end-to-end correlation id, propagated as a Kafka header
+    /// on any event this agent publishes (distributed tracing).
+    async fn execute(&mut self, actions: Vec<DroneDesire>, trace_id: &str) -> Result<()>;
 }
 
 pub struct DroneAgent {
@@ -62,36 +64,15 @@ impl Agent for DroneAgent {
     }
 
     fn deliberate(&self) -> Self::Goal {
-        match &self.beliefs.current_order {
-            None => DroneIntention::Idle,
-            Some(order) => {
-                let drone_id = self.beliefs.drone_id.clone().unwrap_or_default();
-
-                if !self.beliefs.can_carry_payload {
-                    DroneIntention::RefuseDelivery {
-                        order: order.clone(),
-                        reason: format!("{}kg exceeds max payload", order.package_weight),
-                    }
-                } else if !self.beliefs.can_meet_deadline {
-                    DroneIntention::RefuseDelivery {
-                        order: order.clone(),
-                        reason: "Deadline cannot be met".into(),
-                    }
-                } else {
-                    DroneIntention::AcceptDelivery {
-                        order: order.clone(),
-                        drone_id: drone_id,
-                    }
-                }
-            }
-        }
+        // Reasoning lives in a pure, unit-tested function over the beliefs.
+        crate::intentions::deliberate(&self.beliefs)
     }
 
     fn plan(&self, goal: Self::Goal) -> Vec<DroneDesire> {
         plan_for(goal)
     }
 
-    async fn execute(&mut self, actions: Vec<DroneDesire>) -> Result<()> {
+    async fn execute(&mut self, actions: Vec<DroneDesire>, trace_id: &str) -> Result<()> {
         for action in actions {
             match action {
                 // ── Store the Created event in MongoDB ────────────────────────
@@ -127,7 +108,8 @@ impl Agent for DroneAgent {
                         .send(
                             FutureRecord::to(SAGA_EVENTS_TOPIC)
                                 .key(&order_id)
-                                .payload(&payload),
+                                .payload(&payload)
+                                .headers(common::trace::trace_headers(trace_id)),
                             Timeout::After(Duration::from_secs(5)),
                         )
                         .await
@@ -196,7 +178,8 @@ impl Agent for DroneAgent {
                         .send(
                             FutureRecord::to(SAGA_EVENTS_TOPIC)
                                 .key(&key)
-                                .payload(&payload),
+                                .payload(&payload)
+                                .headers(common::trace::trace_headers(trace_id)),
                             Timeout::After(Duration::from_secs(5)),
                         )
                         .await
