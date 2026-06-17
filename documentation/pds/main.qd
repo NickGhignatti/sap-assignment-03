@@ -163,7 +163,6 @@ non un requisito funzionale diretto per l'utente.)*
 ### Vincoli tecnici (non obiettivi del progetto, ma vincoli di realizzazione)
 - Il sistema è realizzato come insieme di servizi indipendenti che comunicano in modo
   asincrono, per garantire scalabilità e isolamento dei guasti.
-- I dati di ogni consegna sono persistiti su database non relazionale (MongoDB).
 - La comunicazione tra i componenti interni avviene in modo asincrono tramite un event streaming platform / message broker (Apache Kafka).
 - Il linguaggio di implementazione è Rust (edizione 2024).
 - La coordinazione di operazioni distribuite in caso di fallimento segue il pattern SAGA.

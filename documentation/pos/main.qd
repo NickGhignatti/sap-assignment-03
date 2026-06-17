@@ -51,15 +51,14 @@ Realizzare **DroneFlow**, una piattaforma online che permetta a un utente di:
 
 ## Obiettivi specifici
 
-1. Offrire un'interfaccia semplice per la creazione di una richiesta di consegna.
-2. Garantire che ogni richiesta venga presa in carico, verificata (peso, indirizzi, finestra
+1. Garantire che ogni richiesta venga presa in carico, verificata (peso, indirizzi, finestra
    temporale) e affidata a un drone disponibile in modo automatico, senza intervento umano.
-3. Assicurare che, in caso di impossibilità di completare la consegna (drone non disponibile,
+2. Assicurare che, in caso di impossibilità di completare la consegna (drone non disponibile,
    peso fuori specifica, ecc.), l'utente venga informato tempestivamente e la richiesta venga
    annullata in modo ordinato.
-4. Rendere tracciabile ogni consegna: l'utente deve poter conoscere in ogni momento lo stato
+3. Rendere tracciabile ogni consegna: l'utente deve poter conoscere in ogni momento lo stato
    del pacco (in attesa, in viaggio, consegnato) e la posizione approssimativa del drone.
-5. Mantenere uno storico completo di ogni consegna effettuata, consultabile sia dall'utente
+4. Mantenere uno storico completo di ogni consegna effettuata, consultabile sia dall'utente
    sia dall'operatore del servizio.
 
 ---

@@ -70,7 +70,6 @@ Il progetto è considerato un successo se, alla data di consegna:
 | R-05 | Il sistema gestisce i fallimenti annullando le operazioni parziali in modo ordinato        | Must     |
 | R-06 | Lo storico completo di ogni consegna è persistito e consultabile                           | Must     |
 | R-07 | Il sistema è in grado di gestire più richieste simultaneamente senza degrado               | Should   |
-| R-08 | L'utente riceve notifica al completamento della consegna                                   | Should   |
 | R-09 | Gli operatori del servizio possono consultare lo stato di tutte le consegne attive         | Could    |
 
 ---
@@ -131,7 +130,7 @@ Il progetto è considerato un successo se, alla data di consegna:
 
 | Voce                       | Costo stimato                   |
 |----------------------------|---------------------------------|
-| Ore di sviluppo            | ~120 ore (stima)                |
+| Ore di sviluppo            | ~130 ore (stima)                |
 | Infrastruttura             | € 0 (ambiente locale)           |
 | Licenze software           | € 0 (tutto open source)         |
 | **Totale**                 | **€ 0 — progetto accademico**   |
@@ -151,7 +150,4 @@ Il progetto è considerato un successo se, alla data di consegna:
 
 ## 9. Autorizzazione
 
-| Ruolo              | Nome                | Data      | Firma |
-|--------------------|---------------------|-----------|-------|
-| Sponsor / Docente  | Marco A. Boschetti  | _________ | _____ |
-| Project Manager    | Nicolò Ghignatti    | _________ | _____ |
+Il progetto è stato approvato dal docente PM (Marco A. Boschetti) in data **Aprile 2026**.

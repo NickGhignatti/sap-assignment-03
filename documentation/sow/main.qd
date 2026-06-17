@@ -210,9 +210,9 @@ finale e lessons learned (closing) — tutti in italiano e coerenti con la propo
 
 Il SOW si considera soddisfatto quando:
 
-- [ ] Una richiesta valida viene accettata, pianificata e assegnata a un drone in modo automatico.
-- [ ] Il tracciamento restituisce lo stato aggiornato durante tutta la consegna.
-- [ ] Un fallimento simulato produce l'annullamento ordinato con stato coerente.
-- [ ] Lo storico eventi di una consegna completata contiene tutti gli eventi attesi.
-- [ ] La ricostruzione dello stato da storico è coerente con l'osservazione in tempo reale.
-- [ ] I documenti PM dei cinque process group sono presenti, in italiano, e coerenti tra loro.
+1. Una richiesta valida viene accettata, pianificata e assegnata a un drone in modo automatico.
+2. Il tracciamento restituisce lo stato aggiornato durante tutta la consegna.
+3. Un fallimento simulato produce l'annullamento ordinato con stato coerente.
+4. Lo storico eventi di una consegna completata contiene tutti gli eventi attesi.
+5. La ricostruzione dello stato da storico è coerente con l'osservazione in tempo reale.
+6. La documentazione PM è presente, in italiano, e coerente con la proposta di progetto.

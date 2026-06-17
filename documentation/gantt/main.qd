@@ -28,16 +28,17 @@
 
 ## 1. Assunzioni di pianificazione
 
-- **Calendario**: settimane lavorative da 5 giorni; inizio progetto **lunedì 6 aprile 2026**,
-  fine prevista **metà giugno 2026** (~10–11 settimane), coerente con le date del Project Charter.
+- **Calendario**: settimane lavorative da 7 giorni; inizio progetto **lunedì 6 aprile 2026**,
+  fine prevista **fine giugno 2026** (~12–13 settimane incluso buffer), coerente con le date del Project Charter.
 - **Risorsa unica**: un solo *project manager / sviluppatore*. Le attività sono quindi
   prevalentemente **sequenziali**; le sovrapposizioni indicate riguardano solo attività che
   non competono per lo stesso focus cognitivo (es. setup infrastruttura "a contorno").
 - **Modello a sprint** (cfr. documento *Methodology*): sprint da **2 settimane** nella fase
   *Fondamenta architetturali* (1.1–1.5) e da **1 settimana** nella fase *Prototipazione &
   validazione* (1.6–1.8).
-- **Buffer**: è incluso un buffer del ~15% sul cammino critico per assorbire il rischio RK-02
-  (slittamento sulla scadenza d'esame) e RK-04 (curva di apprendimento).
+- **Buffer**: è incluso un buffer del ~25% sul cammino critico per assorbire il rischio RK-02
+  (slittamento sulla scadenza d'esame), RK-04 (curva di apprendimento) e i periodi di
+  indisponibilità dovuti ad altri esami universitari (cfr. documento *Methodology*).
 
 ---
 
@@ -62,25 +63,7 @@
 
 Relazioni prevalenti **Finish-to-Start** (un'attività inizia al termine della precedente).
 
-```mermaid
-flowchart LR
-    A["A · Setup<br/>1 sett."] --> B["B · Common<br/>1 sett."]
-    A --> C["C · Infra base<br/>1 sett."]
-    B --> D["D · Order service<br/>2 sett."]
-    B --> E["E · Delivery EDA<br/>2 sett."]
-    C --> D
-    C --> E
-    E --> F["F · Drone agent<br/>2 sett."]
-    D --> G["G · Kubernetes<br/>1 sett."]
-    E --> G
-    F --> G
-    G --> H["H · SLO/SLI<br/>1 sett."]
-    H --> I["I · Testing<br/>1 sett."]
-    I --> J["J · Docs &amp; report<br/>1 sett."]
-
-    classDef crit fill:#fdecea,stroke:#c0392b,stroke-width:2px,color:#1a1a18;
-    class A,B,E,F,G,H,I,J crit;
-```
+![Project Network Diagram](./images/network.png)
 
 I nodi evidenziati in rosso sono sul **cammino critico**.
 
@@ -106,35 +89,7 @@ Tra i percorsi possibili dalla partenza alla fine, il più lungo è:
 
 ## 5. Diagramma di Gantt
 
-```mermaid
-gantt
-    title DroneFlow — Schedula di progetto (Apr–Giu 2026)
-    dateFormat  YYYY-MM-DD
-    axisFormat  %d/%m
-    todayMarker off
-
-    section Fondamenta (sprint 2 sett.)
-    A · Setup workspace            :crit, a, 2026-04-06, 5d
-    B · Crate common               :crit, b, after a, 5d
-    C · Infra base (Docker/Kafka/DB):c, after a, 5d
-    D · Order service              :d, after b, 10d
-    E · Delivery service (EDA)     :crit, e, after b, 10d
-    F · Drone service (agent)      :crit, f, after e, 10d
-    M1 Requisiti approvati         :milestone, after a, 0d
-    M2 Architettura decisa         :milestone, after b, 0d
-
-    section Prototipazione (sprint 1 sett.)
-    G · Deployment Kubernetes      :crit, g, after f, 5d
-    H · Definizione e misura SLO/SLI:crit, h, after g, 5d
-    I · Testing & validazione      :crit, i, after h, 5d
-    J · Documentazione & report    :crit, j, after i, 5d
-    M8 Test end-to-end             :milestone, after i, 0d
-    M10 Revisione e consegna       :milestone, after j, 0d
-```
-
-> Nota di rendering: il Gantt è generato in Mermaid (versionabile in git). In sede d'esame può
-> essere accompagnato da uno snapshot prodotto con MS Project, strumento esplicitamente
-> valorizzato dal docente.
+![Diagramma di Gantt](./images/gantt.png)
 
 ---
 

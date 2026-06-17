@@ -43,6 +43,14 @@ jobs:
 
       - uses: quarkdown-labs/setup-quarkdown@v1
 
+      - name: Render Mermaid diagrams
+        if: matrix.document == 'gantt'
+        run: |
+          npm install -g @mermaid-js/mermaid-cli
+          mkdir -p documentation/gantt/images
+          mmdc -i documentation/gantt/network.mmd -o documentation/gantt/images/network.png --backgroundColor white
+          mmdc -i documentation/gantt/gantt.mmd -o documentation/gantt/images/gantt.png --backgroundColor white --width 1600
+
       - name: Build ${{ matrix.document }}
         run:
           quarkdown c documentation/${{ matrix.document }}/main.qd --pdf --out

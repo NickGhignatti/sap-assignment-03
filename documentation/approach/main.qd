@@ -83,14 +83,19 @@ l'approvazione a procedere.
 - **Distinzione requisiti / vincoli tecnici**: scelta deliberata per non confondere il *cosa*
   (requisiti utente) con il *come* (architettura), separando ciò che è valutabile come gestione.
 
-### Verbale — Project Scoping Meeting
-- **Data**: Settimana 1 · **Modalità**: ricevimento (studio 4144 / mail)
-- **Partecipanti**: PM (Ghignatti), Committente PM (Boschetti); input asincrono vincoli tecnici (Ricci)
-- **Ordine del giorno**: (1) bisogni e aspettative del committente; (2) confini di scope;
-  (3) criteri di successo misurabili; (4) approvazione del POS.
-- **Sintesi**: definite le CoS sul servizio (garanzia temporale, tracciabilità, annullamento
-  ordinato); concordati i confini *out of scope* (no pagamenti, no UI, droni simulati);
-  validati i criteri di successo del POS; rilasciato il nulla osta a passare al planning.
+### Note di Scoping
+- **Data**: Settimana 1 · **Modalità**: e-mail
+- **Partecipanti**: PM (Ghignatti) → Committente PM (Boschetti)
+- **Contesto**: lo scope tecnico è interamente definito dalla **traccia dell'Assignment 03 del
+  corso SAP** (stakeholder Ricci): i vincoli architetturali (microservizi, Kafka, Kubernetes,
+  sistema agent-based) non sono stati negoziati ma dati dalla consegna.
+- **Azione di scoping**: il PM ha contattato il docente PM (Boschetti) via e-mail per
+  verificare la compatibilità dell'approccio e ottenere il nulla osta a utilizzare il
+  progetto SAP come base del progetto PM. L'autorizzazione è arrivata per e-mail.
+- **Esito**: compatibilità confermata; negoziazione delle CoS avviata sul *servizio*
+  (garanzia temporale, tracciabilità, annullamento ordinato) nei limiti della traccia SAP;
+  concordati i confini *out of scope* (no pagamenti, no UI, droni simulati); avviata la
+  redazione del POS.
 
 ---
 

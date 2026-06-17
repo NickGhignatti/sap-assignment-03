@@ -1,0 +1,23 @@
+gantt
+    title DroneFlow — Schedula di progetto (Apr–Giu 2026)
+    dateFormat  YYYY-MM-DD
+    axisFormat  %d/%m
+    todayMarker off
+
+    section Fondamenta (sprint 2 sett.)
+    A · Setup workspace            :crit, a, 2026-04-06, 7d
+    B · Crate common               :crit, b, after a, 7d
+    C · Infra base (Docker/Kafka/DB):c, after a, 7d
+    D · Order service              :d, after b, 14d
+    E · Delivery service (EDA)     :crit, e, after b, 14d
+    F · Drone service (agent)      :crit, f, after e, 14d
+    M1 Requisiti approvati         :milestone, after a, 0d
+    M2 Architettura decisa         :milestone, after b, 0d
+
+    section Prototipazione (sprint 1 sett.)
+    G · Deployment Kubernetes      :crit, g, after f, 7d
+    H · Definizione e misura SLO/SLI:crit, h, after g, 7d
+    I · Testing & validazione      :crit, i, after h, 7d
+    J · Documentazione & report    :crit, j, after i, 7d
+    M8 Test end-to-end             :milestone, after i, 0d
+    M10 Revisione e consegna       :milestone, after j, 0d

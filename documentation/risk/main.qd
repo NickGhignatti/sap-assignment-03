@@ -110,15 +110,15 @@ Ogni rischio è valutato qualitativamente su due dimensioni, con scala 1–5:
 
 | ID    | Cat. | Rischio | P | I | Exp. | Strategia | Owner | Trigger |
 |-------|------|---------|---|---|------|-----------|-------|---------|
-| RK-01 | PM   | **Scope creep**: aggiunta di funzionalità non previste (pagamenti, notifiche push, gestione flotta avanzata) | 3 | 4 | 🔴 12 | **Avoid/Mitigate** | PM | Richiesta di feature non presente nel POS |
+| RK-01 | PM   | **Scope creep**: aggiunta di funzionalità non previste (pagamenti, notifiche push, gestione flotta avanzata) | 3 | 4 | 🟡 12 | **Avoid/Mitigate** | PM | Richiesta di feature non presente nel POS |
 | RK-02 | PM   | **Slittamento sulla scadenza d'esame**: il lavoro non è pronto una settimana prima dell'orale | 3 | 5 | 🔴 15 | **Mitigate** | PM | Milestone in ritardo > 3 giorni |
 | RK-03 | PM   | **Bus factor = 1**: unica risorsa (sviluppatore + PM); malattia/imprevisto blocca tutto | 2 | 5 | 🟡 10 | **Mitigate/Accept** | PM | Indisponibilità della risorsa |
-| RK-04 | TEC  | **Curva di apprendimento** su Rust 2024, Kafka e Kubernetes superiore al previsto | 4 | 3 | 🔴 12 | **Mitigate** | PM | Task di setup oltre stima del 50% |
-| RK-05 | TEC  | **Complessità del coordinamento distribuito** (SAGA/EDA) sottostimata | 3 | 4 | 🔴 12 | **Mitigate** | PM | Bug ricorrenti di consistenza tra servizi |
+| RK-04 | TEC  | **Curva di apprendimento** su Rust 2024, Kafka e Kubernetes superiore al previsto | 4 | 3 | 🟡 12 | **Mitigate** | PM | Task di setup oltre stima del 50% |
+| RK-05 | TEC  | **Complessità del coordinamento distribuito** (SAGA/EDA) sottostimata | 3 | 4 | 🟡 12 | **Mitigate** | PM | Bug ricorrenti di consistenza tra servizi |
 | RK-06 | TEC  | **Fallimenti di integrazione** tra microservizi via Kafka (ordini, eventi, compensazioni) | 3 | 3 | 🟡 9 | **Mitigate** | PM | Test E2E falliti su flusso saga |
 | RK-07 | OPS  | **Dati di richiesta non validi** (peso negativo, indirizzi mancanti) | 4 | 1 | 🟢 4 | **Mitigate** | Sistema | Richiesta malformata ricevuta |
 | RK-08 | OPS  | **Nessun drone disponibile** al momento della richiesta | 3 | 3 | 🟡 9 | **Accept (contingency)** | Sistema | Flotta interamente in missione |
-| RK-09 | OPS  | **Volume di richieste > capacità della flotta** in un picco | 3 | 4 | 🔴 12 | **Mitigate** | Sistema | Coda richieste in crescita |
+| RK-09 | OPS  | **Volume di richieste > capacità della flotta** in un picco | 3 | 4 | 🟡 12 | **Mitigate** | Sistema | Coda richieste in crescita |
 | RK-10 | OPS  | **Perdita di comunicazione con un drone in volo**: stato bloccato, risorsa occupata | 2 | 4 | 🟡 8 | **Mitigate** | Sistema | Mancato aggiornamento posizione oltre soglia |
 | RK-11 | EXT  | **Vincoli tecnici SAP in evoluzione** (lo stakeholder Ricci modifica i requisiti architetturali) | 2 | 3 | 🟢 6 | **Accept/Mitigate** | PM | Comunicazione di nuovi vincoli |
 
@@ -131,14 +131,14 @@ Posizionamento dei rischi (ID nelle celle); il colore indica la fascia di esposi
 | P \ I        | 1 (Trasc.) | 2 (Minore) | 3 (Moderato) | 4 (Maggiore) | 5 (Critico) |
 |--------------|------------|------------|--------------|--------------|-------------|
 | **5 (M.Alta)**|           |            |              |              |             |
-| **4 (Alta)** | 🟢 RK-07   |            | 🔴 RK-04      |              |             |
-| **3 (Media)**|            |            | 🟡 RK-06, RK-08 | 🔴 RK-01, RK-05, RK-09 | 🔴 RK-02 |
+| **4 (Alta)** | 🟢 RK-07   |            | 🟡 RK-04      |              |             |
+| **3 (Media)**|            |            | 🟡 RK-06, RK-08 | 🟡 RK-01, RK-05, RK-09 | 🔴 RK-02 |
 | **2 (Bassa)**|            |            | 🟢 RK-11      | 🟡 RK-10      | 🟡 RK-03    |
 | **1 (M.Bassa)**|          |            |              |              |             |
 
 ---
 
-## 6. Piani di risposta dettagliati (rischi 🔴 ad alta esposizione)
+## 6. Piani di risposta dettagliati (rischi a media-alta esposizione)
 
 ### RK-02 — Slittamento sulla scadenza d'esame (Exp. 15) · *Mitigate*
 - **Azioni**: pianificazione su Gantt con milestone settimanali; buffer del 15% sulle stime;
