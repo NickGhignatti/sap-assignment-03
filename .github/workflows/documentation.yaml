@@ -48,8 +48,8 @@ jobs:
         run: |
           npm install -g @mermaid-js/mermaid-cli
           mkdir -p documentation/gantt/images
-          mmdc -i documentation/gantt/network.mmd -o documentation/gantt/images/network.png --backgroundColor white
-          mmdc -i documentation/gantt/gantt.mmd -o documentation/gantt/images/gantt.png --backgroundColor white --width 1600
+          mmdc -p documentation/gantt/puppeteer-config.json -i documentation/gantt/network.mmd -o documentation/gantt/images/network.png --backgroundColor white
+          mmdc -p documentation/gantt/puppeteer-config.json -i documentation/gantt/gantt.mmd -o documentation/gantt/images/gantt.png --backgroundColor white --width 1600
 
       - name: Build ${{ matrix.document }}
         run:
