@@ -1,0 +1,182 @@
+.docname {risk}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Analisi dei Rischi (Risk Register)
+
+> Registro unico e quantificato di tutti i rischi del progetto. Consolida i rischi
+> identificati in POS, PDS e Project Charter, li valuta (probabilità × impatto) e definisce
+> per ciascuno una strategia di risposta, un responsabile (owner) e un trigger di attivazione.
+
+---
+
+| Campo           | Valore                                             |
+|-----------------|----------------------------------------------------|
+| **Progetto**    | DroneFlow — Servizio di Consegna Pacchi con Droni  |
+| **Project No.** | SAP-03                                             |
+| **Redatto da**  | Ghignatti Nicolò                                   |
+| **Versione**    | 1.0 — Aprile 2026                                  |
+
+---
+
+## 1. Premessa terminologica
+
+In questo progetto l'acronimo **RBS** è usato in due accezioni distinte, da non confondere:
+
+- **Requirements Breakdown Structure** (documento `rbs`): decomposizione gerarchica dei
+  *requisiti* del servizio.
+- **Risk Breakdown Structure** (sezione 3 di questo documento): decomposizione gerarchica
+  delle *fonti di rischio*.
+
+Inoltre si distingue tra **rischio** (evento incerto e *futuro* che, se si verifica, ha un
+effetto sugli obiettivi) e **issue** (problema *già accaduto*). I rischi sono tracciati in
+questo registro; gli issue nell'**Issues Log** della fase di Monitoring & Controlling.
+
+---
+
+## 2. Metodologia di valutazione
+
+Ogni rischio è valutato qualitativamente su due dimensioni, con scala 1–5:
+
+### Scala di Probabilità
+
+| Valore | Livello       | Significato                                  |
+|--------|---------------|----------------------------------------------|
+| 1      | Molto bassa   | Improbabile (< 10%)                          |
+| 2      | Bassa         | Possibile ma non atteso (10–30%)             |
+| 3      | Media         | Realisticamente possibile (30–50%)           |
+| 4      | Alta          | Probabile (50–70%)                           |
+| 5      | Molto alta    | Quasi certo (> 70%)                          |
+
+### Scala di Impatto
+
+| Valore | Livello       | Significato sul progetto                                     |
+|--------|---------------|-------------------------------------------------------------|
+| 1      | Trascurabile  | Nessun effetto pratico su tempi/qualità                     |
+| 2      | Minore        | Lieve ritardo o rilavorazione locale                       |
+| 3      | Moderato      | Ritardo di alcuni giorni o degrado di una funzionalità     |
+| 4      | Maggiore      | Slittamento di una milestone o funzionalità a rischio      |
+| 5      | Critico       | Obiettivo di progetto / scadenza d'esame compromessi       |
+
+### Esposizione (Exposure)
+
+**Exposure = Probabilità × Impatto** (range 1–25), con fasce di priorità:
+
+| Fascia | Punteggio | Azione richiesta                                            |
+|--------|-----------|-------------------------------------------------------------|
+| 🟢 Basso  | 1–6    | Monitoraggio periodico, accettazione                        |
+| 🟡 Medio  | 8–12   | Piano di mitigazione definito                               |
+| 🔴 Alto   | 15–25  | Mitigazione attiva e prioritaria, revisione frequente       |
+
+---
+
+## 3. Risk Breakdown Structure (tassonomia delle fonti di rischio)
+
+```
+[0] Rischi di progetto DroneFlow
+│
+├── [TEC] Rischi Tecnici
+│   ├── Complessità del coordinamento distribuito (SAGA, EDA)
+│   ├── Curva di apprendimento su tecnologie nuove (Rust 2024, Kafka, Kubernetes)
+│   ├── Fallimenti di integrazione tra microservizi
+│   └── Scalabilità sotto carico
+│
+├── [PM] Rischi di Project Management
+│   ├── Scope creep
+│   ├── Slittamento rispetto alla scadenza d'esame
+│   └── Risorsa singola (bus factor): un solo sviluppatore/PM
+│
+├── [OPS] Rischi Operativi del servizio (dominio)
+│   ├── Richiesta con dati non validi
+│   ├── Nessun drone disponibile
+│   ├── Volume di richieste superiore alla flotta
+│   └── Perdita di comunicazione con un drone in volo
+│
+└── [EXT] Rischi Esterni
+    ├── Vincoli tecnici del corso SAP (stakeholder Ricci) in evoluzione
+    └── (scenario industriale) Vincoli regolatori sul volo urbano dei droni
+```
+
+---
+
+## 4. Risk Register
+
+| ID    | Cat. | Rischio | P | I | Exp. | Strategia | Owner | Trigger |
+|-------|------|---------|---|---|------|-----------|-------|---------|
+| RK-01 | PM   | **Scope creep**: aggiunta di funzionalità non previste (pagamenti, notifiche push, gestione flotta avanzata) | 3 | 4 | 🟡 12 | **Avoid/Mitigate** | PM | Richiesta di feature non presente nel POS |
+| RK-02 | PM   | **Slittamento sulla scadenza d'esame**: il lavoro non è pronto una settimana prima dell'orale | 3 | 5 | 🔴 15 | **Mitigate** | PM | Milestone in ritardo > 3 giorni |
+| RK-03 | PM   | **Bus factor = 1**: unica risorsa (sviluppatore + PM); malattia/imprevisto blocca tutto | 2 | 5 | 🟡 10 | **Mitigate/Accept** | PM | Indisponibilità della risorsa |
+| RK-04 | TEC  | **Curva di apprendimento** su Rust 2024, Kafka e Kubernetes superiore al previsto | 4 | 3 | 🟡 12 | **Mitigate** | PM | Task di setup oltre stima del 50% |
+| RK-05 | TEC  | **Complessità del coordinamento distribuito** (SAGA/EDA) sottostimata | 3 | 4 | 🟡 12 | **Mitigate** | PM | Bug ricorrenti di consistenza tra servizi |
+| RK-06 | TEC  | **Fallimenti di integrazione** tra microservizi via Kafka (ordini, eventi, compensazioni) | 3 | 3 | 🟡 9 | **Mitigate** | PM | Test E2E falliti su flusso saga |
+| RK-07 | OPS  | **Dati di richiesta non validi** (peso negativo, indirizzi mancanti) | 4 | 1 | 🟢 4 | **Mitigate** | Sistema | Richiesta malformata ricevuta |
+| RK-08 | OPS  | **Nessun drone disponibile** al momento della richiesta | 3 | 3 | 🟡 9 | **Accept (contingency)** | Sistema | Flotta interamente in missione |
+| RK-09 | OPS  | **Volume di richieste > capacità della flotta** in un picco | 3 | 4 | 🟡 12 | **Mitigate** | Sistema | Coda richieste in crescita |
+| RK-10 | OPS  | **Perdita di comunicazione con un drone in volo**: stato bloccato, risorsa occupata | 2 | 4 | 🟡 8 | **Mitigate** | Sistema | Mancato aggiornamento posizione oltre soglia |
+| RK-11 | EXT  | **Vincoli tecnici SAP in evoluzione** (lo stakeholder Ricci modifica i requisiti architetturali) | 2 | 3 | 🟢 6 | **Accept/Mitigate** | PM | Comunicazione di nuovi vincoli |
+
+---
+
+## 5. Matrice Probabilità–Impatto
+
+Posizionamento dei rischi (ID nelle celle); il colore indica la fascia di esposizione.
+
+| P \ I        | 1 (Trasc.) | 2 (Minore) | 3 (Moderato) | 4 (Maggiore) | 5 (Critico) |
+|--------------|------------|------------|--------------|--------------|-------------|
+| **5 (M.Alta)**|           |            |              |              |             |
+| **4 (Alta)** | 🟢 RK-07   |            | 🟡 RK-04      |              |             |
+| **3 (Media)**|            |            | 🟡 RK-06, RK-08 | 🟡 RK-01, RK-05, RK-09 | 🔴 RK-02 |
+| **2 (Bassa)**|            |            | 🟢 RK-11      | 🟡 RK-10      | 🟡 RK-03    |
+| **1 (M.Bassa)**|          |            |              |              |             |
+
+---
+
+## 6. Piani di risposta dettagliati (rischi a media-alta esposizione)
+
+### RK-02 — Slittamento sulla scadenza d'esame (Exp. 15) · *Mitigate*
+- **Azioni**: pianificazione su Gantt con milestone settimanali; buffer del 25% sulle stime;
+  consegna dell'elaborato prevista con margine rispetto al vincolo "una settimana prima
+  dell'orale"; revisione di avanzamento al termine di ogni sprint.
+- **Contingenza**: se a 3 settimane dalla scadenza il cammino critico è in ritardo, si applica
+  **de-scoping** delle funzionalità *Could/Should* (MoSCoW) per proteggere il *Must*.
+- **Rischio residuo**: basso.
+
+### RK-01 — Scope creep (Exp. 12) · *Avoid/Mitigate*
+- **Azioni**: ogni nuova richiesta è valutata rispetto al **POS** prima di essere intrapresa;
+  le variazioni di scope passano per la **Scope Bank** e sono registrate nel change log
+  (fase di Monitoring & Controlling). Confini "Out of Scope" già fissati nel Project Charter.
+- **Rischio residuo**: basso.
+
+### RK-04 — Curva di apprendimento tecnologie nuove (Exp. 12) · *Mitigate*
+- **Azioni**: la metodologia adottata prevede **sprint lunghi (2 settimane)** nella prima fase
+  proprio per assorbire la complessità infrastrutturale (DDD, Kafka, Kubernetes) senza forzare
+  rilasci incompleti (cfr. documento *Methodology*); spike tecnici dedicati prima di stimare.
+- **Rischio residuo**: medio.
+
+### RK-05 — Complessità del coordinamento distribuito (Exp. 12) · *Mitigate*
+- **Azioni**: adozione del **pattern SAGA** con compensazioni esplicite per l'annullamento
+  ordinato; **Event Sourcing** per la ricostruibilità dello stato; test di integrazione sui
+  flussi event-driven prima della validazione end-to-end.
+- **Rischio residuo**: medio.
+
+### RK-09 — Volume di richieste > capacità della flotta (Exp. 12) · *Mitigate*
+- **Azioni**: architettura a microservizi **scalabile orizzontalmente** (vincolo tecnico già
+  motivato in PDS/Business Case); deployment su **Kubernetes** per lo scaling dei componenti;
+  comunicazione chiara all'utente in caso di impossibilità (no stato indefinito).
+- **Rischio residuo**: medio.
+
+---
+
+## 7. Monitoraggio dei rischi
+
+Il Risk Register è un **documento vivo**: viene rivisto al termine di ogni sprint durante
+l'**auto-revisione di avanzamento (status review)**. I rischi che si concretizzano vengono trasferiti nell'**Issues Log**.
+Le variazioni di esposizione e i nuovi rischi emersi sono registrati aggiornando questo
+documento e, se impattano lo scope, la **Scope Bank**.

@@ -1,0 +1,17 @@
+flowchart LR
+    A["A · Setup<br/>1 sett."] --> B["B · Common<br/>1 sett."]
+    A --> C["C · Infra base<br/>1 sett."]
+    B --> D["D · Order service<br/>2 sett."]
+    B --> E["E · Delivery EDA<br/>2 sett."]
+    C --> D
+    C --> E
+    E --> F["F · Drone agent<br/>2 sett."]
+    D --> G["G · Kubernetes<br/>1 sett."]
+    E --> G
+    F --> G
+    G --> H["H · SLO/SLI<br/>1 sett."]
+    H --> I["I · Testing<br/>1 sett."]
+    I --> J["J · Docs & report<br/>1 sett."]
+
+    classDef crit fill:#fdecea,stroke:#c0392b,stroke-width:2px,color:#1a1a18;
+    class A,B,E,F,G,H,I,J crit;

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="drone-service--documentazione-tecnica" data-depth="1"><a href="#drone-service--documentazione-tecnica">Drone Service — Documentazione Tecnica</a><ol><li data-target-id="_1-responsabilità" data-depth="2"><a href="#_1-responsabilità">1. Responsabilità</a></li><li data-target-id="_2-architettura-interna" data-depth="2"><a href="#_2-architettura-interna">2. Architettura interna</a></li><li data-target-id="_3-modello-dati" data-depth="2"><a href="#_3-modello-dati">3. Modello dati</a><ol><li data-target-id="dronebeliefs--lo-stato-vivo-dellrsquoagente-in-memoria" data-depth="3"><a href="#dronebeliefs--lo-stato-vivo-dellrsquoagente-in-memoria">DroneBeliefs — lo stato vivo dell&rsquo;agente (in memoria)</a></li><li data-target-id="droneentry--lo-stato-ricostruito-dagli-eventi" data-depth="3"><a href="#droneentry--lo-stato-ricostruito-dagli-eventi">DroneEntry — lo stato ricostruito dagli eventi</a></li><li data-target-id="droneevent--il-fatto-persistito-su-mongodb" data-depth="3"><a href="#droneevent--il-fatto-persistito-su-mongodb">DroneEvent — il fatto persistito su MongoDB</a></li></ol></li><li data-target-id="_4-macchina-a-stati--dronestate" data-depth="2"><a href="#_4-macchina-a-stati--dronestate">4. Macchina a stati — DroneState</a></li><li data-target-id="_5-event-sourcing--sequenza-completa-degli-eventi" data-depth="2"><a href="#_5-event-sourcing--sequenza-completa-degli-eventi">5. Event Sourcing — sequenza completa degli eventi</a></li><li data-target-id="_6-rete-di-petri--ciclo-di-vita-di-un-drone" data-depth="2"><a href="#_6-rete-di-petri--ciclo-di-vita-di-un-drone">6. Rete di Petri — Ciclo di vita di un drone</a></li><li data-target-id="_7-diagramma-di-sequenza--consegna-completa" data-depth="2"><a href="#_7-diagramma-di-sequenza--consegna-completa">7. Diagramma di sequenza — Consegna completa</a></li><li data-target-id="_8-diagramma-di-sequenza--compensazione" data-depth="2"><a href="#_8-diagramma-di-sequenza--compensazione">8. Diagramma di sequenza — Compensazione</a></li><li data-target-id="_9-la-flotta-e-la-concorrenza" data-depth="2"><a href="#_9-la-flotta-e-la-concorrenza">9. La flotta e la concorrenza</a></li><li data-target-id="_10-scheduler--il-task-periodico" data-depth="2"><a href="#_10-scheduler--il-task-periodico">10. Scheduler — il task periodico</a></li><li data-target-id="_11-reference-dei-moduli" data-depth="2"><a href="#_11-reference-dei-moduli">11. Reference dei moduli</a><ol><li data-target-id="mainrs--wiring-e-avvio" data-depth="3"><a href="#mainrs--wiring-e-avvio">main.rs — wiring e avvio</a></li><li data-target-id="storers--droneeventstore" data-depth="3"><a href="#storers--droneeventstore">store.rs — DroneEventStore</a></li><li data-target-id="modelrs--droneentry-dronestate" data-depth="3"><a href="#modelrs--droneentry-dronestate">model.rs — DroneEntry, DroneState</a></li><li data-target-id="consumerrs--due-consumer-kafka" data-depth="3"><a href="#consumerrs--due-consumer-kafka">consumer.rs — due consumer Kafka</a></li><li data-target-id="metricsrs--dronemetrics" data-depth="3"><a href="#metricsrs--dronemetrics">metrics.rs — DroneMetrics</a></li><li data-target-id="apirs--handler-http" data-depth="3"><a href="#apirs--handler-http">api.rs — handler HTTP</a></li></ol></li><li data-target-id="_12-api-reference" data-depth="2"><a href="#_12-api-reference">12. API Reference</a><ol><li data-target-id="get-health" data-depth="3"><a href="#get-health">GET /health</a></li><li data-target-id="get-metrics" data-depth="3"><a href="#get-metrics">GET /metrics</a></li><li data-target-id="get-orderorderidstatus" data-depth="3"><a href="#get-orderorderidstatus">GET /order/{orderId}/status</a></li><li data-target-id="get-orderorderidevents" data-depth="3"><a href="#get-orderorderidevents">GET /order/{orderId}/events</a></li><li data-target-id="get-dronedroneidevents" data-depth="3"><a href="#get-dronedroneidevents">GET /drone/{droneId}/events</a></li><li data-target-id="get-dronedroneidrebuild" data-depth="3"><a href="#get-dronedroneidrebuild">GET /drone/{droneId}/rebuild</a></li></ol></li><li data-target-id="_13-graceful-shutdown" data-depth="2"><a href="#_13-graceful-shutdown">13. Graceful shutdown</a></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="il-sistema-oggi" data-decorative="">Il sistema oggi</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common (libreria)</a></li><li><a href="../order">Order Service</a></li><li><a href="../delivery">Delivery Service</a></li><li><a href="../drone" aria-current="page">Drone Service</a></li><li><a href="../agent">Flotta ad Agenti (BDI)</a></li></ul><h2 id="infrastruttura-amp-operabilità" data-decorative="">Infrastruttura &amp; operabilità</h2><ul><li><a href="../kafka">Messaging Layer (Kafka)</a></li><li><a href="../k8s">Deployment Kubernetes</a></li><li><a href="../slo">Osservabilità &amp; SLO</a></li><li><a href="../testing">Testing &amp; qualità</a></li></ul><h2 id="appendice" data-decorative="">Appendice</h2><ul><li><a href="../evoluzione">Evoluzione del progetto</a></li><li><a href="../conclusioni">Conclusioni</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="drone-service--documentazione-tecnica" data-depth="1"><a href="#drone-service--documentazione-tecnica">Drone Service — Documentazione Tecnica</a><ol><li data-target-id="_1-responsabilità" data-depth="2"><a href="#_1-responsabilità">1. Responsabilità</a></li><li data-target-id="_2-architettura-interna" data-depth="2"><a href="#_2-architettura-interna">2. Architettura interna</a></li><li data-target-id="_3-modello-dati" data-depth="2"><a href="#_3-modello-dati">3. Modello dati</a><ol><li data-target-id="dronebeliefs--lo-stato-vivo-dellrsquoagente-in-memoria" data-depth="3"><a href="#dronebeliefs--lo-stato-vivo-dellrsquoagente-in-memoria">DroneBeliefs — lo stato vivo dell&rsquo;agente (in memoria)</a></li><li data-target-id="droneentry--lo-stato-ricostruito-dagli-eventi" data-depth="3"><a href="#droneentry--lo-stato-ricostruito-dagli-eventi">DroneEntry — lo stato ricostruito dagli eventi</a></li><li data-target-id="droneevent--il-fatto-persistito-su-mongodb" data-depth="3"><a href="#droneevent--il-fatto-persistito-su-mongodb">DroneEvent — il fatto persistito su MongoDB</a></li></ol></li><li data-target-id="_4-macchina-a-stati--dronestate" data-depth="2"><a href="#_4-macchina-a-stati--dronestate">4. Macchina a stati — DroneState</a></li><li data-target-id="_5-event-sourcing--sequenza-completa-degli-eventi" data-depth="2"><a href="#_5-event-sourcing--sequenza-completa-degli-eventi">5. Event Sourcing — sequenza completa degli eventi</a></li><li data-target-id="_6-rete-di-petri--ciclo-di-vita-di-un-drone" data-depth="2"><a href="#_6-rete-di-petri--ciclo-di-vita-di-un-drone">6. Rete di Petri — Ciclo di vita di un drone</a></li><li data-target-id="_7-diagramma-di-sequenza--consegna-completa" data-depth="2"><a href="#_7-diagramma-di-sequenza--consegna-completa">7. Diagramma di sequenza — Consegna completa</a></li><li data-target-id="_8-diagramma-di-sequenza--compensazione" data-depth="2"><a href="#_8-diagramma-di-sequenza--compensazione">8. Diagramma di sequenza — Compensazione</a></li><li data-target-id="_9-la-flotta-e-la-concorrenza" data-depth="2"><a href="#_9-la-flotta-e-la-concorrenza">9. La flotta e la concorrenza</a></li><li data-target-id="_10-scheduler--il-task-periodico" data-depth="2"><a href="#_10-scheduler--il-task-periodico">10. Scheduler — il task periodico</a></li><li data-target-id="_11-reference-dei-moduli" data-depth="2"><a href="#_11-reference-dei-moduli">11. Reference dei moduli</a><ol><li data-target-id="mainrs--wiring-e-avvio" data-depth="3"><a href="#mainrs--wiring-e-avvio">main.rs — wiring e avvio</a></li><li data-target-id="storers--droneeventstore" data-depth="3"><a href="#storers--droneeventstore">store.rs — DroneEventStore</a></li><li data-target-id="modelrs--droneentry-dronestate" data-depth="3"><a href="#modelrs--droneentry-dronestate">model.rs — DroneEntry, DroneState</a></li><li data-target-id="consumerrs--due-consumer-kafka" data-depth="3"><a href="#consumerrs--due-consumer-kafka">consumer.rs — due consumer Kafka</a></li><li data-target-id="metricsrs--dronemetrics" data-depth="3"><a href="#metricsrs--dronemetrics">metrics.rs — DroneMetrics</a></li><li data-target-id="apirs--handler-http" data-depth="3"><a href="#apirs--handler-http">api.rs — handler HTTP</a></li></ol></li><li data-target-id="_12-api-reference" data-depth="2"><a href="#_12-api-reference">12. API Reference</a><ol><li data-target-id="get-health" data-depth="3"><a href="#get-health">GET /health</a></li><li data-target-id="get-metrics" data-depth="3"><a href="#get-metrics">GET /metrics</a></li><li data-target-id="get-orderorderidstatus" data-depth="3"><a href="#get-orderorderidstatus">GET /order/{orderId}/status</a></li><li data-target-id="get-orderorderidevents" data-depth="3"><a href="#get-orderorderidevents">GET /order/{orderId}/events</a></li><li data-target-id="get-dronedroneidevents" data-depth="3"><a href="#get-dronedroneidevents">GET /drone/{droneId}/events</a></li><li data-target-id="get-dronedroneidrebuild" data-depth="3"><a href="#get-dronedroneidrebuild">GET /drone/{droneId}/rebuild</a></li></ol></li><li data-target-id="_13-graceful-shutdown" data-depth="2"><a href="#_13-graceful-shutdown">13. Graceful shutdown</a></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><blockquote><p>[NOTE!]
+Il Drone Service è organizzato in due livelli. Questa pagina documenta il livello
+<strong>di servizio</strong>: persistenza (event sourcing), API HTTP, consumer Kafka, scheduler
+e wiring. Il cuore <strong>decisionale</strong> — la flotta di agenti BDI che decide se
+accettare o rifiutare una consegna — è documentato in
+<a href="../agent">Flotta ad Agenti (BDI)</a>.</p></blockquote><h1 class="page-break" id="drone-service--documentazione-tecnica">Drone Service — Documentazione Tecnica</h1><h2 id="_1-responsabilità">1. Responsabilità</h2><p>Il Drone Service è il componente più complesso del sistema, con quattro
+responsabilità distinte:</p><ol><li><strong>Assegnazione autonoma.</strong> Una flotta di tre agenti BDI valuta ogni ordine in
+arrivo e decide <em>autonomamente</em> se accettarlo o rifiutarlo, in base al peso del
+carico e alla deadline. Questa è la parte ad agenti, in <a href="../agent">agent.qd</a>.</li><li><strong>Event Sourcing.</strong> Persiste ogni cambio di stato del drone come <strong>evento
+immutabile</strong> su MongoDB. Lo stato corrente non è memorizzato direttamente: è
+sempre <em>ricostruibile</em> applicando in ordine la sequenza degli eventi.</li><li><strong>Scheduler.</strong> Un task periodico (ogni 10 secondi) controlla se i droni in volo
+hanno raggiunto la destinazione e, in tal caso, completa la consegna.</li><li><strong>Compensazione.</strong> Riceve gli eventi <span class="codespan-content"><code>CompensateDrone</code></span> dalla SAGA via Kafka e
+riporta l&rsquo;agente coinvolto allo stato <span class="codespan-content"><code>Idle</code></span>.</li></ol><hr /><h2 id="_2-architettura-interna">2. Architettura interna</h2><figure><pre class="mermaid">graph TD
+    K_IN1[[&quot;Kafka\ndrone-requests&quot;]]
+    K_IN2[[&quot;Kafka\nsaga-events&quot;]]
+    CONS_O[&quot;consumer.rs\nstart_order_consumer&quot;]
+    CONS_C[&quot;consumer.rs\nstart_compensation_consumer&quot;]
+    FLEET[&quot;fleet.rs\nDroneFleet&quot;]
+    A0[&quot;DroneAgent 0\n(BDI)&quot;]
+    A1[&quot;DroneAgent 1\n(BDI)&quot;]
+    A2[&quot;DroneAgent 2\n(BDI)&quot;]
+    STORE[&quot;store.rs\nDroneEventStore&quot;]
+    MDB[(&quot;MongoDB\ndrone_events&quot;)]
+    K_OUT[[&quot;Kafka\nsaga-events&quot;]]
+    API[&quot;api.rs\nAxum handlers&quot;]
+    SCHED[&quot;main.rs\nScheduler Task\n(ogni 10s)&quot;]
+    HTTP[&quot;HTTP Client&quot;]
+
+    K_IN1 --&gt;|&quot;OrderMessage&quot;| CONS_O
+    K_IN2 --&gt;|&quot;CompensateDrone&quot;| CONS_C
+    CONS_O --&gt; FLEET
+    CONS_C --&gt; FLEET
+    FLEET --&gt; A0
+    FLEET -.-&gt; A1
+    FLEET -.-&gt; A2
+    A0 --&gt; STORE
+    A0 --&gt;|&quot;DroneAssigned\nDroneAssignmentFailed&quot;| K_OUT
+    STORE &lt;--&gt; MDB
+    SCHED --&gt;|&quot;check_arrivals()&quot;| FLEET
+    HTTP --&gt; API
+    API --&gt; STORE</pre></figure><p><strong>Lettura del diagramma.</strong> Tre flussi convergono sulla <span class="codespan-content"><code>DroneFleet</code></span>:
+(1) gli <strong>ordini</strong> da <span class="codespan-content"><code>drone-requests</code></span>, tramite <span class="codespan-content"><code>start_order_consumer</code></span>;
+(2) le <strong>compensazioni</strong> da <span class="codespan-content"><code>saga-events</code></span>, tramite <span class="codespan-content"><code>start_compensation_consumer</code></span>;
+(3) gli <strong>arrivi</strong>, tramite lo <span class="codespan-content"><code>Scheduler Task</code></span> che chiama <span class="codespan-content"><code>check_arrivals()</code></span> ogni
+10 secondi. La flotta instrada ogni richiesta a uno dei tre agenti. Gli agenti
+scrivono gli eventi sul <span class="codespan-content"><code>DroneEventStore</code></span> (che li persiste su MongoDB) e pubblicano
+i <span class="codespan-content"><code>SagaEvent</code></span> di esito (<span class="codespan-content"><code>DroneAssigned</code></span>/<span class="codespan-content"><code>DroneAssignmentFailed</code></span>) su <span class="codespan-content"><code>saga-events</code></span>.
+Sul lato destro, gli <strong>handler HTTP</strong> leggono dal <span class="codespan-content"><code>DroneEventStore</code></span> per servire le
+query di stato e storico — un percorso completamente separato dal flusso di scrittura.</p><hr /><h2 id="_3-modello-dati">3. Modello dati</h2><p>Il Drone Service distingue <strong>tre rappresentazioni</strong> dello stato di un drone, ognuna
+con uno scopo diverso. Capire la differenza è essenziale.</p><h3 id="dronebeliefs--lo-stato-vivo-dellrsquoagente-in-memoria"><span class="codespan-content"><code>DroneBeliefs</code></span> — lo stato <em>vivo</em> dell&rsquo;agente (in memoria)</h3><p>È la belief base di un <span class="codespan-content"><code>DroneAgent</code></span>: ciò che l&rsquo;agente <em>crede</em> su sé stesso in questo
+istante. Vive in memoria, isolata per agente, e guida le decisioni. È descritta in
+dettaglio in <a href="../agent">agent.qd</a>.</p><pre><code>┌──────────────────────────────────────┐
+│           DroneBeliefs               │
+│        [per singolo agente]          │
+├──────────────────────────────────────┤
+│ drone_id           : Option&lt;String&gt;  │
+│ is_available       : bool            │
+│ current_order      : Option&lt;Order&gt;   │
+│ phase              : AgentPhase      │
+│ can_carry_payload  : bool            │
+│ can_meet_deadline  : bool            │
+│ dispatch_time      : Option&lt;Utc&gt;     │
+│ expected_arrival   : Option&lt;Utc&gt;     │
+└──────────────────────────────────────┘</code></pre><h3 id="droneentry--lo-stato-ricostruito-dagli-eventi"><span class="codespan-content"><code>DroneEntry</code></span> — lo stato <em>ricostruito</em> dagli eventi</h3><p>Definita in <span class="codespan-content"><code>model.rs</code></span>, è una rappresentazione in memoria <strong>ricostruita
+dall&rsquo;event store</strong> (non lo stato live dell&rsquo;agente). La usano l&rsquo;handler HTTP
+<span class="codespan-content"><code>/rebuild</code></span> e il metodo <span class="codespan-content"><code>rebuild_drone()</code></span>.</p><pre><code>┌────────────────────────────────────┐
+│            DroneEntry              │
+│    [ricostruita da eventi]         │
+├────────────────────────────────────┤
+│ drone_id        : String           │
+│ order           : OrderMessage     │
+│ state           : DroneState       │
+│ dispatch_time   : Option&lt;Utc&gt;      │
+│ delivery_time   : Option&lt;Utc&gt;      │
+│ expected_arrival: Option&lt;Utc&gt;      │
+└────────────────────────────────────┘</code></pre><p><span class="codespan-content"><code>DroneState</code></span> è un enum a tre valori: <span class="codespan-content"><code>Sleeping</code></span> → <span class="codespan-content"><code>InTransit</code></span> → <span class="codespan-content"><code>Returning</code></span>. I
+metodi <span class="codespan-content"><code>start()</code></span> (→ <span class="codespan-content"><code>InTransit</code></span>, fissa <span class="codespan-content"><code>dispatch_time</code></span>) ed <span class="codespan-content"><code>end()</code></span> (→ <span class="codespan-content"><code>Returning</code></span>,
+fissa <span class="codespan-content"><code>delivery_time</code></span>) sono applicati durante la ricostruzione.</p><h3 id="droneevent--il-fatto-persistito-su-mongodb"><span class="codespan-content"><code>DroneEvent</code></span> — il fatto <em>persistito</em> su MongoDB</h3><p>Il tipo condiviso (in <a href="common.qd)">common</a>, serializzato come documento nella
+collection <span class="codespan-content"><code>drone_events</code></span>. Ogni documento è un evento immutabile.</p><pre><code>┌─────────────────────────────────────┐
+│  drone_events collection            │
+│  (ogni documento = un evento)       │
+├──────────────┬──────────────────────┤
+│ type         │ &quot;DRONE_CREATED&quot;      │
+│ drone_id     │ UUID                 │
+│ order_id     │ UUID                 │
+│ version      │ 0, 1, 2, 3 ...       │
+│ timestamp    │ DateTime&lt;Utc&gt;        │
+│ [+ campi specifici per variante]    │
+└─────────────────────────────────────┘</code></pre><blockquote><p>[NOTE!]
+La distinzione chiave: <strong><span class="codespan-content"><code>DroneBeliefs</code></span></strong> è lo stato <em>deciso dall&rsquo;agente ora</em>;
+<strong><span class="codespan-content"><code>DroneEvent</code></span></strong> è la <em>verità storica persistita</em>; <strong><span class="codespan-content"><code>DroneEntry</code></span></strong> è una
+<em>vista derivata</em>, ricostruita dagli eventi su richiesta. L&rsquo;invariante del sistema
+è che lo stato ricostruito dagli eventi coincida con quello osservato nelle belief.</p></blockquote><hr /><h2 id="_4-macchina-a-stati--dronestate">4. Macchina a stati — <span class="codespan-content"><code>DroneState</code></span></h2><figure><pre class="mermaid">stateDiagram-v2
+    [*] --&gt; Sleeping : DroneEntry::new()
+
+    Sleeping --&gt; InTransit : start() &mdash; Dispatched event
+    InTransit --&gt; Returning : end() &mdash; Delivered event
+
+    note right of InTransit
+        expected_arrival &egrave; impostato
+        Lo scheduler controlla ogni 10s
+    end note</pre></figure><p><strong>Lettura del diagramma.</strong> <span class="codespan-content"><code>DroneState</code></span> è la macchina a stati <em>della vista
+ricostruita</em> (<span class="codespan-content"><code>DroneEntry</code></span>), non delle belief dell&rsquo;agente. Una nuova entry nasce
+<span class="codespan-content"><code>Sleeping</code></span>; l&rsquo;applicazione dell&rsquo;evento <span class="codespan-content"><code>Dispatched</code></span> la porta <span class="codespan-content"><code>InTransit</code></span> (e fissa
+<span class="codespan-content"><code>dispatch_time</code></span>); l&rsquo;applicazione di <span class="codespan-content"><code>Delivered</code></span> la porta <span class="codespan-content"><code>Returning</code></span>. L&rsquo;evento
+<span class="codespan-content"><code>Returned</code></span> non cambia ulteriormente lo stato (resta <span class="codespan-content"><code>Returning</code></span>): rappresenta solo
+il rientro fisico alla base. È durante la fase <span class="codespan-content"><code>InTransit</code></span> che il drone è
+&ldquo;monitorato&rdquo; dallo scheduler in base a <span class="codespan-content"><code>expected_arrival</code></span>.</p><hr /><h2 id="_5-event-sourcing--sequenza-completa-degli-eventi">5. Event Sourcing — sequenza completa degli eventi</h2><p>Per ogni drone, la sequenza di eventi su MongoDB è sempre questa, in ordine di
+<span class="codespan-content"><code>version</code></span> crescente:</p><pre><code>version=0  DRONE_CREATED    { drone_id, order_id, customer_id, from, to, weight, ... }
+version=1  DRONE_DISPATCHED { drone_id, order_id, dispatch_time }
+version=2  DRONE_DELIVERED  { drone_id, order_id, delivery_time }
+version=3  DRONE_RETURNED   { drone_id, order_id, return_time }</code></pre><p>L&rsquo;idea dell&rsquo;<strong>Event Sourcing</strong> è che lo stato corrente non venga memorizzato come
+tale: si memorizza la <em>sequenza di fatti</em> che lo hanno prodotto, e lo stato si
+<strong>ricostruisce</strong> applicando i fatti in ordine. Il vantaggio è un audit log completo
+e immutabile: si può sempre rispondere alla domanda &ldquo;come è arrivato il drone in
+questo stato?&rdquo; riproducendo gli eventi.</p><figure><pre class="mermaid">flowchart LR
+    E0[&quot;DroneEvent\nCreated (v=0)&quot;]
+    E1[&quot;DroneEvent\nDispatched (v=1)&quot;]
+    E2[&quot;DroneEvent\nDelivered (v=2)&quot;]
+    E3[&quot;DroneEvent\nReturned (v=3)&quot;]
+    S0[&quot;DroneEntry\nSleeping&quot;]
+    S1[&quot;DroneEntry\nInTransit&quot;]
+    S2[&quot;DroneEntry\nReturning&quot;]
+    S3[&quot;DroneEntry\nReturning\n(consegna completa)&quot;]
+
+    E0 --&gt;|&quot;new()&quot;| S0
+    S0 --&gt; E1
+    E1 --&gt;|&quot;start()&quot;| S1
+    S1 --&gt; E2
+    E2 --&gt;|&quot;end()&quot;| S2
+    S2 --&gt; E3
+    E3 --&gt;|&quot;no state change&quot;| S3</pre></figure><p><strong>Lettura del diagramma.</strong> A sinistra la sequenza di eventi persistiti; a destra lo
+stato ricostruito a ogni passo. <span class="codespan-content"><code>rebuild_drone()</code></span> legge gli eventi ordinati per
+<span class="codespan-content"><code>version</code></span>, costruisce la <span class="codespan-content"><code>DroneEntry</code></span> dal <span class="codespan-content"><code>Created</code></span> (v=0) e poi applica i successivi:
+<span class="codespan-content"><code>Dispatched</code></span> → <span class="codespan-content"><code>start()</code></span>, <span class="codespan-content"><code>Delivered</code></span> → <span class="codespan-content"><code>end()</code></span>, <span class="codespan-content"><code>Returned</code></span> → nessun cambiamento.
+L&rsquo;invariante garantita è: <em>stato ricostruito dagli eventi == stato osservato nelle
+belief dell&rsquo;agente</em>.</p><hr /><h2 id="_6-rete-di-petri--ciclo-di-vita-di-un-drone">6. Rete di Petri — Ciclo di vita di un drone</h2><figure><pre class="mermaid">flowchart TD
+    P0((&quot;● p0\nOrdine\nricevuto&quot;))
+    T0[&quot;t0: consume\ndrone-requests&quot;]
+    P1((&quot;p1\nOrdine\ndeserializzato&quot;))
+    T1[&quot;t1: ciclo BDI\ndispatch_order()&quot;]
+    P2((&quot;p2\nDRONE_CREATED\nsalvato&quot;))
+    T2[&quot;t2: pubblica\nDroneAssigned&quot;]
+    P3((&quot;p3\nSAGA\nnotificata&quot;))
+    T3[&quot;t3: salva\nDRONE_DISPATCHED&quot;]
+    P4((&quot;p4\nDrone\nin volo&quot;))
+    T_SCHED[&quot;t_sched: scheduler\ndetecta arrivo&quot;]
+    T_COMP[&quot;t_comp: CompensateDrone\nricevuto&quot;]
+    P5((&quot;p5\nDRONE_DELIVERED\nsalvato&quot;))
+    T4[&quot;t4: salva\nDRONE_RETURNED&quot;]
+    P6((&quot;p6\nDrone\nrientrato&quot;))
+    P_COMP((&quot;p_comp\nAgente\nreset Idle&quot;))
+    T_ACK[&quot;t_ack: belief\nupdate_returned()&quot;]
+    T_REFUSE[&quot;t_refuse: pubblica\nDroneAssignmentFailed&quot;]
+    P_REFUSED((&quot;p_refused\nOrdine\nrifiutato&quot;))
+    P_END((&quot;p_end\nDone&quot;))
+
+    P0 --&gt; T0 --&gt; P1 --&gt; T1
+    T1 --&gt;|&quot;AcceptDelivery&quot;| P2 --&gt; T2 --&gt; P3 --&gt; T3 --&gt; P4
+    T1 --&gt;|&quot;RefuseDelivery&quot;| T_REFUSE --&gt; P_REFUSED --&gt; P_END
+    P4 --&gt;|&quot;ETA scaduta&quot;| T_SCHED --&gt; P5 --&gt; T4 --&gt; P6 --&gt; T_ACK --&gt; P_END
+    P4 --&gt;|&quot;SAGA fallisce&quot;| T_COMP --&gt; P_COMP --&gt; P_END</pre></figure><p><strong>Lettura del diagramma.</strong> Il token (un ordine) entra in <span class="codespan-content"><code>p0</code></span> e attraversa il ciclo
+BDI in <span class="codespan-content"><code>t1</code></span>. Da lì si biforca: se l&rsquo;agente <strong>accetta</strong> (<span class="codespan-content"><code>AcceptDelivery</code></span>), salva
+<span class="codespan-content"><code>Created</code></span>, pubblica <span class="codespan-content"><code>DroneAssigned</code></span>, salva <span class="codespan-content"><code>Dispatched</code></span> e arriva in <span class="codespan-content"><code>p4</code></span> (drone in
+volo); se <strong>rifiuta</strong> (<span class="codespan-content"><code>RefuseDelivery</code></span>), pubblica <span class="codespan-content"><code>DroneAssignmentFailed</code></span> e termina.
+Dal posto &ldquo;drone in volo&rdquo; (<span class="codespan-content"><code>p4</code></span>) ci sono due uscite mutuamente esclusive: lo
+<strong>scheduler</strong> rileva l&rsquo;arrivo (ETA scaduta) e completa la consegna (<span class="codespan-content"><code>Delivered</code></span> →
+<span class="codespan-content"><code>Returned</code></span> → belief reset), <em>oppure</em> arriva una <strong>compensazione</strong> dalla SAGA che
+resetta l&rsquo;agente a <span class="codespan-content"><code>Idle</code></span>. È la stessa biforcazione tra completamento normale e
+rollback che caratterizza tutta l&rsquo;architettura.</p><hr /><h2 id="_7-diagramma-di-sequenza--consegna-completa">7. Diagramma di sequenza — Consegna completa</h2><figure><pre class="mermaid">sequenceDiagram
+    participant K as Kafka
+    participant CONS as consumer.rs
+    participant FLEET as fleet.rs
+    participant AGENT as DroneAgent (BDI)
+    participant STORE as store.rs
+    participant MDB as MongoDB
+
+    K-&gt;&gt;CONS: OrderMessage (drone-requests)
+    CONS-&gt;&gt;FLEET: dispatch_order(order)
+    FLEET-&gt;&gt;FLEET: RoundRobinStrategy::select()
+    FLEET-&gt;&gt;AGENT: update_beliefs(order)
+    FLEET-&gt;&gt;AGENT: deliberate() &rarr; AcceptDelivery
+    FLEET-&gt;&gt;AGENT: plan() &rarr; [StoreCreated, PublishAssigned, StoreDispatched]
+    FLEET-&gt;&gt;AGENT: execute(plan)
+
+    AGENT-&gt;&gt;STORE: save_event(Created, v=0)
+    STORE-&gt;&gt;MDB: insert_one
+    AGENT-&gt;&gt;K: publish DroneAssigned (saga-events)
+    AGENT-&gt;&gt;STORE: save_event(Dispatched, v=1)
+    STORE-&gt;&gt;MDB: insert_one
+    AGENT-&gt;&gt;AGENT: update_beliefs &rarr; ExecutingDelivery
+
+    CONS-&gt;&gt;K: commit offset
+
+    Note over AGENT: dopo l'orario di arrivo previsto...
+
+    FLEET-&gt;&gt;FLEET: check_arrivals() [scheduler, ogni 10s]
+    FLEET-&gt;&gt;AGENT: has_arrived() &rarr; true
+    FLEET-&gt;&gt;AGENT: deliberate() &rarr; CompleteDelivery
+    FLEET-&gt;&gt;AGENT: execute([StoreDelivered, StoreReturned])
+    AGENT-&gt;&gt;STORE: save_event(Delivered, v=2)
+    STORE-&gt;&gt;MDB: insert_one
+    AGENT-&gt;&gt;STORE: save_event(Returned, v=3)
+    STORE-&gt;&gt;MDB: insert_one
+    AGENT-&gt;&gt;AGENT: update_beliefs &rarr; Idle</pre></figure><p><strong>Lettura del diagramma.</strong> La prima metà è l&rsquo;<strong>assegnazione</strong>, guidata dal consumer
+di ordini: la flotta seleziona un agente, che esegue il ciclo BDI e produce gli
+eventi <span class="codespan-content"><code>Created</code></span> e <span class="codespan-content"><code>Dispatched</code></span> più la notifica <span class="codespan-content"><code>DroneAssigned</code></span>. Solo dopo
+l&rsquo;esecuzione completa il consumer committa l&rsquo;offset. La seconda metà è il
+<strong>completamento</strong>, guidato dallo scheduler (non dal consumer): quando l&rsquo;orario di
+arrivo è passato, l&rsquo;agente delibera <span class="codespan-content"><code>CompleteDelivery</code></span> e salva <span class="codespan-content"><code>Delivered</code></span> e
+<span class="codespan-content"><code>Returned</code></span>, tornando <span class="codespan-content"><code>Idle</code></span>. I due momenti sono <strong>temporalmente disgiunti</strong> e
+guidati da trigger diversi (Kafka vs. timer).</p><hr /><h2 id="_8-diagramma-di-sequenza--compensazione">8. Diagramma di sequenza — Compensazione</h2><figure><pre class="mermaid">sequenceDiagram
+    participant K as Kafka
+    participant CONS as consumer.rs (comp)
+    participant FLEET as fleet.rs
+    participant AGENT as DroneAgent
+
+    K-&gt;&gt;CONS: SagaEvent::CompensateDrone {drone_id}
+    CONS-&gt;&gt;CONS: match su CompensateDrone
+    CONS-&gt;&gt;FLEET: compensate(drone_id)
+    FLEET-&gt;&gt;FLEET: trova l'agente con quel drone_id
+    FLEET-&gt;&gt;AGENT: execute([RecordCompensation])
+    AGENT-&gt;&gt;AGENT: update_compensated() &rarr; Idle
+    CONS-&gt;&gt;K: commit offset
+    Note over CONS: sempre commit su compensazione &mdash; un retry non aiuterebbe</pre></figure><p><strong>Lettura del diagramma.</strong> Il consumer di compensazione riceve <em>tutti</em> gli eventi di
+<span class="codespan-content"><code>saga-events</code></span>, ma filtra: agisce solo su <span class="codespan-content"><code>CompensateDrone</code></span>. Trova l&rsquo;agente che ha
+quel <span class="codespan-content"><code>drone_id</code></span>, gli fa eseguire l&rsquo;azione <span class="codespan-content"><code>RecordCompensation</code></span> (che non scrive alcun
+evento — la compensazione è un <em>segnale di controllo</em>, non un fatto di dominio) e ne
+resetta le belief a <span class="codespan-content"><code>Idle</code></span>. L&rsquo;offset viene <strong>sempre</strong> committato: la compensazione è
+sincrona e idempotente, e un retry non aggiungerebbe nulla.</p><hr /><h2 id="_9-la-flotta-e-la-concorrenza">9. La flotta e la concorrenza</h2><p><span class="codespan-content"><code>DroneFleet</code></span> coordina tre agenti indipendenti. Non esiste una mappa condivisa dello
+stato dei droni: lo stato di ogni drone vive esclusivamente nelle sue <span class="codespan-content"><code>DroneBeliefs</code></span>,
+private all&rsquo;agente.</p><table><thead><tr><th>Task concorrente</th><th>Operazione</th><th>Frequenza</th></tr></thead><tbody><tr><td>Consumer <span class="codespan-content"><code>drone-requests</code></span></td><td><span class="codespan-content"><code>dispatch_order()</code></span> → ciclo BDI su un agente</td><td>Ad ogni ordine Kafka</td></tr><tr><td>Scheduler</td><td><span class="codespan-content"><code>check_arrivals()</code></span> → <span class="codespan-content"><code>CompleteDelivery</code></span> sugli agenti arrivati</td><td>Ogni 10 secondi</td></tr><tr><td>Consumer <span class="codespan-content"><code>saga-events</code></span></td><td><span class="codespan-content"><code>compensate(drone_id)</code></span> → reset belief</td><td>Al ricevimento di <span class="codespan-content"><code>CompensateDrone</code></span></td></tr><tr><td>Handler HTTP</td><td><span class="codespan-content"><code>store.get_events_for_*()</code></span></td><td>Ad ogni chiamata GET</td></tr></tbody></table><p>I tre task che mutano la flotta (i due consumer e lo scheduler) accedono alla
+<span class="codespan-content"><code>DroneFleet</code></span> tramite un <span class="codespan-content"><code>Arc&lt;tokio::sync::Mutex&lt;DroneFleet&gt;&gt;</code></span> condiviso: il <span class="codespan-content"><code>Mutex</code></span>
+asincrono serializza gli accessi, evitando data race tra di essi. Gli handler HTTP,
+invece, <strong>non</strong> toccano la flotta: leggono direttamente dall&rsquo;<span class="codespan-content"><code>Arc&lt;DroneEventStore&gt;</code></span>,
+che gestisce la concorrenza internamente tramite il driver MongoDB asincrono. Il
+percorso di lettura (HTTP) e quello di scrittura (consumer/scheduler) sono quindi
+disaccoppiati. La struttura interna degli agenti e l&rsquo;isolamento delle belief sono
+trattati in <a href="../agent">agent.qd</a>.</p><hr /><h2 id="_10-scheduler--il-task-periodico">10. Scheduler — il task periodico</h2><p>Il completamento delle consegne non è guidato da un evento Kafka, ma da un task
+periodico definito in <span class="codespan-content"><code>main.rs</code></span>:</p><pre><code class="language-rust">let scheduler_fleet = Arc::clone(&amp;fleet);
+tokio::spawn(async move {
+    let mut interval = tokio::time::interval(Duration::from_secs(10));
+    loop {
+        interval.tick().await;       // cede il runtime durante l'attesa
+        if let Err(e) = scheduler_fleet.lock().await.check_arrivals().await {
+            tracing::error!(&quot;Arrival scheduler error: {e}&quot;);
+        }
+    }
+});</code></pre><p><span class="codespan-content"><code>interval.tick().await</code></span> sospende il task (senza occupare un thread) finché non
+scadono i 10 secondi; poi acquisisce il lock sulla flotta e chiama
+<span class="codespan-content"><code>check_arrivals()</code></span>, che itera sugli agenti e completa la consegna di quelli il cui
+<span class="codespan-content"><code>has_arrived()</code></span> è <span class="codespan-content"><code>true</code></span>. Un eventuale errore viene loggato senza interrompere il
+loop.</p><hr /><h2 id="_11-reference-dei-moduli">11. Reference dei moduli</h2><h3 id="mainrs--wiring-e-avvio"><span class="codespan-content"><code>main.rs</code></span> — wiring e avvio</h3><p>Assembla l&rsquo;intero servizio: connessione a MongoDB (database <span class="codespan-content"><code>drone_service</code></span>,
+<span class="codespan-content"><code>DroneEventStore</code></span>); un producer Kafka (<span class="codespan-content"><code>acks=all</code></span>); <strong>due</strong> consumer con <span class="codespan-content"><code>group.id</code></span>
+distinti (<span class="codespan-content"><code>drone-service-orders</code></span> per gli ordini, <span class="codespan-content"><code>drone-service-compensation</code></span> per le
+compensazioni); il <span class="codespan-content"><code>Registry</code></span> Prometheus con le <span class="codespan-content"><code>DroneMetrics</code></span>; la <span class="codespan-content"><code>DroneFleet</code></span> di
+<strong>3 agenti</strong> con <span class="codespan-content"><code>RoundRobinStrategy</code></span>, avvolta in <span class="codespan-content"><code>Arc&lt;Mutex&lt;...&gt;&gt;</code></span>; i due task
+consumer; lo scheduler degli arrivi; infine il server HTTP Axum (porta <span class="codespan-content"><code>8082</code></span>) con
+graceful shutdown.</p><h3 id="storers--droneeventstore"><span class="codespan-content"><code>store.rs</code></span> — <span class="codespan-content"><code>DroneEventStore</code></span></h3><p>Wrapper sulla collection <span class="codespan-content"><code>drone_events</code></span>. Salva i <span class="codespan-content"><code>DroneEvent</code></span> direttamente come BSON
+(nessuna doppia serializzazione).</p><table><thead><tr><th>Metodo</th><th>Ritorno</th><th>Descrizione</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>save_event(event)</code></span></td><td><span class="codespan-content"><code>Result&lt;()&gt;</code></span></td><td><span class="codespan-content"><code>insert_one</code></span> dell&rsquo;evento; logga <span class="codespan-content"><code>drone_id</code></span>/<span class="codespan-content"><code>event_type</code></span>/<span class="codespan-content"><code>version</code></span></td></tr><tr><td><span class="codespan-content"><code>get_events_for_drone(drone_id)</code></span></td><td><span class="codespan-content"><code>Result&lt;Vec&lt;DroneEvent&gt;&gt;</code></span></td><td>Eventi di un drone, ordinati per <span class="codespan-content"><code>version</code></span></td></tr><tr><td><span class="codespan-content"><code>get_events_for_order(order_id)</code></span></td><td><span class="codespan-content"><code>Result&lt;Vec&lt;DroneEvent&gt;&gt;</code></span></td><td>Eventi di un ordine, ordinati per <span class="codespan-content"><code>version</code></span></td></tr><tr><td><span class="codespan-content"><code>count_events_for_drone(drone_id)</code></span></td><td><span class="codespan-content"><code>Result&lt;u64&gt;</code></span></td><td>Conteggio eventi — usato per calcolare la prossima <span class="codespan-content"><code>version</code></span></td></tr><tr><td><span class="codespan-content"><code>rebuild_drone(drone_id)</code></span></td><td><span class="codespan-content"><code>Result&lt;Option&lt;DroneEntry&gt;&gt;</code></span></td><td>Ricostruisce lo stato applicando gli eventi</td></tr></tbody></table><p><strong><span class="codespan-content"><code>rebuild_drone()</code></span> in dettaglio.</strong> Legge gli eventi ordinati; se la lista è vuota
+ritorna <span class="codespan-content"><code>None</code></span>. Verifica che il <strong>primo evento sia <span class="codespan-content"><code>Created</code></span></strong> — altrimenti l&rsquo;event
+store è corrotto e ritorna un errore (<span class="codespan-content"><code>anyhow::bail!</code></span>). Costruisce una <span class="codespan-content"><code>DroneEntry</code></span>
+dal <span class="codespan-content"><code>Created</code></span>, poi applica i successivi (<span class="codespan-content"><code>Dispatched</code></span> → <span class="codespan-content"><code>start()</code></span>, <span class="codespan-content"><code>Delivered</code></span> →
+<span class="codespan-content"><code>end()</code></span>, <span class="codespan-content"><code>Returned</code></span> → nessuna azione) e ritorna l&rsquo;entry ricostruita.</p><h3 id="modelrs--droneentry-dronestate"><span class="codespan-content"><code>model.rs</code></span> — <span class="codespan-content"><code>DroneEntry</code></span>, <span class="codespan-content"><code>DroneState</code></span></h3><p><span class="codespan-content"><code>DroneState</code></span> (enum <span class="codespan-content"><code>Sleeping</code></span>/<span class="codespan-content"><code>InTransit</code></span>/<span class="codespan-content"><code>Returning</code></span>, serializzato in
+<span class="codespan-content"><code>SCREAMING_SNAKE_CASE</code></span>, con <span class="codespan-content"><code>Display</code></span>). <span class="codespan-content"><code>DroneEntry</code></span> è in memoria, non persistita:
+ne descrive lo stato ricostruito. I metodi <span class="codespan-content"><code>start()</code></span>/<span class="codespan-content"><code>end()</code></span> fanno avanzare lo stato
+e fissano i timestamp; <span class="codespan-content"><code>Display</code></span> produce una riga diagnostica del tipo
+<span class="codespan-content"><code>&quot;Drone &lt;id&gt; Returning from '...' to '...' &mdash; Ns elapsed&quot;</code></span>.</p><h3 id="consumerrs--due-consumer-kafka"><span class="codespan-content"><code>consumer.rs</code></span> — due consumer Kafka</h3><ul><li><span class="codespan-content"><code>start_order_consumer(consumer, fleet)</code></span> — sottoscrive <span class="codespan-content"><code>drone-requests</code></span>. Per ogni
+<span class="codespan-content"><code>OrderMessage</code></span> valido chiama <span class="codespan-content"><code>fleet.lock().await.dispatch_order(order)</code></span>. Commit su
+successo; nessun commit su errore transiente; commit-skip su poison pill.</li><li><span class="codespan-content"><code>start_compensation_consumer(consumer, fleet)</code></span> — sottoscrive <span class="codespan-content"><code>saga-events</code></span>. Fa
+pattern matching: solo <span class="codespan-content"><code>CompensateDrone</code></span> viene gestito (<span class="codespan-content"><code>fleet.compensate(...)</code></span> +
+commit); ogni altro <span class="codespan-content"><code>SagaEvent</code></span> viene committato immediatamente senza azione (ramo
+<span class="codespan-content"><code>Ok(_other)</code></span>); il JSON malformato viene committato e saltato.</li></ul><blockquote><p>[NOTE!]
+In AMQP la routing key <span class="codespan-content"><code>saga.compensate.drone</code></span> faceva sì che <em>solo</em> gli eventi di
+compensazione drone arrivassero sulla coda. In Kafka il consumer riceve <strong>tutti</strong>
+gli eventi del topic <span class="codespan-content"><code>saga-events</code></span> e il filtraggio avviene in codice applicativo
+(il <span class="codespan-content"><code>match</code></span>). Il commit immediato degli eventi non pertinenti è l&rsquo;equivalente di
+&ldquo;la routing key non corrispondeva&rdquo;.</p></blockquote><h3 id="metricsrs--dronemetrics"><span class="codespan-content"><code>metrics.rs</code></span> — <span class="codespan-content"><code>DroneMetrics</code></span></h3><p>Due <span class="codespan-content"><code>IntCounter</code></span>: <span class="codespan-content"><code>drone_assignment_assigned_total</code></span> (consegne accettate) e
+<span class="codespan-content"><code>drone_assignment_refused_total</code></span> (rifiutate per peso, deadline o assenza di droni).
+Sono la base dell&rsquo;SLI di successo di assegnazione (vedi
+<a href="slo.qd)">Osservabilità &amp; SLO</a>; vengono incrementati in <span class="codespan-content"><code>DroneFleet::dispatch_order</code></span>.</p><h3 id="apirs--handler-http"><span class="codespan-content"><code>api.rs</code></span> — handler HTTP</h3><p>Tutti gli handler sono <em>stateless</em> e leggono dal <span class="codespan-content"><code>DroneEventStore</code></span>. Vedi la sezione
+12 per la reference completa.</p><hr /><h2 id="_12-api-reference">12. API Reference</h2><p>Porta: <strong>8082</strong></p><h3 id="get-health"><span class="codespan-content"><code>GET /health</code></span></h3><p><strong>Response <span class="codespan-content"><code>200</code></span>:</strong> <span class="codespan-content"><code>Drone Service is running</code></span></p><h3 id="get-metrics"><span class="codespan-content"><code>GET /metrics</code></span></h3><p>Espone le metriche Prometheus in formato text exposition.</p><pre><code># HELP drone_assignment_assigned_total Number of deliveries accepted and assigned to a drone
+# TYPE drone_assignment_assigned_total counter
+drone_assignment_assigned_total 42
+
+# HELP drone_assignment_refused_total Number of deliveries refused by the fleet
+# TYPE drone_assignment_refused_total counter
+drone_assignment_refused_total 3</code></pre><p><strong>SLI</strong> — tasso di successo: <span class="codespan-content"><code>assigned / (assigned + refused)</code></span>.</p><h3 id="get-orderorderidstatus"><span class="codespan-content"><code>GET /order/{orderId}/status</code></span></h3><p>Ultimo evento registrato per l&rsquo;ordine indicato.
+<strong>Response <span class="codespan-content"><code>200</code></span>:</strong> <span class="codespan-content"><code>Latest event: DRONE_DISPATCHED at 2026-04-10T14:00:01Z</code></span>
+<strong>Response <span class="codespan-content"><code>404</code></span>:</strong> nessun evento per quell&rsquo;<span class="codespan-content"><code>order_id</code></span>.</p><h3 id="get-orderorderidevents"><span class="codespan-content"><code>GET /order/{orderId}/events</code></span></h3><p>Storico completo degli eventi associati a un ordine (JSON).
+<strong>Response <span class="codespan-content"><code>200</code></span>:</strong></p><pre><code class="language-json">[
+  { &quot;event_type&quot;: &quot;DRONE_CREATED&quot;,    &quot;timestamp&quot;: &quot;2026-04-10T14:00:00Z&quot;, &quot;version&quot;: 0 },
+  { &quot;event_type&quot;: &quot;DRONE_DISPATCHED&quot;, &quot;timestamp&quot;: &quot;2026-04-10T14:00:01Z&quot;, &quot;version&quot;: 1 },
+  { &quot;event_type&quot;: &quot;DRONE_DELIVERED&quot;,  &quot;timestamp&quot;: &quot;2026-04-10T14:25:01Z&quot;, &quot;version&quot;: 2 },
+  { &quot;event_type&quot;: &quot;DRONE_RETURNED&quot;,   &quot;timestamp&quot;: &quot;2026-04-10T14:25:01Z&quot;, &quot;version&quot;: 3 }
+]</code></pre><p><strong>Response <span class="codespan-content"><code>404</code></span>:</strong> nessun evento per quell&rsquo;<span class="codespan-content"><code>order_id</code></span>.</p><h3 id="get-dronedroneidevents"><span class="codespan-content"><code>GET /drone/{droneId}/events</code></span></h3><p>Ultimo evento registrato per il drone indicato.
+<strong>Response <span class="codespan-content"><code>200</code></span>:</strong> <span class="codespan-content"><code>Latest event: DRONE_RETURNED at 2026-04-10T14:25:01Z</code></span>
+<strong>Response <span class="codespan-content"><code>404</code></span>:</strong> nessun evento per quel <span class="codespan-content"><code>drone_id</code></span>.</p><h3 id="get-dronedroneidrebuild"><span class="codespan-content"><code>GET /drone/{droneId}/rebuild</code></span></h3><p>Ricostruisce lo stato del drone applicando l&rsquo;event log in ordine (event sourcing).
+<strong>Response <span class="codespan-content"><code>200</code></span>:</strong> <span class="codespan-content"><code>Drone a1b2-... Returning from 'Via Roma 1' to 'Via Dante 5' &mdash; 1502s elapsed</code></span>
+<strong>Response <span class="codespan-content"><code>404</code></span>:</strong> nessun evento per quel <span class="codespan-content"><code>drone_id</code></span>.
+<strong>Response <span class="codespan-content"><code>500</code></span>:</strong> event store corrotto (primo evento non <span class="codespan-content"><code>Created</code></span>).</p><hr /><h2 id="_13-graceful-shutdown">13. Graceful shutdown</h2><pre><code class="language-rust">axum::serve(listener, app)
+    .with_graceful_shutdown(async {
+        tokio::signal::ctrl_c().await.expect(&quot;...&quot;);
+    })
+    .await?;</code></pre><p><span class="codespan-content"><code>with_graceful_shutdown</code></span> attende il completamento delle richieste HTTP in corso
+prima di chiudere il server. I consumer Kafka e lo scheduler, essendo task spawnati,
+vengono interrotti alla terminazione del processo.</p>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

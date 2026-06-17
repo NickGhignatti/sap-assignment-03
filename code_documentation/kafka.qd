@@ -1,0 +1,335 @@
+.docname {Code Docs}
+.include {docs}
+
+# Messaging Layer — Apache Kafka
+
+> [NOTE!]
+> Questa pagina è la **reference del transport layer**: come i tre microservizi
+> usano Kafka per comunicare. La storia della migrazione da RabbitMQ/AMQP a Kafka è
+> in [Evoluzione del progetto](evoluzione.qd); la vista d'insieme dei flussi è in
+> [Architettura del Sistema](architettura.qd).
+
+## 1. Perché Kafka
+
+L'intera comunicazione inter-servizio passa per Apache Kafka. La scelta porta tre
+proprietà che reggono l'architettura event-driven:
+
+- **Log durevole e rigiocabile.** Un topic Kafka è un log append-only persistito su
+  disco. Un messaggio non viene cancellato quando viene consumato: resta nel log, e
+  un consumer può rileggerlo (per esempio dopo un riavvio, ripartendo da un offset).
+  Questo è ciò che rende il sistema resiliente ai fallimenti temporanei.
+- **Disaccoppiamento produttore/consumatore.** Chi produce non sa chi consuma. Si
+  può aggiungere un nuovo consumatore di un topic senza toccare i produttori.
+- **Scalabilità tramite partizioni e consumer group.** Un topic è diviso in
+  partizioni; un gruppo di consumer si divide le partizioni automaticamente. Più
+  repliche di un servizio scalano senza modifiche al codice.
+
+I client Kafka usati sono basati sulla crate `rdkafka` (binding a `librdkafka`).
+
+---
+
+## 2. Topologia — Topic e Consumer Group
+
+### Topic
+
+Il sistema usa **tre topic**, tutti con payload JSON e chiave di partizione
+`order_id`.
+
+| Topic | Produttori | Consumatori | Tipo messaggio | Chiave |
+|---|---|---|---|---|
+| `saga-events` | order, delivery, drone | order, drone | `SagaEvent` | `order_id` |
+| `order-requests` | order | delivery | `OrderMessage` | `order_id` |
+| `drone-requests` | delivery | drone | `OrderMessage` | `order_id` |
+
+### Consumer Group
+
+| Group ID | Servizio | Topic sottoscritto | Ruolo |
+|---|---|---|---|
+| `order-service` | order | `saga-events` | Avanza la SAGA su ogni step event |
+| `delivery-service` | delivery | `order-requests` | Schedula la delivery, inoltra al drone |
+| `drone-service-orders` | drone | `drone-requests` | Assegna un drone, avvia la consegna |
+| `drone-service-compensation` | drone | `saga-events` | Gestisce gli eventi `COMPENSATE_DRONE` |
+
+.mermaid
+    graph LR
+        subgraph Topics["Topic Kafka"]
+            SE["saga-events"]
+            OR["order-requests"]
+            DR["drone-requests"]
+        end
+
+        subgraph Groups["Consumer Groups"]
+            G1["order-service"]
+            G2["delivery-service"]
+            G3["drone-service-orders"]
+            G4["drone-service-compensation"]
+        end
+
+        SE -->|"subscribe"| G1
+        SE -->|"subscribe"| G4
+        OR -->|"subscribe"| G2
+        DR -->|"subscribe"| G3
+
+**Lettura del diagramma.** Si noti che il topic `saga-events` è sottoscritto da
+**due** group distinti (`order-service` e `drone-service-compensation`): è un caso di
+**fan-out**. Ogni group riceve una copia indipendente dell'intero stream di eventi e
+ne mantiene un cursore (offset) separato. L'Order Service avanza la SAGA; il Drone
+Service cerca le compensazioni. I due non interferiscono. Gli altri due topic hanno
+un solo consumatore ciascuno.
+
+---
+
+## 3. Chiave di partizione e ordinamento
+
+Tutti i messaggi usano **`order_id` come chiave di partizione**. Questa è la singola
+decisione di design più importante del transport layer.
+
+Kafka garantisce l'ordinamento dei messaggi **solo all'interno di una singola
+partizione**. Distribuendo i messaggi per chiave (`order_id`), Kafka assicura che
+tutti i messaggi relativi allo stesso ordine finiscano nella **stessa partizione** e
+quindi siano consumati **nell'ordine in cui sono stati prodotti**. Per esempio, per
+un dato ordine, l'evento `DeliveryScheduled` sarà sempre processato prima di
+`DroneAssigned`, perché entrambi hanno la stessa chiave e arrivano nella stessa
+partizione in sequenza.
+
+L'ordinamento *globale* tra ordini diversi non è necessario (e nemmeno desiderabile:
+limiterebbe la parallelizzazione). Ordini diversi possono finire su partizioni
+diverse ed essere elaborati in parallelo. Nel codice, la chiave è impostata nel
+`FutureRecord`:
+
+```rust
+FutureRecord::to(topic).key(key).payload(payload.as_slice())
+//                       ^^^^^^^^ key = order_id
+```
+
+---
+
+## 4. Produttore — durabilità con `acks=all`
+
+Tutti e tre i servizi configurano il producer in modo identico:
+
+```rust
+let producer: FutureProducer = ClientConfig::new()
+    .set("bootstrap.servers", &brokers)
+    .set("message.timeout.ms", "5000")
+    .set("acks", "all")
+    .create()?;
+```
+
+- **`acks=all`** è la garanzia di durabilità più forte: una `send` si considera
+  riuscita solo quando il *leader della partizione* **e tutte le repliche in-sync**
+  hanno confermato la scrittura. Con una singola replica (il setup di sviluppo) ciò
+  significa che il leader ha persistito il messaggio; in un cluster multi-replica
+  protegge dalla perdita di dati alla caduta di un broker.
+- **`message.timeout.ms=5000`** limita a 5 secondi il tempo massimo per consegnare un
+  messaggio al broker prima di considerare la `send` fallita.
+
+Ogni `send` usa un `Timeout::After(Duration::from_secs(5))` lato applicativo e mappa
+l'eventuale errore Kafka in un `anyhow::Error` descrittivo. Poiché il `FutureProducer`
+è `Arc`-backed internamente, clonarlo è economico: è ciò che permette di condividere
+un unico producer tra più componenti.
+
+---
+
+## 5. Consumatore — commit manuale e at-least-once
+
+Tutti i consumer condividono la stessa configurazione di base:
+
+```rust
+let consumer: StreamConsumer = ClientConfig::new()
+    .set("bootstrap.servers", &brokers)
+    .set("group.id", "<nome-gruppo>")
+    .set("auto.offset.reset", "earliest")
+    .set("enable.auto.commit", "false")
+    .create()?;
+```
+
+- **`group.id`** identifica il consumer group (vedi tabella §2). Tutte le repliche
+  con lo stesso `group.id` si dividono le partizioni (load balancing); group diversi
+  ricevono copie indipendenti dello stream (fan-out).
+- **`auto.offset.reset=earliest`**: se il group non ha un offset committato (primo
+  avvio o reset), parte dall'inizio del topic. Garantisce che nessun messaggio
+  prodotto prima dell'avvio del consumer venga perso.
+- **`enable.auto.commit=false`**: gli offset si committano **manualmente**, *dopo*
+  aver elaborato con successo ogni messaggio. È l'equivalente del `basic_ack` di AMQP
+  e la chiave della consegna **at-least-once**.
+
+Il pattern del loop di consumo, identico nei tre servizi:
+
+.mermaid
+    flowchart TD
+        A["consumer.recv() — pull\ndel prossimo messaggio"]
+        B{"payload presente?"}
+        T["commit + skip\n(tombstone)"]
+        C{"deserializzazione"}
+        D["handler applicativo"]
+        E{"esito"}
+        OK["commit_message()\n(offset avanza)"]
+        NOC["NON committa\n(Kafka rielabora)"]
+        PP["commit + skip\n(poison pill)"]
+
+        A --> B
+        B -->|"No"| T
+        B -->|"Sì"| C
+        C -->|"Err"| PP
+        C -->|"Ok"| D --> E
+        E -->|"Ok"| OK
+        E -->|"Err transiente"| NOC
+
+        style OK fill:#dfd
+        style NOC fill:#fdd
+        style PP fill:#fdd
+
+**Lettura del diagramma.** `recv()` è il *pull*: il consumer chiede a Kafka il
+prossimo messaggio (l'opposto del modello *push* di AMQP, in cui era il broker a
+spingere). Quattro esiti:
+
+| Esito | Azione | Equivalente AMQP |
+|---|---|---|
+| Payload vuoto (tombstone) | commit + skip | — |
+| JSON malformato (poison pill) | commit + skip | `nack(requeue=false)` |
+| Handler `Ok` | `commit_message` | `basic_ack` |
+| Handler `Err` transiente | **no commit** | `nack(requeue=true)` |
+
+La distinzione cruciale è tra **poison pill** ed **errore transiente**. Un messaggio
+malformato non diventerà mai valido: committarlo lo *salta*, evitando un loop infinito
+di retry. Un errore transiente (es. MongoDB momentaneamente irraggiungibile) merita
+invece un retry: **non** committare l'offset fa sì che Kafka riconsegni il messaggio
+a un prossimo poll (dopo un riavvio o un rebalance del consumer). L'at-least-once nasce
+proprio da qui: un messaggio è committato solo dopo l'elaborazione riuscita, quindi nel
+peggiore dei casi viene elaborato *più di una volta*, mai *zero volte*.
+
+Il commit è eseguito in modalità `CommitMode::Async` (fire-and-forget, throughput più
+alto). In scenari che richiedano la garanzia più forte si userebbe `CommitMode::Sync`.
+
+> [NOTE!]
+> **Niente wildcard di routing.** In AMQP una routing key come `saga.compensate.drone`
+> faceva sì che il broker consegnasse a una coda *solo* gli eventi pertinenti. In
+> Kafka un consumer riceve **tutti** i messaggi del topic a cui è sottoscritto, e il
+> filtraggio avviene in **codice applicativo**. È il caso del consumer di
+> compensazione del Drone Service, che riceve l'intero `saga-events` e agisce solo su
+> `CompensateDrone`, committando immediatamente tutto il resto.
+
+---
+
+## 6. Infrastruttura — KRaft e i listener
+
+Kafka gira in **KRaft mode** (Kafka Raft), cioè **senza Zookeeper**: il broker è
+contemporaneamente *broker* e *controller* (`KAFKA_PROCESS_ROLES=broker,controller`),
+e gestisce i metadati del cluster con un quorum Raft interno. Questo semplifica
+drasticamente il deployment: un solo processo invece di due cluster separati.
+
+In `docker-compose` il broker espone **due listener**, per servire client su reti
+diverse:
+
+| Listener | Indirizzo | Usato da |
+|---|---|---|
+| `PLAINTEXT` | `kafka:9092` | Container Docker (comunicazione inter-servizio) |
+| `EXTERNAL` | `localhost:9094` | Macchina host (CLI Kafka, IDE, Kafka UI) |
+
+I servizi leggono il broker dalla variabile d'ambiente `KAFKA_BROKERS=kafka:9092`. È
+un *seed*: da un solo indirizzo, i client Kafka scoprono automaticamente l'intera
+topologia del cluster. Dall'host si usa invece `localhost:9094`.
+
+In Kubernetes la configurazione del broker è leggermente diversa (un solo listener
+rilevante per il cluster); i dettagli, incluse le insidie di KRaft su K8s, sono in
+[Deployment Kubernetes](k8s.qd).
+
+### Creazione automatica dei topic
+
+Con `KAFKA_AUTO_CREATE_TOPICS_ENABLE=true`, i topic vengono creati alla **prima
+produzione**. Questo elimina la necessità di dichiarare la topologia all'avvio (in
+AMQP servivano `exchange_declare`/`queue_declare`): i servizi partono e producono, e
+i topic nascono al volo.
+
+> [NOTE!]
+> All'avvio può comparire un errore benigno `UnknownTopicOrPartition: saga-events`:
+> i consumer si sottoscrivono *prima* che il topic esista. Con l'auto-creazione
+> abilitata, il topic viene creato alla prima produzione e il consumer riprende
+> normalmente.
+
+---
+
+## 7. Distributed tracing — propagazione del trace id
+
+In AMQP (assignment 02) il trace context era propagato da Micrometer Observation, che
+si agganciava sia alle chiamate REST sia ai messaggi. In Kafka non esiste nulla di
+analogo "di serie": il broker trasporta byte e non ha alcuna nozione di traccia. La
+correlazione end-to-end è quindi ottenuta **a livello applicativo**, con un approccio
+leggero e senza infrastruttura aggiuntiva (nessun collector, nessun Jaeger).
+
+Il principio è semplice: un singolo **trace id** viene coniato all'ingresso del
+sistema e viaggia insieme a ogni messaggio come **header Kafka** `x-trace-id`. La
+logica condivisa vive nel modulo [`common::trace`](common.qd):
+
+| Lato | Cosa fa | Funzione di `common::trace` |
+|---|---|---|
+| **Ingresso HTTP** (Order `POST /`) | conia il trace id della richiesta | `new_trace_id()` |
+| **Produttore** | allega l'id come header al `FutureRecord` | `trace_headers(trace_id)` |
+| **Consumatore** | estrae l'id dall'header e apre uno span | `trace_id_or_new(msg.headers())` |
+
+Lato produttore, ogni `send` aggiunge l'header (qui l'helper dell'orchestratore):
+
+```rust
+FutureRecord::to(topic)
+    .key(key)                                       // partizione (order_id)
+    .payload(payload.as_slice())                    // corpo JSON
+    .headers(common::trace::trace_headers(trace_id)) // ← trace id end-to-end
+```
+
+Lato consumatore, l'id si estrae dagli header e si entra in uno span `tracing` che lo
+riporta su **tutti** i log emessi durante l'elaborazione del messaggio:
+
+```rust
+let trace_id = common::trace::trace_id_or_new(msg.headers());
+let span = tracing::info_span!("saga_event", %trace_id, order_id = %event.order_id());
+orchestrator.handle_saga_event(event, &trace_id).instrument(span).await
+```
+
+La regola di propagazione è: **l'id estratto da un messaggio in ingresso viene
+ri-allegato a ogni messaggio prodotto in conseguenza**. Così un unico trace id segue
+l'intera vita di un ordine attraverso i salti asincroni:
+
+.mermaid
+    flowchart LR
+        H["HTTP POST /\nnew_trace_id()"]
+        O["Order"]
+        OR["order-requests\nheader: x-trace-id"]
+        D["Delivery"]
+        DR["drone-requests\nheader: x-trace-id"]
+        DRN["Drone"]
+        SE["saga-events\nheader: x-trace-id"]
+
+        H --> O
+        O -->|"trace_headers"| OR --> D
+        D -->|"trace_headers"| DR --> DRN
+        D -->|"trace_headers"| SE
+        DRN -->|"trace_headers"| SE
+        SE -->|"trace_id_or_new"| O
+
+**Lettura del diagramma.** Il trace id nasce con la `POST /`. L'Order lo mette
+sull'`order-requests`; il Delivery lo legge e lo ripropaga sia su `drone-requests`
+(verso il Drone) sia su `saga-events` (verso l'orchestratore); il Drone lo legge dal
+suo ordine e lo riporta sui `saga-events` che pubblica. Ogni consumer, leggendo
+l'header, ritrova lo **stesso** id e lo scrive nei propri log: filtrando i log per
+`trace_id` si ricostruisce la cronologia completa di un ordine, esattamente come
+faceva il trace context su AMQP.
+
+**Dettagli e casi limite.**
+
+- La chiave di partizione (`order_id`) e l'header (`x-trace-id`) sono due cose
+  distinte: la prima decide *dove* finisce il messaggio (ordinamento), il secondo
+  *correla i log* — non influenza il routing.
+- `trace_id_or_new` conia un id fresco se l'header manca (es. un messaggio prodotto
+  da un client più vecchio o un tombstone): un consumer ha **sempre** un id con cui
+  loggare, non resta mai senza traccia.
+- Il completamento della consegna guidato dallo scheduler del Drone (`check_arrivals`)
+  non nasce da un messaggio in ingresso e non pubblica eventi Kafka: per i suoi log si
+  conia un trace id locale.
+
+> [NOTE!]
+> È un tracing **a correlazione**, non un tracing a span distribuiti completo (niente
+> parent/child span cross-servizio né latenze per-hop come in OpenTelemetry). È la
+> scelta deliberata: ripristina la correlabilità end-to-end persa nel passaggio da
+> AMQP a Kafka, restando senza nuova infrastruttura. L'evoluzione naturale sarebbe
+> esportare gli span via OTLP verso un collector.

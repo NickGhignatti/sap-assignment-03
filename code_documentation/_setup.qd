@@ -1,0 +1,8 @@
+.docdescription {Code Docs}
+.doclang {English}
+.theme {paperwhite} layout:{hyperlegible}
+
+.pagemargin {topleft}
+    Documentation
+
+.pageformat width:{1000}

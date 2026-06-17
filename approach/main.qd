@@ -1,0 +1,349 @@
+.docname {approach}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Descrizione dell'Approccio Utilizzato
+
+> Documento narrativo che descrive **come** è stato gestito il progetto DroneFlow attraverso i
+> cinque process group del PMBOK, giustificando ogni scelta gestionale, illustrando gli
+> alternative considerate e indicizzando tutta la documentazione di progetto allegata.
+> È la sezione di sintesi metodologica dell'elaborato; i singoli artefatti sono in allegato.
+
+---
+
+| Campo               | Valore                                             |
+|---------------------|----------------------------------------------------|
+| **Progetto**        | DroneFlow — Servizio di Consegna Pacchi con Droni  |
+| **Project No.**     | SAP-03                                             |
+| **Project Manager** | Ghignatti Nicolò                                   |
+| **Committente**     | Marco A. Boschetti (corso di Project Management)   |
+| **Versione**        | 1.0 — Aprile 2026                                  |
+
+---
+
+## 0. Premessa: il progetto e il quadro metodologico
+
+DroneFlow è la simulazione gestionale di un progetto di sviluppo software reale: un servizio di
+consegna pacchi tramite droni, completamente automatizzato. **L'obiettivo dell'elaborato non è
+il software** (la cui implementazione è un pretesto coerente), **ma dimostrare la capacità di
+gestire il progetto**.
+
+L'approccio segue il **PMBOK 6ª edizione** per la struttura in process group e il framework di
+**R. Wysocki (*Effective Project Management*)** per gli strumenti operativi (CoS, POS, PDS, RBS,
+WBS, PMLC). La metodologia di esecuzione è un **Agile ibrido adattivo** (dettagliato
+nell'allegato *Methodology*).
+
+### Perché questo quadro, e le alternative scartate
+
+| Scelta                                   | Alternativa considerata             | Motivazione della scelta |
+|------------------------------------------|-------------------------------------|--------------------------|
+| **PMBOK + Wysocki** come riferimento     | Solo PMBOK; solo PRINCE2             | PMBOK dà la struttura per process group; Wysocki fornisce template pratici per software e la tassonomia PMLC, allineati al programma del corso |
+| **PMLC Adattivo (Agile ibrido)**         | Linear (Waterfall); Incremental puro | I requisiti del *drone-service* (agent-based) e dell'EDA erano parzialmente incerti: un modello adattivo riduce il rischio di rilavorazione (cfr. Wysocki: più incertezza ⇒ più iterazioni, planning *just-in-time*, risk management crescente) |
+| **Risorsa unica PM+Sviluppatore**        | Team simulato multi-ruolo           | Contesto accademico reale; reso esplicito come rischio RK-03 (bus factor) e gestito |
+
+> 📌 *Nota di coerenza architettura↔gestione*: le scelte architetturali (microservizi, Kafka,
+> SAGA, Event Sourcing, Kubernetes) **non sono obiettivi di progetto** ma vincoli tecnici al
+> servizio dei requisiti di affidabilità, tracciabilità e scalabilità. Questa distinzione è
+> mantenuta in tutti i documenti (POS/PDS/RBS) ed è coerente con la gestione del rischio.
+
+### 0.1 Tensioni tra PMBOK e Wysocki e scelte di riconciliazione
+
+Combinare due riferimenti non è gratuito: PMBOK e Wysocki, su alcuni punti, **non dicono la
+stessa cosa**. Anziché nasconderlo, ogni divergenza è stata risolta con una scelta esplicita e
+motivata. Le tensioni principali e la loro risoluzione:
+
+#### 1) POS *e* Project Charter: ridondanza apparente
+
+- **Il conflitto**: per PMBOK il documento che autorizza il progetto e conferisce autorità al PM
+  è il **Project Charter**; per Wysocki il documento sintetico che apre il progetto è il **POS**
+  (Project Overview Statement). Entrambi "riassumono e aprono" il progetto: tenerli entrambi
+  sembra una duplicazione.
+- **La risoluzione (scelta adottata)**: i due documenti sono trattati come **sequenziali, non
+  alternativi**, distinti per *momento* e per *direzione*:
+  - Il **POS** è una **proposta**, redatta *dal PM* **prima** dell'approvazione, e sottoposta al
+    committente come *richiesta* di via libera (flusso bottom-up, PM → committente). È il
+    deliverable che *chiude la negoziazione* (CoS → POS).
+  - Il **Project Charter** è l'**autorizzazione formale**, emessa *dal committente/sponsor*
+    **dopo** l'accettazione, che *conferisce* al PM l'autorità sulle risorse (flusso top-down,
+    committente → PM).
+  - In questa lettura il POS è l'**input** e il Charter è l'**output** dello stesso gate di
+    Scoping/Initiating: il POS è "il progetto prima del sì", il Charter è "il progetto appena
+    accettato". Nessuna ridondanza, ma un passaggio di consegne con cambio di responsabilità.
+
+#### 2) Nomenclatura dei process group
+
+- **Il conflitto**: PMBOK nomina i gruppi *Initiating, Planning, Executing, Monitoring &
+  Controlling, Closing*; Wysocki usa *Scoping, Planning, Launching, Monitoring & Controlling,
+  Closing*.
+- **La risoluzione**: si adotta la **struttura di governance PMBOK** (i cinque process group
+  come ossatura standard e riconoscibile) e si mantengono gli **strumenti Wysocki** al loro
+  interno. Le intestazioni del documento riportano entrambe le diciture (es. *Scoping /
+  Initiating*, *Launching / Executing*) per esplicitare la corrispondenza senza ambiguità.
+
+#### 3) Struttura "predittiva" PMBOK 6 vs ciclo Adattivo (APF) di Wysocki
+
+- **Il conflitto**: i process group di PMBOK 6 sono spesso letti come un flusso prevalentemente
+  **predittivo/sequenziale**; l'**Adaptive Project Framework** di Wysocki è invece **iterativo**.
+  Applicare l'uno sopra l'altro sembra incoerente.
+- **La risoluzione**: i process group PMBOK **non sono fasi temporali ma gruppi logici che si
+  ripetono a ogni iterazione**. Ogni sprint adattivo *ri-attraversa* Planning → Executing →
+  Monitoring & Controlling. I due modelli operano quindi su **livelli di astrazione diversi**:
+  l'APF è il *ciclo di vita macro* (governato dall'incertezza sulla soluzione), i process group
+  sono la *governance per-iterazione*. Letti così sono complementari, non in conflitto.
+
+#### 4) Conditions of Satisfaction (Wysocki) vs raccolta requisiti (PMBOK)
+
+- **Il conflitto**: la **CoS** (negoziazione *wants vs needs*) è un costrutto Wysocki che non
+  ha un equivalente diretto in PMBOK, dove la materia è coperta da *Collect Requirements* e
+  dall'analisi degli stakeholder.
+- **La risoluzione**: la CoS è usata come **front-end di negoziazione** che *alimenta* il
+  processo requisiti PMBOK: `CoS → criteri di successo del POS → RBS`. È un arricchimento del
+  *front-end*, non una via alternativa.
+
+#### 5) RBS separata dalla WBS
+
+- **Il conflitto**: Wysocki tiene esplicita la **Requirements Breakdown Structure**; PMBOK
+  tende a inglobare i requisiti nello *scope baseline* e nella **WBS**.
+- **La risoluzione**: si mantiene la **RBS distinta dalla WBS** per preservare la tracciabilità
+  *requisito → work package* e la separazione *cosa* (RBS) vs *come* (WBS), coerente con la
+  distinzione requisiti/vincoli tecnici adottata in tutto l'elaborato.
+
+#### 6) Business Case: documento dello sponsor (PMBOK) redatto dal PM
+
+- **Il conflitto**: per PMBOK il **Business Case** è un *documento di business pre-progetto*,
+  tipicamente di proprietà dello **sponsor/iniziatore** e fornito come **input** al processo
+  *Develop Project Charter*. Wysocki gli dà meno enfasi. Qui, però, è stato redatto **dal PM**.
+- **La risoluzione**: nel contesto accademico a **risorsa unica**, lo sponsor (il committente
+  PM) non produce documenti operativi; il PM redige il Business Case sia per *dimostrare la
+  competenza* valutata, sia perché ne è il naturale estensore in assenza di un'organizzazione
+  committente. La sua **collocazione** resta però quella PMBOK — artefatto di Scoping che
+  *alimenta* il Charter — quindi la deviazione è solo di *autore*, non di *ruolo*.
+
+#### 7) SOW: input del committente (PMBOK) vs deliverable del PM
+
+- **Il conflitto**: in PMBOK lo **Statement of Work** è tipicamente un **input fornito dal
+  committente/sponsor** (descrive prodotti/servizi attesi). Inoltre il suo contenuto
+  (deliverable + criteri di accettazione) **si sovrappone** in parte a POS/PDS.
+- **La risoluzione**: il SOW è scritto dal PM (stessa logica del Business Case, risorsa unica)
+  ma con un **focus distinto**: descrive il **product scope** — *cosa* viene consegnato e con
+  *quali criteri di accettazione* — mentre POS/PDS inquadrano il **project scope** (perché,
+  obiettivi, vincoli). La sovrapposizione apparente è risolta per **oggetto**: SOW = contratto
+  sui deliverable; POS/PDS = inquadramento del progetto.
+
+#### 8) Earned Value Management (PMBOK) vs reporting leggero (adattivo)
+
+- **Il conflitto**: PMBOK 6 dà ampio spazio all'**Earned Value Management** (CPI/SPI) come
+  tecnica di controllo dell'avanzamento; l'impostazione adattiva di Wysocki privilegia un
+  monitoraggio **leggero** (milestone, *variance*, *stoplight report*).
+- **La risoluzione**: si è scelto il **reporting leggero** (variance + semaforo) perché l'EVM è
+  **sovradimensionato** per un progetto a risorsa singola e a budget nullo (non c'è un *cost
+  baseline* monetario significativo da tracciare). L'EVM è comunque **citato esplicitamente**
+  come strumento d'elezione qualora il team crescesse (cfr. *Monitoring & Controlling* e
+  *Lessons Learned*): la scelta è di *tailoring*, non di ignoranza dello strumento — coerente
+  con il principio PMBOK 6 di **adattare i processi al contesto**.
+
+> In sintesi: dove i due framework divergono, **PMBOK fornisce la struttura di governance** e
+> **Wysocki gli strumenti operativi**; le sovrapposizioni (come POS/Charter o SOW/PDS) sono
+> risolte per *momento, responsabilità e oggetto*, non eliminate arbitrariamente. Le deviazioni
+> dovute alla risorsa unica (Business Case e SOW redatti dal PM) toccano l'*autore*, mai il
+> *ruolo* dell'artefatto nel ciclo.
+
+---
+
+## 1. Scoping / Initiating
+
+**Obiettivo della fase**: capire i veri bisogni del committente, documentarli, ottenere
+l'approvazione a procedere.
+
+### Cosa è stato fatto
+1. **Conditions of Satisfaction (CoS)**: chiarito il dilemma *"client wants vs client needs"*
+   negoziando con il committente cosa il servizio debba *davvero* garantire (finestra temporale,
+   tracciabilità, annullamento ordinato) prima di impegnarsi. → allegato *CoS*.
+2. **Raccolta e decomposizione dei requisiti** nella **RBS** (Requirements Breakdown Structure),
+   con priorità **MoSCoW** e attore principale. → allegato *RBS*.
+3. **Sintesi del progetto** in **POS** (una pagina, orientata al senior management) e sua
+   versione operativa estesa, il **PDS**, per il planning team. → allegati *POS*, *PDS*.
+4. **Project Charter**: autorizzazione formale del progetto e nomina del PM, con confini
+   *in/out of scope*, milestone e budget. → allegato *Project Charter*.
+5. **Business Case**: giustificazione economica (SWOT, IRACIS, analisi alternative, breakeven).
+   → allegato *Business Case*.
+6. **Stakeholder Register**: identificazione di committente PM (Boschetti), vincolo tecnico SAP
+   (Ricci), PM/sviluppatore, utenti finali simulati, con strategia di comunicazione per ciascuno.
+   → allegato *Stakeholder Register*.
+
+### Scelte e alternative
+- **POS + PDS separati** anziché un unico documento: il POS resta sintetico per l'approvazione,
+  il PDS fornisce il dettaglio al planning. Alternativa scartata: un solo documento, meno
+  leggibile per il committente.
+- **Distinzione requisiti / vincoli tecnici**: scelta deliberata per non confondere il *cosa*
+  (requisiti utente) con il *come* (architettura), separando ciò che è valutabile come gestione.
+
+### Note di Scoping
+- **Data**: Settimana 1 · **Modalità**: e-mail
+- **Partecipanti**: PM (Ghignatti) → Committente PM (Boschetti)
+- **Contesto**: lo scope tecnico è interamente definito dalla **traccia dell'Assignment 03 del
+  corso SAP** (stakeholder Ricci): i vincoli architetturali (microservizi, Kafka, Kubernetes,
+  sistema agent-based) non sono stati negoziati ma dati dalla consegna.
+- **Azione di scoping**: il PM ha contattato il docente PM (Boschetti) via e-mail per
+  verificare la compatibilità dell'approccio e ottenere il nulla osta a utilizzare il
+  progetto SAP come base del progetto PM. L'autorizzazione è arrivata per e-mail.
+- **Esito**: compatibilità confermata; negoziazione delle CoS avviata sul *servizio*
+  (garanzia temporale, tracciabilità, annullamento ordinato) nei limiti della traccia SAP;
+  concordati i confini *out of scope* (no pagamenti, no UI, droni simulati); avviata la
+  redazione del POS.
+
+---
+
+## 2. Planning
+
+**Obiettivo della fase**: trasformare lo scope in un piano eseguibile e approvato.
+
+### Cosa è stato fatto
+1. **Joint Project Planning (JPP)**: sessione di pianificazione che, dal PDS, ha prodotto la WBS
+   e le stime.
+2. **WBS** (Work Breakdown Structure): decomposizione del lavoro in 8 work package (1.1–1.8).
+   → allegato *WBS*.
+3. **Stime** di durata, risorse e costi per attività. → allegato *Schedula* (sez. 2) e *Charter* (budget).
+4. **Project Network Diagram + Cammino Critico + Gantt**: sequenziamento, dipendenze
+   Finish-to-Start, identificazione del cammino critico (A→B→E→F→G→H→I→J, 10 settimane) e
+   baseline temporale. → allegato *Schedula/Gantt*.
+5. **Risk Register**: consolidamento e quantificazione dei rischi (matrice P×I) con strategie di
+   risposta e owner. → allegato *Analisi dei Rischi*.
+
+### Scelte e alternative
+- **WBS deliverable-oriented** (per componenti/servizi) anziché per fasi temporali: facilita la
+  tracciabilità requisito→work package e l'assegnazione.
+- **Cammino critico calcolato a mano** e reso esplicito: l'Order service (D) ha *float*, mentre
+  EDA (E) e drone agent (F) sono critici → priorità di monitoraggio su questi.
+- **Buffer del 25%** sul cammino critico: scelta conservativa per coprire i rischi RK-02/RK-04 e
+  la disponibilità variabile dovuta agli altri esami, preferita a una stima "ottimistica"
+  (Brooks: gli sviluppatori sottostimano sistematicamente).
+
+### Note di Planning (Joint Project Planning)
+- **Quando**: Settimana 2 · **Modalità**: sessione di lavoro individuale (PM/sviluppatore)
+- **Punti affrontati**: (1) costruzione WBS dal PDS; (2) stime durata/risorse; (3) dipendenze e
+  cammino critico; (4) identificazione rischi; (5) baseline e via libera a eseguire.
+- **Esito**: prodotta la WBS a 8 work package; stimate le durate (fondamenta a sprint da 2
+  settimane, prototipazione a sprint da 1); calcolato il cammino critico; popolato il Risk
+  Register; congelata la baseline e dato il via libera all'esecuzione.
+
+---
+
+## 3. Launching / Executing
+
+**Obiettivo della fase**: avviare il lavoro e produrre i deliverable.
+
+### Cosa è stato fatto
+- **Kick-off**: conferma di scope, baseline e regole operative.
+- **Regole operative del team**: pur con risorsa unica, sono state fissate convenzioni di
+  lavoro (commit message chiari e tracciabili, auto-revisione a fine sprint, board dei task —
+  cfr. strategia di comunicazione interna nello *Stakeholder Register*).
+- **Esecuzione per work package** secondo WBS, con i due sprint lunghi sulle fondamenta
+  (common, infra, EDA, drone agent) e gli sprint corti sulla prototipazione (K8s, SLO/SLI,
+  testing, docs).
+- **Gestione dei cambiamenti di scope**: ogni richiesta di variazione valutata rispetto al POS;
+  le varianti accettate registrate (Scope Bank) e quelle fuori perimetro respinte (controllo del
+  rischio RK-01 scope creep).
+
+### Scelte e alternative
+- **Sprint a lunghezza variabile** (ibrido) anziché Scrum a sprint fissi: motivato nel documento
+  *Methodology* dalla diversa natura cognitiva delle due fasi. Alternativa scartata: Scrum puro
+  (sprint fissi) — troppo rigido per assorbire la complessità infrastrutturale iniziale.
+
+### Note di avvio (Launching)
+- **Quando**: inizio Settimana 1 · **Modalità**: auto-organizzazione; committente informato via e-mail
+- **Punti affrontati**: (1) obiettivi e criteri di successo; (2) baseline di schedula; (3) regole
+  operative; (4) canali di comunicazione e cadenza di reporting.
+- **Esito**: confermati obiettivi e baseline; stabilita la cadenza di status a fine sprint;
+  definite le convenzioni di versionamento; avviato il primo work package (Setup workspace).
+
+---
+
+## 4. Monitoring & Controlling
+
+**Obiettivo della fase**: misurare l'avanzamento rispetto alla baseline e correggere.
+
+### Cosa è stato fatto
+- **Sistema di reporting**: a fine sprint, confronto avanzamento vs baseline (Gantt) con
+  *variance report* sulle attività del cammino critico; segnalazione visiva a semaforo
+  (stoplight). → allegato *Status Report*.
+- **Issues Log**: registro dei problemi *già accaduti* (distinti dai rischi), con stato e azione.
+  → allegato *Issues Log*.
+- **Scope Bank**: registro delle richieste di variazione di scope e relativa decisione.
+- **Auto-revisione di avanzamento (status review)** a fine sprint: revisione avanzamento, rischi e issue.
+- **Controllo del rischio**: Risk Register rivisto a ogni status; i rischi concretizzati
+  trasferiti nell'Issues Log.
+
+### Scelte e alternative
+- **Reporting leggero** (variance + stoplight) coerente con la risorsa unica, anziché Earned
+  Value Management completo: l'EVM è stato valutato ma ritenuto sovradimensionato per il
+  contesto; se ne cita comunque la logica (CPI/SPI) come alternativa per progetti più grandi.
+
+### Note di avanzamento (esempio, fine Sprint 3)
+- **Modalità**: auto-revisione di fine sprint (PM/sviluppatore)
+- **Punti affrontati**: (1) avanzamento vs baseline; (2) variance sul cammino critico;
+  (3) rischi/issue aperti; (4) azioni correttive.
+- **Esito**: refactoring EDA (E) in linea; emersa curva di apprendimento Kafka (RK-04) → spike
+  tecnico programmato; nessuna erosione del buffer; confermato il proseguimento.
+
+---
+
+## 5. Closing
+
+**Obiettivo della fase**: verificare il soddisfacimento dei requisiti, consegnare e chiudere.
+
+### Cosa è stato fatto
+- **Verifica di accettazione**: controllo dei criteri di successo (POS/PDS/SOW) sui deliverable.
+  → allegato *Verbale di Accettazione*.
+- **Rapporto finale di progetto**: sintesi di risultati, scostamenti e metriche. → allegato
+  *Rapporto Finale*.
+- **Retrospettiva / Lessons Learned**: post-implementation audit con cosa ha funzionato, cosa
+  migliorare e azioni per progetti futuri. → allegato *Lessons Learned*.
+
+### Note di chiusura (retrospettiva)
+- **Modalità**: auto-revisione finale (PM/sviluppatore); presentazione al committente
+- **Punti affrontati**: (1) verifica criteri di successo; (2) consegna deliverable;
+  (3) lessons learned; (4) chiusura formale.
+- **Esito**: criteri di successo soddisfatti; consegna accettata; raccolte le lezioni (es.
+  valore degli sprint lunghi sulle fondamenta; sottostima iniziale della complessità EDA);
+  progetto dichiarato formalmente chiuso.
+
+---
+
+## 6. Indice della documentazione allegata
+
+| # | Documento (allegato)        | Process group        | Contenuto in una riga |
+|---|-----------------------------|----------------------|-----------------------|
+| 1 | Conditions of Satisfaction  | Scoping              | Negoziazione bisogni vs desideri del committente |
+| 2 | POS                         | Scoping              | Sintesi di progetto in una pagina per l'approvazione |
+| 3 | Project Charter             | Scoping              | Autorizzazione formale, confini, milestone, budget |
+| 4 | Business Case               | Scoping              | Giustificazione economica (SWOT, IRACIS, breakeven) |
+| 5 | SOW                         | Scoping              | Deliverable e criteri di accettazione |
+| 6 | RBS                         | Scoping              | Decomposizione gerarchica dei requisiti (MoSCoW) |
+| 7 | Stakeholder Register        | Scoping              | Mappa stakeholder e strategie di comunicazione |
+| 8 | PDS                         | Planning             | Versione estesa del POS per il planning team |
+| 9 | WBS                         | Planning             | Decomposizione del lavoro in work package |
+| 10| Schedula / Gantt            | Planning             | Network, cammino critico, Gantt, milestone |
+| 11| Analisi dei Rischi          | Planning             | Risk register quantificato e piani di risposta |
+| 12| Methodology                 | Planning/Execution   | Modello PMLC adottato (Agile ibrido adattivo) |
+| 13| Status Report               | Monitoring & Control | Avanzamento vs baseline, variance, stoplight |
+| 14| Issues Log                  | Monitoring & Control | Registro dei problemi accaduti |
+| 15| Rapporto Finale             | Closing              | Sintesi risultati e scostamenti |
+| 16| Lessons Learned             | Closing              | Retrospettiva e azioni per il futuro |
+
+---
+
+## 7. Conclusione
+
+L'approccio adottato bilancia la **struttura PMBOK** (governance per process group) con la
+**flessibilità adattiva** richiesta dall'incertezza tecnica del progetto. Ogni scelta gestionale
+è tracciabile fino a un bisogno del committente (CoS → POS → RBS → WBS → schedula) e ogni vincolo
+architetturale è giustificato da un requisito di servizio, mantenendo la **coerenza tra gestione
+del progetto e architettura** richiesta dalla valutazione.

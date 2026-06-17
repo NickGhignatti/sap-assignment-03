@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="messaging-layer--apache-kafka" data-depth="1"><a href="#messaging-layer--apache-kafka">Messaging Layer — Apache Kafka</a><ol><li data-target-id="_1-perché-kafka" data-depth="2"><a href="#_1-perché-kafka">1. Perché Kafka</a></li><li data-target-id="_2-topologia--topic-e-consumer-group" data-depth="2"><a href="#_2-topologia--topic-e-consumer-group">2. Topologia — Topic e Consumer Group</a><ol><li data-target-id="topic" data-depth="3"><a href="#topic">Topic</a></li><li data-target-id="consumer-group" data-depth="3"><a href="#consumer-group">Consumer Group</a></li></ol></li><li data-target-id="_3-chiave-di-partizione-e-ordinamento" data-depth="2"><a href="#_3-chiave-di-partizione-e-ordinamento">3. Chiave di partizione e ordinamento</a></li><li data-target-id="_4-produttore--durabilità-con-acksall" data-depth="2"><a href="#_4-produttore--durabilità-con-acksall">4. Produttore — durabilità con acks=all</a></li><li data-target-id="_5-consumatore--commit-manuale-e-at-least-once" data-depth="2"><a href="#_5-consumatore--commit-manuale-e-at-least-once">5. Consumatore — commit manuale e at-least-once</a></li><li data-target-id="_6-infrastruttura--kraft-e-i-listener" data-depth="2"><a href="#_6-infrastruttura--kraft-e-i-listener">6. Infrastruttura — KRaft e i listener</a><ol><li data-target-id="creazione-automatica-dei-topic" data-depth="3"><a href="#creazione-automatica-dei-topic">Creazione automatica dei topic</a></li></ol></li><li data-target-id="_7-distributed-tracing--propagazione-del-trace-id" data-depth="2"><a href="#_7-distributed-tracing--propagazione-del-trace-id">7. Distributed tracing — propagazione del trace id</a></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="il-sistema-oggi" data-decorative="">Il sistema oggi</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common (libreria)</a></li><li><a href="../order">Order Service</a></li><li><a href="../delivery">Delivery Service</a></li><li><a href="../drone">Drone Service</a></li><li><a href="../agent">Flotta ad Agenti (BDI)</a></li></ul><h2 id="infrastruttura-amp-operabilità" data-decorative="">Infrastruttura &amp; operabilità</h2><ul><li><a href="../kafka" aria-current="page">Messaging Layer (Kafka)</a></li><li><a href="../k8s">Deployment Kubernetes</a></li><li><a href="../slo">Osservabilità &amp; SLO</a></li><li><a href="../testing">Testing &amp; qualità</a></li></ul><h2 id="appendice" data-decorative="">Appendice</h2><ul><li><a href="../evoluzione">Evoluzione del progetto</a></li><li><a href="../conclusioni">Conclusioni</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="messaging-layer--apache-kafka" data-depth="1"><a href="#messaging-layer--apache-kafka">Messaging Layer — Apache Kafka</a><ol><li data-target-id="_1-perché-kafka" data-depth="2"><a href="#_1-perché-kafka">1. Perché Kafka</a></li><li data-target-id="_2-topologia--topic-e-consumer-group" data-depth="2"><a href="#_2-topologia--topic-e-consumer-group">2. Topologia — Topic e Consumer Group</a><ol><li data-target-id="topic" data-depth="3"><a href="#topic">Topic</a></li><li data-target-id="consumer-group" data-depth="3"><a href="#consumer-group">Consumer Group</a></li></ol></li><li data-target-id="_3-chiave-di-partizione-e-ordinamento" data-depth="2"><a href="#_3-chiave-di-partizione-e-ordinamento">3. Chiave di partizione e ordinamento</a></li><li data-target-id="_4-produttore--durabilità-con-acksall" data-depth="2"><a href="#_4-produttore--durabilità-con-acksall">4. Produttore — durabilità con acks=all</a></li><li data-target-id="_5-consumatore--commit-manuale-e-at-least-once" data-depth="2"><a href="#_5-consumatore--commit-manuale-e-at-least-once">5. Consumatore — commit manuale e at-least-once</a></li><li data-target-id="_6-infrastruttura--kraft-e-i-listener" data-depth="2"><a href="#_6-infrastruttura--kraft-e-i-listener">6. Infrastruttura — KRaft e i listener</a><ol><li data-target-id="creazione-automatica-dei-topic" data-depth="3"><a href="#creazione-automatica-dei-topic">Creazione automatica dei topic</a></li></ol></li><li data-target-id="_7-distributed-tracing--propagazione-del-trace-id" data-depth="2"><a href="#_7-distributed-tracing--propagazione-del-trace-id">7. Distributed tracing — propagazione del trace id</a></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><h1 class="page-break" id="messaging-layer--apache-kafka">Messaging Layer — Apache Kafka</h1><blockquote><p>[NOTE!]
+Questa pagina è la <strong>reference del transport layer</strong>: come i tre microservizi
+usano Kafka per comunicare. La storia della migrazione da RabbitMQ/AMQP a Kafka è
+in <a href="../evoluzione">Evoluzione del progetto</a>; la vista d&rsquo;insieme dei flussi è in
+<a href="../architettura">Architettura del Sistema</a>.</p></blockquote><h2 id="_1-perché-kafka">1. Perché Kafka</h2><p>L&rsquo;intera comunicazione inter-servizio passa per Apache Kafka. La scelta porta tre
+proprietà che reggono l&rsquo;architettura event-driven:</p><ul><li><strong>Log durevole e rigiocabile.</strong> Un topic Kafka è un log append-only persistito su
+disco. Un messaggio non viene cancellato quando viene consumato: resta nel log, e
+un consumer può rileggerlo (per esempio dopo un riavvio, ripartendo da un offset).
+Questo è ciò che rende il sistema resiliente ai fallimenti temporanei.</li><li><strong>Disaccoppiamento produttore/consumatore.</strong> Chi produce non sa chi consuma. Si
+può aggiungere un nuovo consumatore di un topic senza toccare i produttori.</li><li><strong>Scalabilità tramite partizioni e consumer group.</strong> Un topic è diviso in
+partizioni; un gruppo di consumer si divide le partizioni automaticamente. Più
+repliche di un servizio scalano senza modifiche al codice.</li></ul><p>I client Kafka usati sono basati sulla crate <span class="codespan-content"><code>rdkafka</code></span> (binding a <span class="codespan-content"><code>librdkafka</code></span>).</p><hr /><h2 id="_2-topologia--topic-e-consumer-group">2. Topologia — Topic e Consumer Group</h2><h3 id="topic">Topic</h3><p>Il sistema usa <strong>tre topic</strong>, tutti con payload JSON e chiave di partizione
+<span class="codespan-content"><code>order_id</code></span>.</p><table><thead><tr><th>Topic</th><th>Produttori</th><th>Consumatori</th><th>Tipo messaggio</th><th>Chiave</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>saga-events</code></span></td><td>order, delivery, drone</td><td>order, drone</td><td><span class="codespan-content"><code>SagaEvent</code></span></td><td><span class="codespan-content"><code>order_id</code></span></td></tr><tr><td><span class="codespan-content"><code>order-requests</code></span></td><td>order</td><td>delivery</td><td><span class="codespan-content"><code>OrderMessage</code></span></td><td><span class="codespan-content"><code>order_id</code></span></td></tr><tr><td><span class="codespan-content"><code>drone-requests</code></span></td><td>delivery</td><td>drone</td><td><span class="codespan-content"><code>OrderMessage</code></span></td><td><span class="codespan-content"><code>order_id</code></span></td></tr></tbody></table><h3 id="consumer-group">Consumer Group</h3><table><thead><tr><th>Group ID</th><th>Servizio</th><th>Topic sottoscritto</th><th>Ruolo</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>order-service</code></span></td><td>order</td><td><span class="codespan-content"><code>saga-events</code></span></td><td>Avanza la SAGA su ogni step event</td></tr><tr><td><span class="codespan-content"><code>delivery-service</code></span></td><td>delivery</td><td><span class="codespan-content"><code>order-requests</code></span></td><td>Schedula la delivery, inoltra al drone</td></tr><tr><td><span class="codespan-content"><code>drone-service-orders</code></span></td><td>drone</td><td><span class="codespan-content"><code>drone-requests</code></span></td><td>Assegna un drone, avvia la consegna</td></tr><tr><td><span class="codespan-content"><code>drone-service-compensation</code></span></td><td>drone</td><td><span class="codespan-content"><code>saga-events</code></span></td><td>Gestisce gli eventi <span class="codespan-content"><code>COMPENSATE_DRONE</code></span></td></tr></tbody></table><figure><pre class="mermaid">graph LR
+    subgraph Topics[&quot;Topic Kafka&quot;]
+        SE[&quot;saga-events&quot;]
+        OR[&quot;order-requests&quot;]
+        DR[&quot;drone-requests&quot;]
+    end
+
+    subgraph Groups[&quot;Consumer Groups&quot;]
+        G1[&quot;order-service&quot;]
+        G2[&quot;delivery-service&quot;]
+        G3[&quot;drone-service-orders&quot;]
+        G4[&quot;drone-service-compensation&quot;]
+    end
+
+    SE --&gt;|&quot;subscribe&quot;| G1
+    SE --&gt;|&quot;subscribe&quot;| G4
+    OR --&gt;|&quot;subscribe&quot;| G2
+    DR --&gt;|&quot;subscribe&quot;| G3</pre></figure><p><strong>Lettura del diagramma.</strong> Si noti che il topic <span class="codespan-content"><code>saga-events</code></span> è sottoscritto da
+<strong>due</strong> group distinti (<span class="codespan-content"><code>order-service</code></span> e <span class="codespan-content"><code>drone-service-compensation</code></span>): è un caso di
+<strong>fan-out</strong>. Ogni group riceve una copia indipendente dell&rsquo;intero stream di eventi e
+ne mantiene un cursore (offset) separato. L&rsquo;Order Service avanza la SAGA; il Drone
+Service cerca le compensazioni. I due non interferiscono. Gli altri due topic hanno
+un solo consumatore ciascuno.</p><hr /><h2 id="_3-chiave-di-partizione-e-ordinamento">3. Chiave di partizione e ordinamento</h2><p>Tutti i messaggi usano <strong><span class="codespan-content"><code>order_id</code></span> come chiave di partizione</strong>. Questa è la singola
+decisione di design più importante del transport layer.</p><p>Kafka garantisce l&rsquo;ordinamento dei messaggi <strong>solo all&rsquo;interno di una singola
+partizione</strong>. Distribuendo i messaggi per chiave (<span class="codespan-content"><code>order_id</code></span>), Kafka assicura che
+tutti i messaggi relativi allo stesso ordine finiscano nella <strong>stessa partizione</strong> e
+quindi siano consumati <strong>nell&rsquo;ordine in cui sono stati prodotti</strong>. Per esempio, per
+un dato ordine, l&rsquo;evento <span class="codespan-content"><code>DeliveryScheduled</code></span> sarà sempre processato prima di
+<span class="codespan-content"><code>DroneAssigned</code></span>, perché entrambi hanno la stessa chiave e arrivano nella stessa
+partizione in sequenza.</p><p>L&rsquo;ordinamento <em>globale</em> tra ordini diversi non è necessario (e nemmeno desiderabile:
+limiterebbe la parallelizzazione). Ordini diversi possono finire su partizioni
+diverse ed essere elaborati in parallelo. Nel codice, la chiave è impostata nel
+<span class="codespan-content"><code>FutureRecord</code></span>:</p><pre><code class="language-rust">FutureRecord::to(topic).key(key).payload(payload.as_slice())
+//                       ^^^^^^^^ key = order_id</code></pre><hr /><h2 id="_4-produttore--durabilità-con-acksall">4. Produttore — durabilità con <span class="codespan-content"><code>acks=all</code></span></h2><p>Tutti e tre i servizi configurano il producer in modo identico:</p><pre><code class="language-rust">let producer: FutureProducer = ClientConfig::new()
+    .set(&quot;bootstrap.servers&quot;, &amp;brokers)
+    .set(&quot;message.timeout.ms&quot;, &quot;5000&quot;)
+    .set(&quot;acks&quot;, &quot;all&quot;)
+    .create()?;</code></pre><ul><li><strong><span class="codespan-content"><code>acks=all</code></span></strong> è la garanzia di durabilità più forte: una <span class="codespan-content"><code>send</code></span> si considera
+riuscita solo quando il <em>leader della partizione</em> <strong>e tutte le repliche in-sync</strong>
+hanno confermato la scrittura. Con una singola replica (il setup di sviluppo) ciò
+significa che il leader ha persistito il messaggio; in un cluster multi-replica
+protegge dalla perdita di dati alla caduta di un broker.</li><li><strong><span class="codespan-content"><code>message.timeout.ms=5000</code></span></strong> limita a 5 secondi il tempo massimo per consegnare un
+messaggio al broker prima di considerare la <span class="codespan-content"><code>send</code></span> fallita.</li></ul><p>Ogni <span class="codespan-content"><code>send</code></span> usa un <span class="codespan-content"><code>Timeout::After(Duration::from_secs(5))</code></span> lato applicativo e mappa
+l&rsquo;eventuale errore Kafka in un <span class="codespan-content"><code>anyhow::Error</code></span> descrittivo. Poiché il <span class="codespan-content"><code>FutureProducer</code></span>
+è <span class="codespan-content"><code>Arc</code></span>-backed internamente, clonarlo è economico: è ciò che permette di condividere
+un unico producer tra più componenti.</p><hr /><h2 id="_5-consumatore--commit-manuale-e-at-least-once">5. Consumatore — commit manuale e at-least-once</h2><p>Tutti i consumer condividono la stessa configurazione di base:</p><pre><code class="language-rust">let consumer: StreamConsumer = ClientConfig::new()
+    .set(&quot;bootstrap.servers&quot;, &amp;brokers)
+    .set(&quot;group.id&quot;, &quot;&lt;nome-gruppo&gt;&quot;)
+    .set(&quot;auto.offset.reset&quot;, &quot;earliest&quot;)
+    .set(&quot;enable.auto.commit&quot;, &quot;false&quot;)
+    .create()?;</code></pre><ul><li><strong><span class="codespan-content"><code>group.id</code></span></strong> identifica il consumer group (vedi tabella §2). Tutte le repliche
+con lo stesso <span class="codespan-content"><code>group.id</code></span> si dividono le partizioni (load balancing); group diversi
+ricevono copie indipendenti dello stream (fan-out).</li><li><strong><span class="codespan-content"><code>auto.offset.reset=earliest</code></span></strong>: se il group non ha un offset committato (primo
+avvio o reset), parte dall&rsquo;inizio del topic. Garantisce che nessun messaggio
+prodotto prima dell&rsquo;avvio del consumer venga perso.</li><li><strong><span class="codespan-content"><code>enable.auto.commit=false</code></span></strong>: gli offset si committano <strong>manualmente</strong>, <em>dopo</em>
+aver elaborato con successo ogni messaggio. È l&rsquo;equivalente del <span class="codespan-content"><code>basic_ack</code></span> di AMQP
+e la chiave della consegna <strong>at-least-once</strong>.</li></ul><p>Il pattern del loop di consumo, identico nei tre servizi:</p><figure><pre class="mermaid">flowchart TD
+    A[&quot;consumer.recv() &mdash; pull\ndel prossimo messaggio&quot;]
+    B{&quot;payload presente?&quot;}
+    T[&quot;commit + skip\n(tombstone)&quot;]
+    C{&quot;deserializzazione&quot;}
+    D[&quot;handler applicativo&quot;]
+    E{&quot;esito&quot;}
+    OK[&quot;commit_message()\n(offset avanza)&quot;]
+    NOC[&quot;NON committa\n(Kafka rielabora)&quot;]
+    PP[&quot;commit + skip\n(poison pill)&quot;]
+
+    A --&gt; B
+    B --&gt;|&quot;No&quot;| T
+    B --&gt;|&quot;S&igrave;&quot;| C
+    C --&gt;|&quot;Err&quot;| PP
+    C --&gt;|&quot;Ok&quot;| D --&gt; E
+    E --&gt;|&quot;Ok&quot;| OK
+    E --&gt;|&quot;Err transiente&quot;| NOC
+
+    style OK fill:#dfd
+    style NOC fill:#fdd
+    style PP fill:#fdd</pre></figure><p><strong>Lettura del diagramma.</strong> <span class="codespan-content"><code>recv()</code></span> è il <em>pull</em>: il consumer chiede a Kafka il
+prossimo messaggio (l&rsquo;opposto del modello <em>push</em> di AMQP, in cui era il broker a
+spingere). Quattro esiti:</p><table><thead><tr><th>Esito</th><th>Azione</th><th>Equivalente AMQP</th></tr></thead><tbody><tr><td>Payload vuoto (tombstone)</td><td>commit + skip</td><td>—</td></tr><tr><td>JSON malformato (poison pill)</td><td>commit + skip</td><td><span class="codespan-content"><code>nack(requeue=false)</code></span></td></tr><tr><td>Handler <span class="codespan-content"><code>Ok</code></span></td><td><span class="codespan-content"><code>commit_message</code></span></td><td><span class="codespan-content"><code>basic_ack</code></span></td></tr><tr><td>Handler <span class="codespan-content"><code>Err</code></span> transiente</td><td><strong>no commit</strong></td><td><span class="codespan-content"><code>nack(requeue=true)</code></span></td></tr></tbody></table><p>La distinzione cruciale è tra <strong>poison pill</strong> ed <strong>errore transiente</strong>. Un messaggio
+malformato non diventerà mai valido: committarlo lo <em>salta</em>, evitando un loop infinito
+di retry. Un errore transiente (es. MongoDB momentaneamente irraggiungibile) merita
+invece un retry: <strong>non</strong> committare l&rsquo;offset fa sì che Kafka riconsegni il messaggio
+a un prossimo poll (dopo un riavvio o un rebalance del consumer). L&rsquo;at-least-once nasce
+proprio da qui: un messaggio è committato solo dopo l&rsquo;elaborazione riuscita, quindi nel
+peggiore dei casi viene elaborato <em>più di una volta</em>, mai <em>zero volte</em>.</p><p>Il commit è eseguito in modalità <span class="codespan-content"><code>CommitMode::Async</code></span> (fire-and-forget, throughput più
+alto). In scenari che richiedano la garanzia più forte si userebbe <span class="codespan-content"><code>CommitMode::Sync</code></span>.</p><blockquote><p>[NOTE!]
+<strong>Niente wildcard di routing.</strong> In AMQP una routing key come <span class="codespan-content"><code>saga.compensate.drone</code></span>
+faceva sì che il broker consegnasse a una coda <em>solo</em> gli eventi pertinenti. In
+Kafka un consumer riceve <strong>tutti</strong> i messaggi del topic a cui è sottoscritto, e il
+filtraggio avviene in <strong>codice applicativo</strong>. È il caso del consumer di
+compensazione del Drone Service, che riceve l&rsquo;intero <span class="codespan-content"><code>saga-events</code></span> e agisce solo su
+<span class="codespan-content"><code>CompensateDrone</code></span>, committando immediatamente tutto il resto.</p></blockquote><hr /><h2 id="_6-infrastruttura--kraft-e-i-listener">6. Infrastruttura — KRaft e i listener</h2><p>Kafka gira in <strong>KRaft mode</strong> (Kafka Raft), cioè <strong>senza Zookeeper</strong>: il broker è
+contemporaneamente <em>broker</em> e <em>controller</em> (<span class="codespan-content"><code>KAFKA_PROCESS_ROLES=broker,controller</code></span>),
+e gestisce i metadati del cluster con un quorum Raft interno. Questo semplifica
+drasticamente il deployment: un solo processo invece di due cluster separati.</p><p>In <span class="codespan-content"><code>docker-compose</code></span> il broker espone <strong>due listener</strong>, per servire client su reti
+diverse:</p><table><thead><tr><th>Listener</th><th>Indirizzo</th><th>Usato da</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>PLAINTEXT</code></span></td><td><span class="codespan-content"><code>kafka:9092</code></span></td><td>Container Docker (comunicazione inter-servizio)</td></tr><tr><td><span class="codespan-content"><code>EXTERNAL</code></span></td><td><span class="codespan-content"><code>localhost:9094</code></span></td><td>Macchina host (CLI Kafka, IDE, Kafka UI)</td></tr></tbody></table><p>I servizi leggono il broker dalla variabile d&rsquo;ambiente <span class="codespan-content"><code>KAFKA_BROKERS=kafka:9092</code></span>. È
+un <em>seed</em>: da un solo indirizzo, i client Kafka scoprono automaticamente l&rsquo;intera
+topologia del cluster. Dall&rsquo;host si usa invece <span class="codespan-content"><code>localhost:9094</code></span>.</p><p>In Kubernetes la configurazione del broker è leggermente diversa (un solo listener
+rilevante per il cluster); i dettagli, incluse le insidie di KRaft su K8s, sono in
+<a href="../k8s">Deployment Kubernetes</a>.</p><h3 id="creazione-automatica-dei-topic">Creazione automatica dei topic</h3><p>Con <span class="codespan-content"><code>KAFKA_AUTO_CREATE_TOPICS_ENABLE=true</code></span>, i topic vengono creati alla <strong>prima
+produzione</strong>. Questo elimina la necessità di dichiarare la topologia all&rsquo;avvio (in
+AMQP servivano <span class="codespan-content"><code>exchange_declare</code></span>/<span class="codespan-content"><code>queue_declare</code></span>): i servizi partono e producono, e
+i topic nascono al volo.</p><blockquote><p>[NOTE!]
+All&rsquo;avvio può comparire un errore benigno <span class="codespan-content"><code>UnknownTopicOrPartition: saga-events</code></span>:
+i consumer si sottoscrivono <em>prima</em> che il topic esista. Con l&rsquo;auto-creazione
+abilitata, il topic viene creato alla prima produzione e il consumer riprende
+normalmente.</p></blockquote><hr /><h2 id="_7-distributed-tracing--propagazione-del-trace-id">7. Distributed tracing — propagazione del trace id</h2><p>In AMQP (assignment 02) il trace context era propagato da Micrometer Observation, che
+si agganciava sia alle chiamate REST sia ai messaggi. In Kafka non esiste nulla di
+analogo &ldquo;di serie&rdquo;: il broker trasporta byte e non ha alcuna nozione di traccia. La
+correlazione end-to-end è quindi ottenuta <strong>a livello applicativo</strong>, con un approccio
+leggero e senza infrastruttura aggiuntiva (nessun collector, nessun Jaeger).</p><p>Il principio è semplice: un singolo <strong>trace id</strong> viene coniato all&rsquo;ingresso del
+sistema e viaggia insieme a ogni messaggio come <strong>header Kafka</strong> <span class="codespan-content"><code>x-trace-id</code></span>. La
+logica condivisa vive nel modulo <a href="../common"><span class="codespan-content"><code>common::trace</code></span></a>:</p><table><thead><tr><th>Lato</th><th>Cosa fa</th><th>Funzione di <span class="codespan-content"><code>common::trace</code></span></th></tr></thead><tbody><tr><td><strong>Ingresso HTTP</strong> (Order <span class="codespan-content"><code>POST /</code></span>)</td><td>conia il trace id della richiesta</td><td><span class="codespan-content"><code>new_trace_id()</code></span></td></tr><tr><td><strong>Produttore</strong></td><td>allega l&rsquo;id come header al <span class="codespan-content"><code>FutureRecord</code></span></td><td><span class="codespan-content"><code>trace_headers(trace_id)</code></span></td></tr><tr><td><strong>Consumatore</strong></td><td>estrae l&rsquo;id dall&rsquo;header e apre uno span</td><td><span class="codespan-content"><code>trace_id_or_new(msg.headers())</code></span></td></tr></tbody></table><p>Lato produttore, ogni <span class="codespan-content"><code>send</code></span> aggiunge l&rsquo;header (qui l&rsquo;helper dell&rsquo;orchestratore):</p><pre><code class="language-rust">FutureRecord::to(topic)
+    .key(key)                                       // partizione (order_id)
+    .payload(payload.as_slice())                    // corpo JSON
+    .headers(common::trace::trace_headers(trace_id)) // &larr; trace id end-to-end</code></pre><p>Lato consumatore, l&rsquo;id si estrae dagli header e si entra in uno span <span class="codespan-content"><code>tracing</code></span> che lo
+riporta su <strong>tutti</strong> i log emessi durante l&rsquo;elaborazione del messaggio:</p><pre><code class="language-rust">let trace_id = common::trace::trace_id_or_new(msg.headers());
+let span = tracing::info_span!(&quot;saga_event&quot;, %trace_id, order_id = %event.order_id());
+orchestrator.handle_saga_event(event, &amp;trace_id).instrument(span).await</code></pre><p>La regola di propagazione è: <strong>l&rsquo;id estratto da un messaggio in ingresso viene
+ri-allegato a ogni messaggio prodotto in conseguenza</strong>. Così un unico trace id segue
+l&rsquo;intera vita di un ordine attraverso i salti asincroni:</p><figure><pre class="mermaid">flowchart LR
+    H[&quot;HTTP POST /\nnew_trace_id()&quot;]
+    O[&quot;Order&quot;]
+    OR[&quot;order-requests\nheader: x-trace-id&quot;]
+    D[&quot;Delivery&quot;]
+    DR[&quot;drone-requests\nheader: x-trace-id&quot;]
+    DRN[&quot;Drone&quot;]
+    SE[&quot;saga-events\nheader: x-trace-id&quot;]
+
+    H --&gt; O
+    O --&gt;|&quot;trace_headers&quot;| OR --&gt; D
+    D --&gt;|&quot;trace_headers&quot;| DR --&gt; DRN
+    D --&gt;|&quot;trace_headers&quot;| SE
+    DRN --&gt;|&quot;trace_headers&quot;| SE
+    SE --&gt;|&quot;trace_id_or_new&quot;| O</pre></figure><p><strong>Lettura del diagramma.</strong> Il trace id nasce con la <span class="codespan-content"><code>POST /</code></span>. L&rsquo;Order lo mette
+sull&rsquo;<span class="codespan-content"><code>order-requests</code></span>; il Delivery lo legge e lo ripropaga sia su <span class="codespan-content"><code>drone-requests</code></span>
+(verso il Drone) sia su <span class="codespan-content"><code>saga-events</code></span> (verso l&rsquo;orchestratore); il Drone lo legge dal
+suo ordine e lo riporta sui <span class="codespan-content"><code>saga-events</code></span> che pubblica. Ogni consumer, leggendo
+l&rsquo;header, ritrova lo <strong>stesso</strong> id e lo scrive nei propri log: filtrando i log per
+<span class="codespan-content"><code>trace_id</code></span> si ricostruisce la cronologia completa di un ordine, esattamente come
+faceva il trace context su AMQP.</p><p><strong>Dettagli e casi limite.</strong></p><ul><li>La chiave di partizione (<span class="codespan-content"><code>order_id</code></span>) e l&rsquo;header (<span class="codespan-content"><code>x-trace-id</code></span>) sono due cose
+distinte: la prima decide <em>dove</em> finisce il messaggio (ordinamento), il secondo
+<em>correla i log</em> — non influenza il routing.</li><li><span class="codespan-content"><code>trace_id_or_new</code></span> conia un id fresco se l&rsquo;header manca (es. un messaggio prodotto
+da un client più vecchio o un tombstone): un consumer ha <strong>sempre</strong> un id con cui
+loggare, non resta mai senza traccia.</li><li>Il completamento della consegna guidato dallo scheduler del Drone (<span class="codespan-content"><code>check_arrivals</code></span>)
+non nasce da un messaggio in ingresso e non pubblica eventi Kafka: per i suoi log si
+conia un trace id locale.</li></ul><blockquote><p>[NOTE!]
+È un tracing <strong>a correlazione</strong>, non un tracing a span distribuiti completo (niente
+parent/child span cross-servizio né latenze per-hop come in OpenTelemetry). È la
+scelta deliberata: ripristina la correlabilità end-to-end persa nel passaggio da
+AMQP a Kafka, restando senza nuova infrastruttura. L&rsquo;evoluzione naturale sarebbe
+esportare gli span via OTLP verso un collector.</p></blockquote>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

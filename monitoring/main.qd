@@ -1,0 +1,88 @@
+.docname {monitoring}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Monitoring & Controlling — Status Report, Issues Log, Scope Bank
+
+> Strumenti con cui l'avanzamento del progetto è misurato rispetto alla baseline e tenuto sotto
+> controllo: il sistema di reporting (status report), il registro dei problemi accaduti (issues
+> log) e il registro delle variazioni di scope (scope bank).
+
+---
+
+| Campo           | Valore                                             |
+|-----------------|----------------------------------------------------|
+| **Progetto**    | DroneFlow — Servizio di Consegna Pacchi con Droni  |
+| **Project No.** | SAP-03                                             |
+| **Redatto da**  | Ghignatti Nicolò                                   |
+| **Versione**    | 1.0 — Aprile 2026                                  |
+
+---
+
+## 1. Sistema di reporting
+
+L'avanzamento è rilevato **a fine di ogni sprint** e confrontato con la baseline della *Schedula*.
+Il reporting adottato è volutamente **leggero** (coerente con la risorsa unica):
+
+- **Variance report**: scostamento di completamento per work package, con focus sulle attività
+  del **cammino critico** (le uniche che, se in ritardo, slittano l'intero progetto).
+- **Stoplight report**: indicatore a semaforo per work package — 🟢 in linea, 🟡 a rischio,
+  🔴 in ritardo.
+
+> *Alternativa valutata*: **Earned Value Management** (CPI/SPI). Logica solida ma
+> sovradimensionata per un progetto a risorsa singola; citata come strumento d'elezione per
+> progetti più grandi.
+
+### 1.1 Status Report (esempio, fine Sprint 3)
+
+| Work package          | Pianificato | Reale | Stato | Note |
+|-----------------------|-------------|-------|-------|------|
+| 1.1 Setup workspace   | 100%        | 100%  | 🟢    | Chiuso |
+| 1.2 Crate common      | 100%        | 100%  | 🟢    | Chiuso |
+| 1.6.1–3 Infra base    | 100%        | 100%  | 🟢    | Chiuso |
+| 1.3 Order service     | 50%         | 55%   | 🟢    | In anticipo (ha float) |
+| 1.4 Delivery EDA (E)  | 50%         | 45%   | 🟡    | Curva apprendimento Kafka (RK-04) |
+| **Cammino critico**   | —           | —     | 🟡    | Buffer integro, nessuna azione drastica |
+
+**Azioni correttive**: spike tecnico su Kafka per rientrare; rischio RK-04 monitorato.
+
+---
+
+## 2. Issues Log
+
+Registro dei **problemi già accaduti** (distinti dai rischi, che sono *futuri* e incerti). Un
+rischio che si concretizza viene "promosso" qui dal Risk Register.
+
+| ID    | Data    | Issue                                            | Origine (rischio) | Priorità | Stato     | Azione / Esito |
+|-------|---------|--------------------------------------------------|-------------------|----------|-----------|----------------|
+| IS-01 | Sprint 3| Errore `PRECONDITION_FAILED` su consumer Kafka   | RK-06             | Media    | Risolto   | Consumer group/tag univoco per istanza |
+| IS-02 | Sprint 3| Tempo di apprendimento Kafka oltre stima         | RK-04             | Media    | In corso  | Spike tecnico dedicato |
+| IS-03 | Sprint 5| Incoerenza transitoria di stato nel flusso SAGA  | RK-05             | Alta     | Risolto   | Aggiunta compensazione esplicita |
+
+---
+
+## 3. Scope Bank
+
+Registro delle **richieste di variazione di scope**: protegge dal rischio RK-01 (scope creep).
+Ogni richiesta è valutata rispetto al POS prima di essere accettata.
+
+| ID    | Richiesta di variazione                          | Valutazione vs POS        | Decisione   |
+|-------|--------------------------------------------------|---------------------------|-------------|
+| SC-01 | Aggiungere notifiche push all'utente             | Fuori scope (out of scope)| ❌ Respinta |
+| SC-02 | Esporre tempo rimanente stimato nel tracking     | Coerente (requisito 3.2)  | ✅ Accettata |
+| SC-03 | Pannello operatore per consegne attive           | Could (bassa priorità)    | ⏸ Rinviata  |
+
+---
+
+## 4. Cadenza di controllo
+
+A fine di ogni sprint si tiene l'**auto-revisione di avanzamento (status review)**: revisione di
+status report, issues log, scope bank e Risk Register. Gli scostamenti che erodono il buffer attivano il piano di
+contingenza definito nell'Analisi dei Rischi (de-scoping MoSCoW a protezione dei *Must*).

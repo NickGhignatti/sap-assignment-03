@@ -1,0 +1,93 @@
+.docname {closing}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Chiusura del Progetto — Accettazione, Rapporto Finale, Lessons Learned
+
+> Documenti della fase di Closing: la verifica e accettazione dei deliverable da parte del
+> committente, il rapporto finale di progetto e la retrospettiva (post-implementation audit) con
+> le lezioni apprese.
+
+---
+
+| Campo           | Valore                                             |
+|-----------------|----------------------------------------------------|
+| **Progetto**    | DroneFlow — Servizio di Consegna Pacchi con Droni  |
+| **Project No.** | SAP-03                                             |
+| **Redatto da**  | Ghignatti Nicolò                                   |
+| **Versione**    | 1.0 — Giugno 2026                                  |
+
+---
+
+## 1. Verbale di Accettazione
+
+Verifica del soddisfacimento dei **criteri di successo** (POS / PDS / SOW) sui deliverable.
+
+| Criterio (da PDS)                                            | Verifica                          | Esito |
+|-------------------------------------------------------------|-----------------------------------|:----:|
+| CS1 — Richiesta valida accettata e drone assegnato          | Demo flusso completo              | ✅   |
+| CS2 — Richiesta non valida rifiutata con messaggio          | Demo con peso negativo            | ✅   |
+| CS3 — Stato consultabile in ogni momento                    | API di tracking                   | ✅   |
+| CS4 — Storico eventi coerente (Event Sourcing)              | Storico ordinato e ricostruibile  | ✅   |
+| CS5 — Annullamento ordinato in caso di fallimento (SAGA)    | Demo con fallimento simulato      | ✅   |
+| CS6 — Documentazione PM completa e coerente                 | Revisione documentale            | ✅   |
+
+**Dichiarazione**: i deliverable soddisfano i criteri concordati. Il progetto è accettato.
+
+---
+
+## 2. Rapporto Finale di Progetto
+
+### 2.1 Sintesi
+DroneFlow ha raggiunto l'obiettivo: dimostrare la gestibilità e la fattibilità di un servizio di
+consegna con droni completamente automatizzato, con garanzie di tracciabilità, annullamento
+ordinato e storico immutabile.
+
+### 2.2 Performance vs baseline
+
+| Dimensione   | Baseline        | Consuntivo      | Scostamento |
+|--------------|-----------------|-----------------|-------------|
+| Tempi        | 10 settimane    | ~10 settimane   | In linea (buffer assorbito su EDA) |
+| Scope        | Tutti i *Must*  | Tutti i *Must*  | Nessun taglio sui Must |
+| Costi        | ~130 ore        | In linea        | Trascurabile |
+| Qualità      | Criteri CS1–CS6 | Tutti soddisfatti | — |
+
+### 2.3 Rischi concretizzati
+RK-04 (curva di apprendimento Kafka) e RK-05 (complessità EDA/SAGA) si sono manifestati come
+issue IS-02/IS-03 ma sono stati gestiti senza impatto sul cammino critico, grazie al buffer.
+
+---
+
+## 3. Lessons Learned (Retrospettiva / Post-Implementation Audit)
+
+### Cosa ha funzionato (keep)
+- **Sprint lunghi sulle fondamenta**: assorbire la complessità infrastrutturale senza forzare
+  rilasci incompleti si è rivelato decisivo (mitigazione efficace di RK-04).
+- **Distinzione requisiti vs vincoli tecnici**: ha mantenuto la documentazione coerente e
+  difendibile.
+- **Buffer del 25% sul cammino critico**: ha assorbito gli imprevisti tecnici e i periodi di
+  minore disponibilità.
+
+### Cosa migliorare (improve)
+- **Sottostima iniziale della complessità EDA/SAGA**: in futuro prevedere uno *spike* tecnico
+  *prima* della stima delle attività critiche.
+- **Bus factor = 1**: documentare di più man mano (non a fine progetto) per ridurre la dipendenza
+  dalla singola risorsa.
+
+### Azioni per progetti futuri
+1. Inserire spike tecnici di pre-stima per le tecnologie non note.
+2. Adottare reporting EVM se il team cresce oltre 2–3 persone.
+3. Mantenere il Risk Register come documento vivo fin dal primo sprint.
+
+---
+
+## 4. Chiusura formale
+Con l'accettazione dei deliverable, la consegna della documentazione e la retrospettiva, il
+progetto DroneFlow è **dichiarato formalmente chiuso**.

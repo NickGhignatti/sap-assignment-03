@@ -1,0 +1,127 @@
+.docname {gantt}
+.doctype {paged}
+.doclang {Italian}
+.theme {paperwhite} layout:{latex}
+
+.docauthors
+  - Nick Ghignatti
+
+.pagemargin {bottomcenter}
+    .currentpage
+
+# Schedula di Progetto — Network Diagram, Cammino Critico e Gantt
+
+> Trasforma la WBS (il *cosa*) in una schedula temporale (il *quando* e in *che ordine*).
+> Stima le durate, definisce le dipendenze tra attività (project network), individua il
+> **cammino critico** e lo rappresenta come diagramma di Gantt.
+
+---
+
+| Campo           | Valore                                             |
+|-----------------|----------------------------------------------------|
+| **Progetto**    | DroneFlow — Servizio di Consegna Pacchi con Droni  |
+| **Project No.** | SAP-03                                             |
+| **Redatto da**  | Ghignatti Nicolò                                   |
+| **Versione**    | 1.0 — Aprile 2026                                  |
+
+---
+
+## 1. Assunzioni di pianificazione
+
+- **Calendario**: settimane lavorative da 7 giorni; inizio progetto **lunedì 6 aprile 2026**,
+  fine prevista **fine giugno 2026** (~12–13 settimane incluso buffer), coerente con le date del Project Charter.
+- **Risorsa unica**: un solo *project manager / sviluppatore*. Le attività sono quindi
+  prevalentemente **sequenziali**; le sovrapposizioni indicate riguardano solo attività che
+  non competono per lo stesso focus cognitivo (es. setup infrastruttura "a contorno").
+- **Modello a sprint** (cfr. documento *Methodology*): sprint da **2 settimane** nella fase
+  *Fondamenta architetturali* (1.1–1.5) e da **1 settimana** nella fase *Prototipazione &
+  validazione* (1.6–1.8).
+- **Buffer**: è incluso un buffer del ~25% sul cammino critico per assorbire il rischio RK-02
+  (slittamento sulla scadenza d'esame), RK-04 (curva di apprendimento) e i periodi di
+  indisponibilità dovuti ad altri esami universitari (cfr. documento *Methodology*).
+
+---
+
+## 2. Stima delle attività e dipendenze (input del network diagram)
+
+| ID  | Attività (da WBS)                         | Durata | Dipende da | Critica |
+|-----|-------------------------------------------|--------|------------|:------:|
+| A   | 1.1 Setup workspace                       | 1 sett.| —          | ✅ |
+| B   | 1.2 Crate `common`                        | 1 sett.| A          | ✅ |
+| C   | 1.6.1–1.6.3 Infra base (Docker, Kafka, DB)| 1 sett.| A          |    |
+| D   | 1.3 Customer/Order service                | 2 sett.| B, C       |    |
+| E   | 1.4 Delivery service (refactoring EDA)    | 2 sett.| B, C       | ✅ |
+| F   | 1.5 Drone service (agent-based)           | 2 sett.| E          | ✅ |
+| G   | 1.6.4 Deployment Kubernetes               | 1 sett.| D, E, F    | ✅ |
+| H   | 1.6.5–1.6.6 Definizione e misura SLO/SLI  | 1 sett.| G          | ✅ |
+| I   | 1.7 Testing & validazione (E2E, EDA, SLI) | 1 sett.| H          | ✅ |
+| J   | 1.8 Documentazione e report finale        | 1 sett.| I          | ✅ |
+
+---
+
+## 3. Project Network Diagram (dipendenze logiche)
+
+Relazioni prevalenti **Finish-to-Start** (un'attività inizia al termine della precedente).
+
+![Project Network Diagram](./images/network.png)
+
+I nodi evidenziati in rosso sono sul **cammino critico**.
+
+---
+
+## 4. Cammino critico
+
+Tra i percorsi possibili dalla partenza alla fine, il più lungo è:
+
+> **A → B → E → F → G → H → I → J**
+> (Setup → Common → Delivery EDA → Drone agent → Kubernetes → SLO/SLI → Testing → Docs)
+> = 1 + 1 + 2 + 2 + 1 + 1 + 1 + 1 = **10 settimane**
+
+- Il percorso alternativo che passa per **D** (Order service) — `A → B → D → G` — è più corto:
+  l'attività **D ha float** (slack), quindi un suo ritardo contenuto **non** ritarda il progetto.
+- Le attività critiche (float = 0) sono **A, B, E, F, G, H, I, J**: vanno protette
+  prioritariamente. Il monitoraggio di avanzamento (fase Monitoring & Controlling) si concentra
+  su queste.
+- Implicazione gestionale: il **refactoring EDA (E)** e il **drone agent-based (F)** sono i due
+  blocchi più lunghi *e* critici → sono anche i rischi tecnici RK-04/RK-05 del Risk Register.
+
+---
+
+## 5. Diagramma di Gantt
+
+![Diagramma di Gantt](./images/gantt.png)
+
+---
+
+## 6. Milestone (raffinate rispetto al Project Charter)
+
+| Milestone | Descrizione                                   | Attività collegata | Sett. (Gantt) | Sett. (Charter) |
+|-----------|-----------------------------------------------|--------------------|:-------------:|:---------------:|
+| M1        | Requisiti di servizio definiti e approvati    | A                  | 1             | 1               |
+| M2        | Architettura di sistema decisa                | B                  | 2             | 2               |
+| M3        | Ricezione e validazione richiesta             | D                  | 4             | 4               |
+| M4        | Assegnazione automatica drone                 | F                  | 6             | 6               |
+| M5        | Tracciamento stato consegna                   | F                  | 6             | 8               |
+| M6        | Gestione fallimenti e annullamento ordinato   | E/F (SAGA)         | 6             | 9               |
+| M7        | Storico consegne consultabile (Event Sourcing)| F                  | 6             | 10              |
+| M8        | Test end-to-end (happy path + fallimento)     | I                  | 9             | 11              |
+| M9        | Documentazione PM completa                    | J                  | 10            | 11              |
+| M10       | Revisione finale e consegna                   | J                  | 10            | 12              |
+
+> **Perché differiscono dal Charter (progressive elaboration)**: le date del Project Charter sono
+> una stima *top-down* preliminare, prodotta in fase di **Initiating** quando le dipendenze non
+> erano ancora note. Le date qui sopra sono invece **derivate dal network di dipendenze
+> Finish-to-Start** in fase di **Planning**. Poiché M4–M7 dipendono tutte dal completamento del
+> *drone service* (attività F, fine settimana 6) — è lì che diventano disponibili tracciamento,
+> SAGA ed Event Sourcing — nel piano dettagliato si **addensano alla settimana 6**, mentre le
+> settimane 7–10 sono dedicate a deployment K8s, SLO/SLI, testing e documentazione. La differenza
+> non è un errore ma il normale **raffinamento delle stime** passando da Initiating a Planning.
+
+---
+
+## 7. Gestione dello scostamento (collegamento al Monitoring)
+
+L'avanzamento reale è confrontato con questa **baseline** durante le auto-revisioni di avanzamento (status review) di fine sprint.
+Gli scostamenti sul cammino critico generano un **variance report**; se un ritardo erode il
+buffer, si applica il piano di contingenza RK-02 (de-scoping delle funzionalità *Could/Should*
+secondo priorità MoSCoW, a protezione dei *Must*).

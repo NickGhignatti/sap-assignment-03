@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="conclusioni" data-depth="1"><a href="#conclusioni">Conclusioni</a><ol><li data-target-id="_1-architettura-event-driven" data-depth="2"><a href="#_1-architettura-event-driven">1. Architettura Event-Driven</a></li><li data-target-id="_2-scaling-e-service-level-objectives" data-depth="2"><a href="#_2-scaling-e-service-level-objectives">2. Scaling e Service Level Objectives</a><ol><li data-target-id="slo-e-sli" data-depth="3"><a href="#slo-e-sli">SLO e SLI</a></li><li data-target-id="deployment-kubernetes" data-depth="3"><a href="#deployment-kubernetes">Deployment Kubernetes</a></li></ol></li><li data-target-id="_3-architettura-ad-agenti" data-depth="2"><a href="#_3-architettura-ad-agenti">3. Architettura ad Agenti</a><ol><li data-target-id="modello-scelto-bdi" data-depth="3"><a href="#modello-scelto-bdi">Modello scelto: BDI</a></li><li data-target-id="prototipo-implementato" data-depth="3"><a href="#prototipo-implementato">Prototipo implementato</a></li></ol></li><li data-target-id="considerazioni-finali" data-depth="2"><a href="#considerazioni-finali">Considerazioni finali</a></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="il-sistema-oggi" data-decorative="">Il sistema oggi</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common (libreria)</a></li><li><a href="../order">Order Service</a></li><li><a href="../delivery">Delivery Service</a></li><li><a href="../drone">Drone Service</a></li><li><a href="../agent">Flotta ad Agenti (BDI)</a></li></ul><h2 id="infrastruttura-amp-operabilità" data-decorative="">Infrastruttura &amp; operabilità</h2><ul><li><a href="../kafka">Messaging Layer (Kafka)</a></li><li><a href="../k8s">Deployment Kubernetes</a></li><li><a href="../slo">Osservabilità &amp; SLO</a></li><li><a href="../testing">Testing &amp; qualità</a></li></ul><h2 id="appendice" data-decorative="">Appendice</h2><ul><li><a href="../evoluzione">Evoluzione del progetto</a></li><li><a href="../conclusioni" aria-current="page">Conclusioni</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="conclusioni" data-depth="1"><a href="#conclusioni">Conclusioni</a><ol><li data-target-id="_1-architettura-event-driven" data-depth="2"><a href="#_1-architettura-event-driven">1. Architettura Event-Driven</a></li><li data-target-id="_2-scaling-e-service-level-objectives" data-depth="2"><a href="#_2-scaling-e-service-level-objectives">2. Scaling e Service Level Objectives</a><ol><li data-target-id="slo-e-sli" data-depth="3"><a href="#slo-e-sli">SLO e SLI</a></li><li data-target-id="deployment-kubernetes" data-depth="3"><a href="#deployment-kubernetes">Deployment Kubernetes</a></li></ol></li><li data-target-id="_3-architettura-ad-agenti" data-depth="2"><a href="#_3-architettura-ad-agenti">3. Architettura ad Agenti</a><ol><li data-target-id="modello-scelto-bdi" data-depth="3"><a href="#modello-scelto-bdi">Modello scelto: BDI</a></li><li data-target-id="prototipo-implementato" data-depth="3"><a href="#prototipo-implementato">Prototipo implementato</a></li></ol></li><li data-target-id="considerazioni-finali" data-depth="2"><a href="#considerazioni-finali">Considerazioni finali</a></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><h1 class="page-break" id="conclusioni">Conclusioni</h1><p>Questa sezione ripercorre i tre punti richiesti dall&rsquo;assignment e descrive come
+ciascuno è stato affrontato e risolto nel progetto <strong>DroneFlow</strong>, rimandando alle
+pagine di riferimento per i dettagli tecnici.</p><hr /><h2 id="_1-architettura-event-driven">1. Architettura Event-Driven</h2><p><strong>Richiesta:</strong> riprogettare un microservizio adottando un&rsquo;architettura event-driven
+con Apache Kafka come middleware.</p><p>Il <strong>Drone Service</strong> è stato identificato come il candidato ideale per la
+riprogettazione: è il componente più reattivo del sistema, il cui comportamento
+dipende interamente da eventi esterni (arrivo di un ordine, compensazione dalla SAGA,
+scadenza del timer di consegna). Reimplementarlo come sistema puramente event-driven
+era quindi la scelta più naturale e coerente.</p><p>La migrazione da RabbitMQ/AMQP a <strong>Apache Kafka</strong> ha riguardato l&rsquo;intero transport
+layer dei tre servizi, lasciando invariata la business logic (il percorso completo è
+in <a href="evoluzione.qd)">Evoluzione del progetto</a>. I punti chiave dell&rsquo;implementazione,
+documentati in <a href="../kafka">Messaging Layer (Kafka)</a>:</p><ul><li><strong>Tre topic distinti</strong> (<span class="codespan-content"><code>order-requests</code></span>, <span class="codespan-content"><code>drone-requests</code></span>, <span class="codespan-content"><code>saga-events</code></span>) con
+routing per <span class="codespan-content"><code>order_id</code></span> come chiave di partizione, che garantisce l&rsquo;ordinamento
+degli eventi per ogni singolo ordine.</li><li><strong>Quattro consumer group indipendenti</strong>, uno per ogni ruolo nel sistema. Il Drone
+Service ne usa due in parallelo: uno per gli ordini in arrivo
+(<span class="codespan-content"><code>drone-service-orders</code></span>) e uno dedicato alla compensazione
+(<span class="codespan-content"><code>drone-service-compensation</code></span>).</li><li><strong>Semantica di commit esplicita</strong>: l&rsquo;offset viene confermato solo dopo
+l&rsquo;elaborazione riuscita, abilitando la rielaborazione automatica in caso di errore
+transitorio. I messaggi malformati (<em>poison pill</em>) vengono saltati per evitare il
+blocco del consumer.</li><li>Gli altri due microservizi (<a href="../order">Order</a> e <a href="delivery.qd)">Delivery</a> sono stati
+adattati al nuovo transport senza modifiche alla loro logica applicativa.</li></ul><hr /><h2 id="_2-scaling-e-service-level-objectives">2. Scaling e Service Level Objectives</h2><p><strong>Richiesta:</strong> definire almeno 2 SLO con i relativi SLI, estendere l&rsquo;implementazione
+per misurarli e realizzare un deployment Kubernetes.</p><h3 id="slo-e-sli">SLO e SLI</h3><p>Sono stati definiti <strong>quattro SLO</strong>, superando il minimo richiesto di due (dettagli
+in <a href="slo.qd)">Osservabilità &amp; SLO</a>:</p><table><thead><tr><th>SLO</th><th>Target</th><th>SLI</th><th>Servizio</th></tr></thead><tbody><tr><td>Affidabilità SAGA</td><td>≥ 95% completate</td><td><span class="codespan-content"><code>completed / (completed + failed + compensated)</code></span></td><td>Order</td></tr><tr><td>Latenza SAGA</td><td>≥ 90% sotto i 15s</td><td><span class="codespan-content"><code>bucket{le=&quot;15.0&quot;} / count</code></span></td><td>Order</td></tr><tr><td>Disponibilità HTTP</td><td>≥ 99% risposte non-5xx</td><td><span class="codespan-content"><code>1 &minus; (5xx / totale)</code></span></td><td>Order</td></tr><tr><td>Successo assegnazione drone</td><td>≥ 90% accettate</td><td><span class="codespan-content"><code>assigned / (assigned + refused)</code></span></td><td>Drone</td></tr></tbody></table><p>Le metriche sono implementate tramite <strong>Prometheus</strong>: counter e histogram incrementati
+direttamente nel codice Rust (<span class="codespan-content"><code>orchestrator.rs</code></span> per l&rsquo;Order Service, <span class="codespan-content"><code>fleet.rs</code></span> per il
+Drone Service) ed esposti sull&rsquo;endpoint <span class="codespan-content"><code>/metrics</code></span> di ciascun servizio. Un server
+Prometheus in cluster esegue lo scraping ogni 15 secondi.</p><p>Per supportare la verifica in autonomia, è stato realizzato uno script PowerShell
+(<span class="codespan-content"><code>generate-slo-report.ps1</code></span>) che interroga Prometheus tramite PromQL, calcola l&rsquo;<strong>error
+budget consumato</strong> per ogni SLO e genera un report Markdown nella cartella <span class="codespan-content"><code>reports/</code></span>.</p><h3 id="deployment-kubernetes">Deployment Kubernetes</h3><p>L&rsquo;intero sistema è dispiegabile su Kubernetes con <strong>11 manifest</strong> nella cartella
+<span class="codespan-content"><code>k8s/</code></span>, organizzati nel namespace <span class="codespan-content"><code>droneflow</code></span> (dettagli in
+<a href="k8s.qd)">Deployment Kubernetes</a>:</p><ul><li><span class="codespan-content"><code>StatefulSet</code></span> per MongoDB e Kafka, che richiedono storage e identità DNS stabili.</li><li><span class="codespan-content"><code>Deployment</code></span> per i tre microservizi e Kafka UI, stateless e liberamente schedulabili.</li><li><span class="codespan-content"><code>ConfigMap</code></span> e <span class="codespan-content"><code>Secret</code></span> per la configurazione non sensibile e le credenziali.</li><li><span class="codespan-content"><code>Ingress</code></span> Traefik per esporre all&rsquo;esterno solo i servizi con API HTTP.</li></ul><p>Il deployment è stato testato su <strong>k3d</strong> (k3s su Docker). L&rsquo;intero cluster può essere
+avviato con la sequenza di comandi documentata in <a href="../k8s">k8s.qd</a>.</p><hr /><h2 id="_3-architettura-ad-agenti">3. Architettura ad Agenti</h2><p><strong>Richiesta:</strong> applicare un approccio agent-oriented al sistema di controllo del
+drone, identificare un modello/architettura e realizzare un prototipo.</p><h3 id="modello-scelto-bdi">Modello scelto: BDI</h3><p>È stato adottato il paradigma <strong>BDI (Belief–Desire–Intention)</strong>, un modello classico
+dei sistemi multi-agente che si adatta perfettamente al dominio: un drone deve
+percepire il proprio contesto, ragionare sui propri vincoli e prendere decisioni
+autonome su cosa fare. Il modello è documentato in
+<a href="../agent">Flotta ad Agenti (BDI)</a>.</p><p>Il ciclo di vita di ogni agente segue cinque fasi:</p><pre><code>perceive()       &rarr; arriva un OrderMessage da Kafka
+update_beliefs() &rarr; aggiorna lo stato interno (peso, deadline, disponibilit&agrave;)
+deliberate()     &rarr; sceglie un'intenzione: AcceptDelivery / RefuseDelivery / Idle
+plan()           &rarr; traduce l'intenzione in una sequenza di azioni atomiche
+execute()        &rarr; persiste gli eventi su MongoDB e pubblica su Kafka</code></pre><h3 id="prototipo-implementato">Prototipo implementato</h3><p>Il prototipo è strutturato in quattro moduli principali:</p><ul><li><strong><span class="codespan-content"><code>beliefs.rs</code></span></strong> — la belief base di ogni agente: disponibilità, ordine corrente,
+fase operativa, capacità di carico e rispetto della deadline.</li><li><strong><span class="codespan-content"><code>intentions.rs</code></span></strong> — le intenzioni (<span class="codespan-content"><code>AcceptDelivery</code></span>, <span class="codespan-content"><code>RefuseDelivery</code></span>,
+<span class="codespan-content"><code>CompleteDelivery</code></span>, <span class="codespan-content"><code>Compensate</code></span>) e la funzione <span class="codespan-content"><code>plan_for()</code></span> che le traduce in
+sequenze di <span class="codespan-content"><code>DroneDesire</code></span>.</li><li><strong><span class="codespan-content"><code>agent.rs</code></span></strong> — il trait <span class="codespan-content"><code>Agent</code></span> con il ciclo BDI completo e la sua implementazione
+in <span class="codespan-content"><code>DroneAgent</code></span>.</li><li><strong><span class="codespan-content"><code>fleet.rs</code></span></strong> — <span class="codespan-content"><code>DroneFleet</code></span>, che gestisce un pool di <strong>tre agenti</strong> con una
+strategia di assegnazione intercambiabile (Strategy Pattern). In produzione viene
+usata <span class="codespan-content"><code>RoundRobinStrategy</code></span> per distribuire uniformemente il carico.</li></ul><p>Ogni agente è <strong>completamente isolato</strong>: non condivide stato con gli altri. La
+coordinazione avviene esclusivamente attraverso la flotta, che seleziona l&rsquo;agente
+appropriato per ogni ordine e gestisce i casi trasversali (arrivi e compensazioni).</p><p>L&rsquo;integrazione con il protocollo SAGA non è stata alterata: gli stessi topic Kafka e
+gli stessi <span class="codespan-content"><code>SagaEvent</code></span> del sistema precedente continuano a funzionare. L&rsquo;approccio ad
+agenti ha cambiato esclusivamente <em>come</em> il Drone Service prende le decisioni
+internamente, senza impatti sul contratto con gli altri microservizi.</p><hr /><h2 id="considerazioni-finali">Considerazioni finali</h2><p>I tre punti dell&rsquo;assignment convergono in un sistema coerente:</p><ul><li>Kafka fornisce il <strong>backbone asincrono</strong> che disaccoppia i servizi e rende il
+sistema resiliente ai fallimenti temporanei.</li><li>Gli SLO e il deployment Kubernetes trasformano il prototipo in un sistema
+<strong>osservabile e operabile</strong>, con metriche che misurano oggettivamente la qualità
+del servizio.</li><li>L&rsquo;architettura BDI introduce <strong>autonomia decisionale</strong> nel Drone Service: il drone
+non esegue istruzioni, ma ragiona sul proprio stato e decide autonomamente se una
+consegna è fattibile.</li></ul><p>Il risultato è una piattaforma a microservizi in cui ogni livello — trasporto,
+orchestrazione, deployment e decision-making — è progettato con un approccio distinto
+e ben motivato. La struttura della documentazione riflette questa stratificazione:
+le pagine <strong>&ldquo;Il sistema oggi&rdquo;</strong> descrivono lo stato attuale come riferimento unico,
+quelle di <strong>&ldquo;Infrastruttura &amp; operabilità&rdquo;</strong> ne coprono il deployment e
+l&rsquo;osservabilità, e l&rsquo;<strong><a href="../evoluzione">Evoluzione del progetto</a></strong> ricostruisce il
+percorso che ha condotto a questo risultato.</p>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

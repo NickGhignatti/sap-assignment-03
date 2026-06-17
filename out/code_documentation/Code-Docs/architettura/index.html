@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="droneflow--architettura-del-sistema" data-depth="1"><a href="#droneflow--architettura-del-sistema">DroneFlow — Architettura del Sistema</a><ol><li data-target-id="_1-panoramica" data-depth="2"><a href="#_1-panoramica">1. Panoramica</a></li><li data-target-id="_2-i-tre-microservizi-e-le-loro-responsabilità" data-depth="2"><a href="#_2-i-tre-microservizi-e-le-loro-responsabilità">2. I tre microservizi e le loro responsabilità</a></li><li data-target-id="_3-struttura-del-workspace-rust" data-depth="2"><a href="#_3-struttura-del-workspace-rust">3. Struttura del workspace Rust</a></li><li data-target-id="_4-componenti-del-sistema" data-depth="2"><a href="#_4-componenti-del-sistema">4. Componenti del sistema</a></li><li data-target-id="_5-topologia-kafka--sintesi" data-depth="2"><a href="#_5-topologia-kafka--sintesi">5. Topologia Kafka — sintesi</a></li><li data-target-id="_6-il-pattern-saga" data-depth="2"><a href="#_6-il-pattern-saga">6. Il pattern SAGA</a></li><li data-target-id="_7-flusso-completo--happy-path" data-depth="2"><a href="#_7-flusso-completo--happy-path">7. Flusso completo — Happy Path</a></li><li data-target-id="_8-flusso-completo--compensazione" data-depth="2"><a href="#_8-flusso-completo--compensazione">8. Flusso completo — Compensazione</a></li><li data-target-id="_9-dove-approfondire" data-depth="2"><a href="#_9-dove-approfondire">9. Dove approfondire</a></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="il-sistema-oggi" data-decorative="">Il sistema oggi</h3><ul><li><a href="../architettura" aria-current="page">Architettura</a></li><li><a href="../common">Common (libreria)</a></li><li><a href="../order">Order Service</a></li><li><a href="../delivery">Delivery Service</a></li><li><a href="../drone">Drone Service</a></li><li><a href="../agent">Flotta ad Agenti (BDI)</a></li></ul><h2 id="infrastruttura-amp-operabilità" data-decorative="">Infrastruttura &amp; operabilità</h2><ul><li><a href="../kafka">Messaging Layer (Kafka)</a></li><li><a href="../k8s">Deployment Kubernetes</a></li><li><a href="../slo">Osservabilità &amp; SLO</a></li><li><a href="../testing">Testing &amp; qualità</a></li></ul><h2 id="appendice" data-decorative="">Appendice</h2><ul><li><a href="../evoluzione">Evoluzione del progetto</a></li><li><a href="../conclusioni">Conclusioni</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="droneflow--architettura-del-sistema" data-depth="1"><a href="#droneflow--architettura-del-sistema">DroneFlow — Architettura del Sistema</a><ol><li data-target-id="_1-panoramica" data-depth="2"><a href="#_1-panoramica">1. Panoramica</a></li><li data-target-id="_2-i-tre-microservizi-e-le-loro-responsabilità" data-depth="2"><a href="#_2-i-tre-microservizi-e-le-loro-responsabilità">2. I tre microservizi e le loro responsabilità</a></li><li data-target-id="_3-struttura-del-workspace-rust" data-depth="2"><a href="#_3-struttura-del-workspace-rust">3. Struttura del workspace Rust</a></li><li data-target-id="_4-componenti-del-sistema" data-depth="2"><a href="#_4-componenti-del-sistema">4. Componenti del sistema</a></li><li data-target-id="_5-topologia-kafka--sintesi" data-depth="2"><a href="#_5-topologia-kafka--sintesi">5. Topologia Kafka — sintesi</a></li><li data-target-id="_6-il-pattern-saga" data-depth="2"><a href="#_6-il-pattern-saga">6. Il pattern SAGA</a></li><li data-target-id="_7-flusso-completo--happy-path" data-depth="2"><a href="#_7-flusso-completo--happy-path">7. Flusso completo — Happy Path</a></li><li data-target-id="_8-flusso-completo--compensazione" data-depth="2"><a href="#_8-flusso-completo--compensazione">8. Flusso completo — Compensazione</a></li><li data-target-id="_9-dove-approfondire" data-depth="2"><a href="#_9-dove-approfondire">9. Dove approfondire</a></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><h1 class="page-break" id="droneflow--architettura-del-sistema">DroneFlow — Architettura del Sistema</h1><blockquote><p>[NOTE!]
+Questa pagina descrive il sistema <strong>nella sua forma attuale</strong>: tre microservizi
+Rust che comunicano in modo asincrono attraverso <strong>Apache Kafka</strong>, orchestrati
+da una SAGA. Il percorso storico che ha portato a questa architettura (la
+versione iniziale su RabbitMQ/AMQP, la migrazione a Kafka, la riprogettazione
+del Drone Service ad agenti) è raccontato nell&rsquo;<a href="../evoluzione">Evoluzione del progetto</a>.</p></blockquote><h2 id="_1-panoramica">1. Panoramica</h2><p>DroneFlow è una piattaforma a <strong>microservizi event-driven</strong> che gestisce l&rsquo;intero
+ciclo di vita di una consegna con droni — dalla ricezione dell&rsquo;ordine, alla
+schedulazione della consegna, all&rsquo;assegnazione di un drone, fino al completamento
+o alla compensazione in caso di fallimento.</p><p>Il principio architetturale fondante è il <strong>disaccoppiamento totale tra i
+backend</strong>: i tre servizi <strong>non si chiamano mai direttamente via REST</strong>. L&rsquo;unico
+canale di comunicazione inter-servizio è lo scambio di messaggi asincroni su
+Kafka. Un servizio non sa (e non ha bisogno di sapere) quali altri servizi
+esistono: pubblica eventi su un topic e consuma eventi da un altro. Questo rende
+il sistema:</p><ul><li><strong>Resiliente</strong> — se un servizio è temporaneamente offline, i messaggi
+destinati a lui restano nel topic Kafka e vengono consumati appena torna su.
+Nessuna richiesta viene persa e nessun chiamante resta bloccato in attesa.</li><li><strong>Scalabile orizzontalmente</strong> — più repliche dello stesso servizio condividono
+un <em>consumer group</em> e Kafka distribuisce automaticamente le partizioni tra di
+loro (load balancing), senza alcuna modifica al codice.</li><li><strong>Evolvibile</strong> — si può sostituire o riscrivere un servizio purché continui a
+rispettare il <em>contratto dei messaggi</em> (i tipi serializzati definiti in
+<a href="common.qd)"><span class="codespan-content"><code>common</code></span></a>.</li></ul><p>Gli unici punti di contatto con il mondo esterno sono due interfacce HTTP: quella
+dell&rsquo;<strong>Order Service</strong> (per creare ordini e interrogarne lo stato) e quella del
+<strong>Drone Service</strong> (per consultare lo storico degli eventi dei droni). Il
+<strong>Delivery Service</strong> è invece <em>puramente event-driven</em>: non espone alcuna rotta
+HTTP, vive esclusivamente di Kafka.</p><hr /><h2 id="_2-i-tre-microservizi-e-le-loro-responsabilità">2. I tre microservizi e le loro responsabilità</h2><table><thead><tr><th>Servizio</th><th>Ruolo</th><th>Interfaccia</th><th>Stato persistente</th></tr></thead><tbody><tr><td><strong>Order</strong></td><td>Punto d&rsquo;ingresso HTTP + <strong>orchestratore SAGA</strong></td><td>HTTP <span class="codespan-content"><code>:8080</code></span> + Kafka</td><td>MongoDB <span class="codespan-content"><code>order_service</code></span> (stato delle saga)</td></tr><tr><td><strong>Delivery</strong></td><td>Coordinamento intermedio: assegna un <span class="codespan-content"><code>delivery_id</code></span> e inoltra</td><td>Solo Kafka</td><td><em>Nessuno</em> (stateless)</td></tr><tr><td><strong>Drone</strong></td><td><strong>Flotta di agenti BDI</strong> + <strong>Event Sourcing</strong> + scheduler arrivi</td><td>HTTP <span class="codespan-content"><code>:8082</code></span> + Kafka</td><td>MongoDB <span class="codespan-content"><code>drone_service</code></span> (event store)</td></tr></tbody></table><p>L&rsquo;<strong>Order Service</strong> ha due nature: da un lato è un server HTTP che accetta le
+richieste degli utenti, dall&rsquo;altro è il <em>cervello</em> della transazione distribuita.
+Reagisce agli eventi pubblicati dagli altri servizi e fa avanzare (o compensare)
+la SAGA. È approfondito in <a href="../order">Order Service</a>.</p><p>Il <strong>Delivery Service</strong> è il più semplice: riceve un ordine validato, gli assegna
+un identificativo di consegna e lo passa al Drone Service, notificando
+contestualmente l&rsquo;orchestratore. È <em>stateless</em> — non possiede database. Dettagli
+in <a href="../delivery">Delivery Service</a>.</p><p>Il <strong>Drone Service</strong> è il più articolato: una <strong>flotta di tre agenti autonomi</strong>
+(modello Belief–Desire–Intention) decide per ogni ordine se accettarlo o
+rifiutarlo, persiste ogni cambio di stato come evento immutabile (Event Sourcing)
+e completa le consegne tramite uno scheduler periodico. La parte di servizio
+(persistenza, API, scheduler) è in <a href="../drone">Drone Service</a>; il cuore decisionale
+ad agenti è in <a href="../agent">Flotta ad Agenti (BDI)</a>.</p><hr /><h2 id="_3-struttura-del-workspace-rust">3. Struttura del workspace Rust</h2><p>Il progetto è un <strong>workspace Cargo</strong> con quattro membri: una libreria condivisa e
+tre binari, uno per microservizio.</p><pre><code class="language-toml"># Cargo.toml (root)
+[workspace]
+resolver = &quot;3&quot;
+members = [&quot;common&quot;, &quot;delivery&quot;, &quot;drone&quot;, &quot;order&quot;]</code></pre><pre><code>workspace/
+├── Cargo.toml              &larr; workspace root [members = [...]]
+├── Cargo.lock              &larr; lockfile condiviso da tutti i membri
+├── common/                 &larr; libreria condivisa (no binary)
+│   └── src/
+│       ├── lib.rs          &larr; re-export pubblico: events + messages
+│       ├── events.rs       &larr; SagaEvent, DroneEvent
+│       └── messages.rs     &larr; OrderMessage
+├── order/
+│   └── src/
+│       ├── main.rs         &larr; wiring: Mongo, Kafka, HTTP, metriche
+│       ├── api.rs          &larr; handler HTTP (Axum)
+│       ├── service.rs      &larr; OrderService + DTO di richiesta/risposta
+│       ├── orchestrator.rs &larr; SagaOrchestrator + SagaMetrics
+│       ├── saga.rs         &larr; SagaState, SagaStatus, SagaStep
+│       ├── repository.rs   &larr; SagaRepository (MongoDB)
+│       ├── consumer.rs     &larr; task consumer Kafka (saga-events)
+│       └── http_metrics.rs &larr; middleware metriche di disponibilit&agrave; HTTP
+├── delivery/
+│   └── src/
+│       ├── main.rs         &larr; wiring: Kafka producer + consumer
+│       ├── service.rs      &larr; DeliveryService
+│       └── consumer.rs     &larr; task consumer Kafka (order-requests)
+└── drone/
+    └── src/
+        ├── main.rs         &larr; wiring: Mongo, Kafka (2 consumer), flotta, scheduler
+        ├── agent.rs        &larr; trait Agent + DroneAgent (ciclo BDI)
+        ├── beliefs.rs      &larr; DroneBeliefs, AgentPhase
+        ├── intentions.rs   &larr; DroneIntention, DroneDesire, plan_for()
+        ├── fleet.rs        &larr; DroneFleet + AssignmentStrategy
+        ├── store.rs        &larr; DroneEventStore (event sourcing su MongoDB)
+        ├── model.rs        &larr; DroneEntry, DroneState (stato ricostruito)
+        ├── consumer.rs     &larr; task consumer Kafka (drone-requests + saga-events)
+        ├── metrics.rs      &larr; DroneMetrics (counter assigned/refused)
+        ├── api.rs          &larr; handler HTTP (Axum)
+        └── service.rs      &larr; DroneService imperativo (legacy, vedi nota)</code></pre><blockquote><p>[NOTE!]
+Il file <span class="codespan-content"><code>drone/src/service.rs</code></span> contiene la <strong>vecchia implementazione imperativa</strong>
+<span class="codespan-content"><code>DroneService</code></span> (con la mappa condivisa <span class="codespan-content"><code>InFlightMap</code></span>), rimasta nel tree per
+riferimento storico. Il <span class="codespan-content"><code>main.rs</code></span> del Drone Service <strong>non la usa</strong>: istanzia
+invece la <span class="codespan-content"><code>DroneFleet</code></span> di agenti. L&rsquo;unico elemento del modulo ancora referenziato
+è la costante <span class="codespan-content"><code>SAGA_EVENTS_TOPIC</code></span>. La storia di questa sostituzione è in
+<a href="../evoluzione">Evoluzione del progetto</a>.</p></blockquote><p><strong>Perché una libreria <span class="codespan-content"><code>common</code></span>?</strong> I tre servizi devono serializzare e
+deserializzare <em>esattamente</em> le stesse strutture dati: se l&rsquo;Order Service
+pubblicasse un <span class="codespan-content"><code>OrderMessage</code></span> con un campo che il Delivery Service non si aspetta,
+la deserializzazione fallirebbe a runtime. Centralizzando i tipi in un&rsquo;unica crate
+condivisa, il compilatore Rust diventa il garante del contratto: un cambiamento al
+formato di un messaggio non compila finché tutti i servizi non sono allineati.
+Il dettaglio dei tipi è in <a href="../common">Common — Libreria Condivisa</a>.</p><hr /><h2 id="_4-componenti-del-sistema">4. Componenti del sistema</h2><p>Il diagramma seguente mostra tutti i componenti runtime e i flussi di messaggi
+Kafka. Le frecce <em>produce</em> indicano una scrittura su un topic; le frecce <em>consume</em>
+indicano una sottoscrizione (con il relativo <span class="codespan-content"><code>group.id</code></span>).</p><figure><pre class="mermaid">graph TB
+    Client([&quot;👤 Client HTTP&quot;])
+
+    subgraph Services[&quot;Microservizi&quot;]
+        Order[&quot;Order Service\n:8080\n(Orchestratore SAGA)&quot;]
+        Delivery[&quot;Delivery Service\n(Kafka Consumer)&quot;]
+        Drone[&quot;Drone Service\n:8082\n(Flotta BDI + Event Sourcing)&quot;]
+    end
+
+    subgraph Infra[&quot;Infrastruttura&quot;]
+        K[[&quot;Apache Kafka\n:9092 (interno)\n:9094 (host)&quot;]]
+        KUI[&quot;Kafka UI\n:8090&quot;]
+        MDB_O[(&quot;MongoDB\norder_service&quot;)]
+        MDB_D[(&quot;MongoDB\ndrone_service&quot;)]
+    end
+
+    Client --&gt;|&quot;POST /\nGET /{id}/saga-status&quot;| Order
+    Client --&gt;|&quot;GET /order/{id}/status\nGET /drone/{id}/events&quot;| Drone
+
+    Order --&gt;|&quot;produce: order-requests&quot;| K
+    Order --&gt;|&quot;produce: saga-events&quot;| K
+    K --&gt;|&quot;consume: saga-events\ngroup: order-service&quot;| Order
+
+    K --&gt;|&quot;consume: order-requests\ngroup: delivery-service&quot;| Delivery
+    Delivery --&gt;|&quot;produce: drone-requests&quot;| K
+    Delivery --&gt;|&quot;produce: saga-events&quot;| K
+
+    K --&gt;|&quot;consume: drone-requests\ngroup: drone-service-orders&quot;| Drone
+    K --&gt;|&quot;consume: saga-events\ngroup: drone-service-compensation&quot;| Drone
+    Drone --&gt;|&quot;produce: saga-events&quot;| K
+
+    Order --- MDB_O
+    Drone --- MDB_D
+    KUI -.-&gt;|&quot;monitor&quot;| K</pre></figure><p><strong>Lettura del diagramma.</strong> Si parte dal <span class="codespan-content"><code>Client HTTP</code></span> in alto. Una consegna nasce
+con una <span class="codespan-content"><code>POST /</code></span> all&rsquo;Order Service, che diventa il punto di partenza della SAGA.
+Da quel momento, <strong>tutta la comunicazione tra i backend passa per Kafka</strong> (il
+nodo centrale): non c&rsquo;è alcuna freccia diretta tra Order, Delivery e Drone. Ogni
+servizio produce messaggi su uno o più topic e ne consuma da altri.</p><p>Si noti la <strong>simmetria delle responsabilità di persistenza</strong>: solo Order e Drone
+hanno un database (rispettivamente per lo stato delle saga e per l&rsquo;event store dei
+droni); il Delivery non ne ha, coerentemente con la sua natura stateless. La
+<strong>Kafka UI</strong> è uno strumento di monitoraggio che si collega in sola lettura al
+broker — non fa parte del flusso applicativo.</p><hr /><h2 id="_5-topologia-kafka--sintesi">5. Topologia Kafka — sintesi</h2><p>Il sistema usa <strong>tre topic</strong> e <strong>quattro consumer group</strong>. Questa è la sintesi
+necessaria a leggere i flussi delle sezioni successive; la trattazione completa
+(KRaft, listener, chiavi di partizione, semantica di commit) è in
+<a href="../kafka">Messaging Layer (Kafka)</a>.</p><table><thead><tr><th>Topic</th><th>Produttori</th><th>Consumatori</th><th>Tipo messaggio</th><th>Chiave</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>saga-events</code></span></td><td>order, delivery, drone</td><td>order, drone</td><td><span class="codespan-content"><code>SagaEvent</code></span> (JSON)</td><td><span class="codespan-content"><code>order_id</code></span></td></tr><tr><td><span class="codespan-content"><code>order-requests</code></span></td><td>order</td><td>delivery</td><td><span class="codespan-content"><code>OrderMessage</code></span> (JSON)</td><td><span class="codespan-content"><code>order_id</code></span></td></tr><tr><td><span class="codespan-content"><code>drone-requests</code></span></td><td>delivery</td><td>drone</td><td><span class="codespan-content"><code>OrderMessage</code></span> (JSON)</td><td><span class="codespan-content"><code>order_id</code></span></td></tr></tbody></table><table><thead><tr><th>Consumer group</th><th>Servizio</th><th>Topic</th><th>Ruolo</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>order-service</code></span></td><td>order</td><td><span class="codespan-content"><code>saga-events</code></span></td><td>Avanza la SAGA a ogni evento di step</td></tr><tr><td><span class="codespan-content"><code>delivery-service</code></span></td><td>delivery</td><td><span class="codespan-content"><code>order-requests</code></span></td><td>Schedula la delivery, inoltra al drone</td></tr><tr><td><span class="codespan-content"><code>drone-service-orders</code></span></td><td>drone</td><td><span class="codespan-content"><code>drone-requests</code></span></td><td>Assegna un drone, avvia la consegna</td></tr><tr><td><span class="codespan-content"><code>drone-service-compensation</code></span></td><td>drone</td><td><span class="codespan-content"><code>saga-events</code></span></td><td>Gestisce gli eventi <span class="codespan-content"><code>COMPENSATE_DRONE</code></span></td></tr></tbody></table><p>Due osservazioni chiave che ricorreranno nei flussi:</p><ol><li><strong>La chiave di partizione è sempre <span class="codespan-content"><code>order_id</code></span>.</strong> Kafka garantisce
+l&rsquo;ordinamento dei messaggi <em>all&rsquo;interno di una partizione</em>; usando <span class="codespan-content"><code>order_id</code></span>
+come chiave, tutti i messaggi relativi allo stesso ordine finiscono nella
+stessa partizione e vengono quindi consumati nell&rsquo;ordine in cui sono stati
+prodotti. L&rsquo;ordinamento globale tra ordini diversi non è necessario.</li><li><strong>Il Drone Service usa due consumer group distinti.</strong> Uno
+(<span class="codespan-content"><code>drone-service-orders</code></span>) per ricevere gli ordini da consegnare, l&rsquo;altro
+(<span class="codespan-content"><code>drone-service-compensation</code></span>) per ricevere gli eventi di compensazione. Sono
+group separati perché hanno cursori (offset) indipendenti e logiche di
+gestione diverse.</li></ol><hr /><h2 id="_6-il-pattern-saga">6. Il pattern SAGA</h2><p>La consegna di un drone è una <strong>transazione distribuita</strong>: coinvolge tre servizi e
+due database, e <em>non</em> può essere protetta da una transazione ACID classica (non
+esiste un lock distribuito su Kafka + due MongoDB). Si usa quindi il pattern
+<strong>SAGA</strong>, che spezza la transazione in una sequenza di <strong>step locali</strong>, ognuno con
+una corrispondente <strong>azione di compensazione</strong> che lo annulla.</p><p>DroneFlow adotta la variante a <strong>orchestrazione</strong>: un coordinatore centrale
+(il <span class="codespan-content"><code>SagaOrchestrator</code></span> nell&rsquo;Order Service) decide quale step eseguire e, in caso
+di fallimento, quali compensazioni emettere. L&rsquo;alternativa — la <em>coreografia</em>,
+dove ogni servizio reagisce agli eventi degli altri senza un coordinatore — è
+stata scartata perché renderebbe la logica di compensazione molto più difficile da
+seguire e testare.</p><p>I tre step della SAGA sono:</p><table><thead><tr><th>Step</th><th>Eseguito da</th><th>Evento di successo</th><th>Compensazione</th></tr></thead><tbody><tr><td>1. <strong>OrderValidation</strong></td><td>Order (sincrono)</td><td><em>(interno)</em></td><td><span class="codespan-content"><code>CompensateOrder</code></span></td></tr><tr><td>2. <strong>DeliveryScheduling</strong></td><td>Delivery</td><td><span class="codespan-content"><code>DeliveryScheduled</code></span></td><td><span class="codespan-content"><code>CompensateDelivery</code></span></td></tr><tr><td>3. <strong>DroneAssignment</strong></td><td>Drone</td><td><span class="codespan-content"><code>DroneAssigned</code></span></td><td><span class="codespan-content"><code>CompensateDrone</code></span></td></tr></tbody></table><p>Il principio fondamentale della compensazione è che gli step vanno annullati in
+<strong>ordine inverso</strong> rispetto a quello di esecuzione: se è fallito lo step 3, si
+compensa prima il drone, poi la delivery, poi l&rsquo;ordine. Questo è implementato in
+<a href="../order"><span class="codespan-content"><code>SagaState::steps_to_compensate()</code></span></a> con un semplice <span class="codespan-content"><code>sort()</code></span> seguito da
+<span class="codespan-content"><code>reverse()</code></span> sugli step completati.</p><hr /><h2 id="_7-flusso-completo--happy-path">7. Flusso completo — Happy Path</h2><p>Il diagramma seguente traccia una consegna che va a buon fine, dall&rsquo;arrivo della
+richiesta HTTP fino al rientro del drone alla base.</p><figure><pre class="mermaid">sequenceDiagram
+    actor Client
+    participant O as Order Service
+    participant MDB_O as MongoDB (order)
+    participant K as Kafka
+    participant D as Delivery Service
+    participant DR as Drone Service
+    participant MDB_D as MongoDB (drone)
+
+    Client-&gt;&gt;O: POST / {ordine}
+    O-&gt;&gt;O: genera order_id + saga_id
+    O-&gt;&gt;MDB_O: save SagaState (STARTED)
+    O-&gt;&gt;O: valida ordine (Step 1)
+    O-&gt;&gt;MDB_O: save SagaState (IN_PROGRESS, step: DeliveryScheduling)
+    O-&gt;&gt;K: produce &rarr; order-requests (OrderMessage, key=order_id)
+    O--&gt;&gt;Client: 201 {order_id, saga_id}
+
+    K-&gt;&gt;D: consume order-requests (group: delivery-service)
+    D-&gt;&gt;D: genera delivery_id
+    D-&gt;&gt;K: produce &rarr; drone-requests (OrderMessage, key=order_id)
+    D-&gt;&gt;K: produce &rarr; saga-events (DeliveryScheduled, key=order_id)
+
+    K-&gt;&gt;O: consume saga-events (group: order-service)
+    O-&gt;&gt;O: match DeliveryScheduled
+    O-&gt;&gt;MDB_O: save SagaState (step: DroneAssignment)
+    O-&gt;&gt;K: commit offset
+
+    K-&gt;&gt;DR: consume drone-requests (group: drone-service-orders)
+    DR-&gt;&gt;DR: DroneFleet::dispatch_order() &mdash; RoundRobin seleziona un agente
+    DR-&gt;&gt;DR: update_beliefs(order)
+    DR-&gt;&gt;DR: deliberate() &rarr; AcceptDelivery
+    DR-&gt;&gt;DR: plan() &rarr; [StoreCreated, PublishAssigned, StoreDispatched]
+    DR-&gt;&gt;MDB_D: save DroneEvent::Created (v0)
+    DR-&gt;&gt;K: produce &rarr; saga-events (DroneAssigned, key=order_id)
+    DR-&gt;&gt;MDB_D: save DroneEvent::Dispatched (v1)
+    DR-&gt;&gt;DR: update_beliefs() &rarr; phase: ExecutingDelivery
+    DR-&gt;&gt;K: commit offset
+
+    K-&gt;&gt;O: consume saga-events (group: order-service)
+    O-&gt;&gt;O: match DroneAssigned
+    O-&gt;&gt;MDB_O: save SagaState (COMPLETED)
+    O-&gt;&gt;K: produce &rarr; saga-events (OrderCompleted, key=order_id)
+    O-&gt;&gt;K: commit offset
+
+    Note over DR: scheduler ogni 10s
+    DR-&gt;&gt;DR: DroneFleet::check_arrivals()
+    DR-&gt;&gt;DR: has_arrived() &rarr; true
+    DR-&gt;&gt;DR: deliberate() &rarr; CompleteDelivery
+    DR-&gt;&gt;MDB_D: save DroneEvent::Delivered (v2)
+    DR-&gt;&gt;MDB_D: save DroneEvent::Returned (v3)
+    DR-&gt;&gt;DR: update_beliefs() &rarr; phase: Idle</pre></figure><p><strong>Narrazione passo per passo.</strong></p><ol><li><p><strong>Creazione dell&rsquo;ordine (sincrona).</strong> Il client invia <span class="codespan-content"><code>POST /</code></span>. L&rsquo;Order Service
+genera un <span class="codespan-content"><code>order_id</code></span> e un <span class="codespan-content"><code>saga_id</code></span>, salva lo stato iniziale della saga su
+MongoDB (<span class="codespan-content"><code>STARTED</code></span>) ed esegue <strong>subito, in modo sincrono</strong>, lo Step 1: la
+validazione dell&rsquo;ordine (peso &gt; 0, indirizzi non vuoti). Se la validazione
+passa, marca lo step come completato, salva di nuovo lo stato
+(<span class="codespan-content"><code>IN_PROGRESS</code></span>, prossimo step <span class="codespan-content"><code>DeliveryScheduling</code></span>) e <strong>pubblica</strong> l&rsquo;ordine sul
+topic <span class="codespan-content"><code>order-requests</code></span>. Solo a questo punto risponde al client con <span class="codespan-content"><code>201</code></span> e i due
+identificativi. <strong>Tutto ciò che segue è asincrono</strong>: il client ha già la sua
+risposta e non resta in attesa.</p></li><li><p><strong>Schedulazione della consegna (Step 2).</strong> Il Delivery Service, sottoscritto a
+<span class="codespan-content"><code>order-requests</code></span>, consuma il messaggio. Genera un <span class="codespan-content"><code>delivery_id</code></span>, inoltra
+l&rsquo;<span class="codespan-content"><code>OrderMessage</code></span> sul topic <span class="codespan-content"><code>drone-requests</code></span> (per il Drone Service) e pubblica un
+evento <span class="codespan-content"><code>DeliveryScheduled</code></span> su <span class="codespan-content"><code>saga-events</code></span> (per l&rsquo;orchestratore). Si noti che il
+<span class="codespan-content"><code>saga_id</code></span> nell&rsquo;evento è lasciato <strong>vuoto</strong>: il Delivery Service non lo conosce, e
+l&rsquo;orchestratore correla la saga tramite <span class="codespan-content"><code>order_id</code></span> (vedi <a href="delivery.qd)">Delivery Service</a>.</p></li><li><p><strong>Avanzamento della saga.</strong> L&rsquo;orchestratore, sottoscritto a <span class="codespan-content"><code>saga-events</code></span>,
+riceve <span class="codespan-content"><code>DeliveryScheduled</code></span>, recupera la saga per <span class="codespan-content"><code>order_id</code></span>, registra il
+<span class="codespan-content"><code>delivery_id</code></span>, marca lo Step 2 completato (prossimo step <span class="codespan-content"><code>DroneAssignment</code></span>) e
+<strong>committa l&rsquo;offset</strong> Kafka — confermando così di aver elaborato il messaggio.</p></li><li><p><strong>Assegnazione del drone (Step 3).</strong> Il Drone Service consuma da
+<span class="codespan-content"><code>drone-requests</code></span>. La <span class="codespan-content"><code>DroneFleet</code></span> seleziona un agente con la strategia
+round-robin; l&rsquo;agente <em>aggiorna le proprie belief</em>, <em>delibera</em> di accettare la
+consegna, <em>pianifica</em> la sequenza di azioni ed <em>esegue</em>: salva l&rsquo;evento <span class="codespan-content"><code>Created</code></span>
+(versione 0), pubblica <span class="codespan-content"><code>DroneAssigned</code></span> su <span class="codespan-content"><code>saga-events</code></span>, salva l&rsquo;evento
+<span class="codespan-content"><code>Dispatched</code></span> (versione 1) e aggiorna le belief alla fase <span class="codespan-content"><code>ExecutingDelivery</code></span>. Il
+ciclo decisionale BDI è descritto in <a href="../agent">Flotta ad Agenti (BDI)</a>.</p></li><li><p><strong>Completamento della saga.</strong> L&rsquo;orchestratore riceve <span class="codespan-content"><code>DroneAssigned</code></span>, marca la
+saga <span class="codespan-content"><code>COMPLETED</code></span>, registra la durata end-to-end (per l&rsquo;SLO di latenza) e pubblica
+<span class="codespan-content"><code>OrderCompleted</code></span>. La transazione distribuita è conclusa con successo.</p></li><li><p><strong>Arrivo a destinazione (asincrono, via scheduler).</strong> Indipendentemente dalla
+saga, ogni 10 secondi lo scheduler del Drone Service chiama <span class="codespan-content"><code>check_arrivals()</code></span>.
+Quando l&rsquo;orario di arrivo previsto di un drone è passato, l&rsquo;agente delibera
+<span class="codespan-content"><code>CompleteDelivery</code></span> e salva gli eventi <span class="codespan-content"><code>Delivered</code></span> (v2) e <span class="codespan-content"><code>Returned</code></span> (v3),
+tornando infine <span class="codespan-content"><code>Idle</code></span> e quindi di nuovo disponibile.</p></li></ol><hr /><h2 id="_8-flusso-completo--compensazione">8. Flusso completo — Compensazione</h2><p>Quando uno step fallisce <em>dopo</em> che altri step sono già stati completati, la SAGA
+deve <strong>annullare</strong> il lavoro svolto. Il diagramma mostra il caso peggiore: il
+fallimento dello Step 3 (assegnazione del drone), che richiede di compensare tutti
+e tre gli step a ritroso.</p><figure><pre class="mermaid">sequenceDiagram
+    participant O as Order Service
+    participant MDB_O as MongoDB (order)
+    participant K as Kafka
+    participant DR as Drone Service
+
+    Note over K,O: DroneAssignmentFailed ricevuto (group: order-service)
+    K-&gt;&gt;O: consume saga-events
+    O-&gt;&gt;O: match DroneAssignmentFailed
+    O-&gt;&gt;MDB_O: save SagaState (FAILED)
+    O-&gt;&gt;MDB_O: save SagaState (COMPENSATING)
+    O-&gt;&gt;K: commit offset
+
+    Note over O: steps_to_compensate() = [DroneAssignment, DeliveryScheduling, OrderValidation]
+
+    O-&gt;&gt;K: produce &rarr; saga-events (CompensateDrone, key=order_id)
+    O-&gt;&gt;K: produce &rarr; saga-events (CompensateDelivery, key=order_id)
+    O-&gt;&gt;K: produce &rarr; saga-events (CompensateOrder, key=order_id)
+
+    K-&gt;&gt;DR: consume saga-events (group: drone-service-compensation)
+    DR-&gt;&gt;DR: match CompensateDrone
+    DR-&gt;&gt;DR: DroneFleet::compensate(drone_id)
+    DR-&gt;&gt;DR: update_compensated() &rarr; phase: Idle
+    DR-&gt;&gt;K: commit offset
+
+    Note over DR,K: altri eventi (CompensateDelivery, CompensateOrder)\nricevuti dallo stesso consumer &rarr; match _ &rarr; commit immediato (skip)
+
+    O-&gt;&gt;MDB_O: save SagaState (COMPENSATED)
+    O-&gt;&gt;K: produce &rarr; saga-events (OrderCancelled, key=order_id)</pre></figure><p><strong>Narrazione passo per passo.</strong></p><ol><li><p><strong>Rilevamento del fallimento.</strong> Il Drone Service, non potendo soddisfare la
+consegna (per esempio un peso eccessivo o l&rsquo;assenza di droni disponibili), ha
+pubblicato <span class="codespan-content"><code>DroneAssignmentFailed</code></span>. L&rsquo;orchestratore lo riceve, recupera la saga,
+la marca <span class="codespan-content"><code>FAILED</code></span> con la motivazione, poi <span class="codespan-content"><code>COMPENSATING</code></span>, e committa l&rsquo;offset.</p></li><li><p><strong>Calcolo dell&rsquo;ordine di compensazione.</strong> L&rsquo;orchestratore chiama
+<span class="codespan-content"><code>steps_to_compensate()</code></span>, che restituisce gli step completati in <strong>ordine
+inverso</strong>. Nel caso peggiore: <span class="codespan-content"><code>[DroneAssignment, DeliveryScheduling, OrderValidation]</code></span>.</p></li><li><p><strong>Emissione delle compensazioni.</strong> Per ogni step da compensare, l&rsquo;orchestratore
+pubblica l&rsquo;evento corrispondente su <span class="codespan-content"><code>saga-events</code></span>: <span class="codespan-content"><code>CompensateDrone</code></span>,
+<span class="codespan-content"><code>CompensateDelivery</code></span>, <span class="codespan-content"><code>CompensateOrder</code></span>. Tutti con chiave <span class="codespan-content"><code>order_id</code></span>, quindi
+nella stessa partizione e nell&rsquo;ordine emesso.</p></li><li><p><strong>Reazione del Drone Service.</strong> Il consumer di compensazione
+(<span class="codespan-content"><code>drone-service-compensation</code></span>) riceve <em>tutti</em> gli eventi <span class="codespan-content"><code>saga-events</code></span>, ma agisce
+<strong>solo</strong> su <span class="codespan-content"><code>CompensateDrone</code></span>: libera l&rsquo;agente coinvolto resettandone le belief
+a <span class="codespan-content"><code>Idle</code></span>. Tutti gli altri eventi (incluse le compensazioni destinate ad altri
+servizi, ma anche <span class="codespan-content"><code>OrderCompleted</code></span>, <span class="codespan-content"><code>DeliveryScheduled</code></span>, ecc.) cadono nel ramo
+<span class="codespan-content"><code>_</code></span> del match e vengono <strong>committati immediatamente</strong> senza azione — l&rsquo;equivalente
+applicativo del &ldquo;la routing key non corrispondeva&rdquo; di RabbitMQ.</p></li><li><p><strong>Chiusura.</strong> Completate le compensazioni, l&rsquo;orchestratore marca la saga
+<span class="codespan-content"><code>COMPENSATED</code></span> e pubblica <span class="codespan-content"><code>OrderCancelled</code></span> come evento terminale di audit.</p></li></ol><blockquote><p>[NOTE!]
+Le compensazioni di <span class="codespan-content"><code>CompensateDelivery</code></span> e <span class="codespan-content"><code>CompensateOrder</code></span> non hanno un
+consumer dedicato che le elabori attivamente: il Delivery Service è stateless
+(non c&rsquo;è nulla di persistente da annullare) e l&rsquo;annullamento dell&rsquo;ordine è già
+registrato nello stato della saga su MongoDB. Questi eventi restano comunque
+sul topic come <strong>traccia di audit</strong> dell&rsquo;avvenuta compensazione.</p></blockquote><hr /><h2 id="_9-dove-approfondire">9. Dove approfondire</h2><ul><li><strong>Contratti dei messaggi</strong> (<span class="codespan-content"><code>OrderMessage</code></span>, <span class="codespan-content"><code>SagaEvent</code></span>, <span class="codespan-content"><code>DroneEvent</code></span>):
+<a href="../common">Common — Libreria Condivisa</a>.</li><li><strong>Orchestrazione della SAGA</strong> e macchine a stati: <a href="../order">Order Service</a>.</li><li><strong>Coordinamento e statelessness</strong>: <a href="../delivery">Delivery Service</a>.</li><li><strong>Event sourcing, scheduler, API</strong>: <a href="../drone">Drone Service</a>.</li><li><strong>Decisione autonoma degli agenti</strong>: <a href="../agent">Flotta ad Agenti (BDI)</a>.</li><li><strong>Dettagli del transport Kafka</strong>: <a href="../kafka">Messaging Layer (Kafka)</a>.</li><li><strong>Deployment e osservabilità</strong>: <a href="../k8s">Deployment Kubernetes</a> e
+<a href="../slo">Osservabilità &amp; SLO</a>.</li></ul>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

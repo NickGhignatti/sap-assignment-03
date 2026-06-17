@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="deployment-kubernetes" data-depth="1"><a href="#deployment-kubernetes">Deployment Kubernetes</a><ol><li data-target-id="_1-panoramica" data-depth="2"><a href="#_1-panoramica">1. Panoramica</a></li><li data-target-id="_2-topologia-del-cluster" data-depth="2"><a href="#_2-topologia-del-cluster">2. Topologia del cluster</a></li><li data-target-id="_3-scelte-di-design" data-depth="2"><a href="#_3-scelte-di-design">3. Scelte di design</a><ol><li data-target-id="deployment-vs-statefulset" data-depth="3"><a href="#deployment-vs-statefulset">Deployment vs StatefulSet</a></li><li data-target-id="service-headless-per-gli-statefulset" data-depth="3"><a href="#service-headless-per-gli-statefulset">Service headless per gli StatefulSet</a></li><li data-target-id="configmap-vs-secret" data-depth="3"><a href="#configmap-vs-secret">ConfigMap vs Secret</a></li><li data-target-id="ingress-selettivo" data-depth="3"><a href="#ingress-selettivo">Ingress selettivo</a></li></ol></li><li data-target-id="_4-il-broker-kafka-in-kraft-su-kubernetes" data-depth="2"><a href="#_4-il-broker-kafka-in-kraft-su-kubernetes">4. Il broker Kafka in KRaft su Kubernetes</a></li><li data-target-id="_5-sequenza-di-deployment" data-depth="2"><a href="#_5-sequenza-di-deployment">5. Sequenza di deployment</a><ol><li data-target-id="nota-sul-build-delle-immagini" data-depth="3"><a href="#nota-sul-build-delle-immagini">Nota sul build delle immagini</a></li></ol></li><li data-target-id="_6-lezioni-di-integrazione-compose--k8s" data-depth="2"><a href="#_6-lezioni-di-integrazione-compose--k8s">6. Lezioni di integrazione (compose → K8s)</a></li><li data-target-id="_7-script-di-test" data-depth="2"><a href="#_7-script-di-test">7. Script di test</a></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="il-sistema-oggi" data-decorative="">Il sistema oggi</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common (libreria)</a></li><li><a href="../order">Order Service</a></li><li><a href="../delivery">Delivery Service</a></li><li><a href="../drone">Drone Service</a></li><li><a href="../agent">Flotta ad Agenti (BDI)</a></li></ul><h2 id="infrastruttura-amp-operabilità" data-decorative="">Infrastruttura &amp; operabilità</h2><ul><li><a href="../kafka">Messaging Layer (Kafka)</a></li><li><a href="../k8s" aria-current="page">Deployment Kubernetes</a></li><li><a href="../slo">Osservabilità &amp; SLO</a></li><li><a href="../testing">Testing &amp; qualità</a></li></ul><h2 id="appendice" data-decorative="">Appendice</h2><ul><li><a href="../evoluzione">Evoluzione del progetto</a></li><li><a href="../conclusioni">Conclusioni</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="deployment-kubernetes" data-depth="1"><a href="#deployment-kubernetes">Deployment Kubernetes</a><ol><li data-target-id="_1-panoramica" data-depth="2"><a href="#_1-panoramica">1. Panoramica</a></li><li data-target-id="_2-topologia-del-cluster" data-depth="2"><a href="#_2-topologia-del-cluster">2. Topologia del cluster</a></li><li data-target-id="_3-scelte-di-design" data-depth="2"><a href="#_3-scelte-di-design">3. Scelte di design</a><ol><li data-target-id="deployment-vs-statefulset" data-depth="3"><a href="#deployment-vs-statefulset">Deployment vs StatefulSet</a></li><li data-target-id="service-headless-per-gli-statefulset" data-depth="3"><a href="#service-headless-per-gli-statefulset">Service headless per gli StatefulSet</a></li><li data-target-id="configmap-vs-secret" data-depth="3"><a href="#configmap-vs-secret">ConfigMap vs Secret</a></li><li data-target-id="ingress-selettivo" data-depth="3"><a href="#ingress-selettivo">Ingress selettivo</a></li></ol></li><li data-target-id="_4-il-broker-kafka-in-kraft-su-kubernetes" data-depth="2"><a href="#_4-il-broker-kafka-in-kraft-su-kubernetes">4. Il broker Kafka in KRaft su Kubernetes</a></li><li data-target-id="_5-sequenza-di-deployment" data-depth="2"><a href="#_5-sequenza-di-deployment">5. Sequenza di deployment</a><ol><li data-target-id="nota-sul-build-delle-immagini" data-depth="3"><a href="#nota-sul-build-delle-immagini">Nota sul build delle immagini</a></li></ol></li><li data-target-id="_6-lezioni-di-integrazione-compose--k8s" data-depth="2"><a href="#_6-lezioni-di-integrazione-compose--k8s">6. Lezioni di integrazione (compose → K8s)</a></li><li data-target-id="_7-script-di-test" data-depth="2"><a href="#_7-script-di-test">7. Script di test</a></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><blockquote><p>[NOTE!]
+Deployment dell&rsquo;intero sistema su <strong>Kubernetes</strong> (testato su <strong>k3d</strong>, un wrapper di
+k3s su Docker). I manifest sostituiscono <span class="codespan-content"><code>docker-compose.yml</code></span> come ambiente di
+orchestrazione, mantenendo lo stesso <em>contratto applicativo</em> (variabili d&rsquo;ambiente,
+porte, topic Kafka).</p></blockquote><h1 class="page-break" id="deployment-kubernetes">Deployment Kubernetes</h1><h2 id="_1-panoramica">1. Panoramica</h2><p>Il deployment su Kubernetes raccoglie tutte le risorse in un unico namespace
+(<span class="codespan-content"><code>droneflow</code></span>) e le descrive in 11 manifest dichiarativi nella cartella <span class="codespan-content"><code>k8s/</code></span>. La
+filosofia è quella tipica di Kubernetes: si dichiara lo <em>stato desiderato</em> (quanti
+pod, quali immagini, quale configurazione) e il control plane si occupa di
+raggiungerlo e mantenerlo. Rispetto a <span class="codespan-content"><code>docker-compose</code></span>, il salto concettuale è la
+distinzione tra workload <strong>stateless</strong> (replicabili e riprogrammabili liberamente) e
+workload <strong>stateful</strong> (con storage e identità di rete stabili).</p><table><thead><tr><th>File</th><th>Risorse</th><th>Scopo</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>namespace.yml</code></span></td><td><span class="codespan-content"><code>Namespace</code></span></td><td>Isola tutte le risorse in <span class="codespan-content"><code>droneflow</code></span></td></tr><tr><td><span class="codespan-content"><code>configmap.yml</code></span></td><td><span class="codespan-content"><code>ConfigMap</code></span></td><td>Config non sensibile (broker Kafka, cluster Kafka UI)</td></tr><tr><td><span class="codespan-content"><code>secret.yml</code></span></td><td><span class="codespan-content"><code>Secret</code></span></td><td>Credenziali MongoDB + URI di connessione</td></tr><tr><td><span class="codespan-content"><code>mongodb.yml</code></span></td><td><span class="codespan-content"><code>Service</code></span> (headless) + <span class="codespan-content"><code>StatefulSet</code></span></td><td>Database persistente</td></tr><tr><td><span class="codespan-content"><code>kafka.yml</code></span></td><td><span class="codespan-content"><code>Service</code></span> (headless) + <span class="codespan-content"><code>Service</code></span> (ClusterIP) + <span class="codespan-content"><code>StatefulSet</code></span></td><td>Broker Kafka KRaft</td></tr><tr><td><span class="codespan-content"><code>kafka-ui.yml</code></span></td><td><span class="codespan-content"><code>Deployment</code></span> + <span class="codespan-content"><code>Service</code></span></td><td>UI di monitoraggio</td></tr><tr><td><span class="codespan-content"><code>order-service.yml</code></span></td><td><span class="codespan-content"><code>Deployment</code></span> + <span class="codespan-content"><code>Service</code></span></td><td>Orchestratore SAGA</td></tr><tr><td><span class="codespan-content"><code>delivery-service.yml</code></span></td><td><span class="codespan-content"><code>Deployment</code></span> + <span class="codespan-content"><code>Service</code></span></td><td>Consumer di delivery</td></tr><tr><td><span class="codespan-content"><code>drone-service.yml</code></span></td><td><span class="codespan-content"><code>Deployment</code></span> + <span class="codespan-content"><code>Service</code></span></td><td>Flotta di agenti drone</td></tr><tr><td><span class="codespan-content"><code>prometheus.yml</code></span></td><td><span class="codespan-content"><code>ConfigMap</code></span> + <span class="codespan-content"><code>Deployment</code></span> + <span class="codespan-content"><code>Service</code></span></td><td>Raccolta metriche (vedi <a href="slo.qd)">SLO</a></td></tr><tr><td><span class="codespan-content"><code>ingress.yml</code></span></td><td><span class="codespan-content"><code>Ingress</code></span> (Traefik)</td><td>Punto d&rsquo;ingresso HTTP esterno</td></tr></tbody></table><hr /><h2 id="_2-topologia-del-cluster">2. Topologia del cluster</h2><figure><pre class="mermaid">graph TB
+    subgraph ext[&quot;Esterno&quot;]
+        U([&quot;👤 Client&quot;])
+    end
+
+    subgraph ns[&quot;namespace: droneflow&quot;]
+        ING[&quot;Ingress (Traefik)\n/order &rarr; order-service\n/drone &rarr; drone-service&quot;]
+
+        subgraph stateless[&quot;Deployment (stateless)&quot;]
+            OS[&quot;order-service\n:8080&quot;]
+            DS[&quot;delivery-service\n:8081&quot;]
+            DRS[&quot;drone-service\n:8082&quot;]
+            KUI[&quot;kafka-ui\n:8080&quot;]
+        end
+
+        subgraph stateful[&quot;StatefulSet (stateful + PVC)&quot;]
+            MDB[(&quot;mongodb-0\n:27017&quot;)]
+            K[[&quot;kafka-0\n:9092&quot;]]
+        end
+
+        CM[&quot;ConfigMap\ndroneflow-config&quot;]
+        SEC[&quot;Secret\ndroneflow-secret&quot;]
+    end
+
+    U --&gt;|&quot;localhost:8080&quot;| ING
+    ING --&gt; OS
+    ING --&gt; DRS
+
+    OS --- K
+    DS --- K
+    DRS --- K
+    KUI --- K
+    OS --- MDB
+    DRS --- MDB
+
+    CM -.-&gt;|&quot;envFrom&quot;| OS
+    CM -.-&gt;|&quot;envFrom&quot;| DS
+    CM -.-&gt;|&quot;envFrom&quot;| DRS
+    SEC -.-&gt;|&quot;envFrom&quot;| OS
+    SEC -.-&gt;|&quot;envFrom&quot;| DRS</pre></figure><p><strong>Lettura del diagramma.</strong> Il traffico esterno entra esclusivamente dall&rsquo;<strong>Ingress
+Traefik</strong>, che instrada per prefisso di path: <span class="codespan-content"><code>/order</code></span> → order-service, <span class="codespan-content"><code>/drone</code></span> →
+drone-service. Si noti che il <span class="codespan-content"><code>delivery-service</code></span> <strong>non</strong> compare nell&rsquo;Ingress: è
+event-driven puro, senza API HTTP. I quattro workload stateless (i tre servizi più la
+Kafka UI) sono <span class="codespan-content"><code>Deployment</code></span>; i due workload stateful (MongoDB e Kafka) sono
+<span class="codespan-content"><code>StatefulSet</code></span> con volume persistente. <span class="codespan-content"><code>ConfigMap</code></span> e <span class="codespan-content"><code>Secret</code></span> vengono iniettati nei
+pod via <span class="codespan-content"><code>envFrom</code></span> (frecce tratteggiate): la prima per la config non sensibile, il
+secondo per le credenziali.</p><hr /><h2 id="_3-scelte-di-design">3. Scelte di design</h2><h3 id="deployment-vs-statefulset">Deployment vs StatefulSet</h3><p>La distinzione è il fulcro del deployment. Riguarda <em>che cosa</em> succede quando
+Kubernetes ricrea un pod.</p><table><thead><tr><th>Risorsa</th><th>Workload</th><th>Motivo</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>StatefulSet</code></span></td><td>MongoDB, Kafka</td><td>Necessitano storage persistente stabile (<span class="codespan-content"><code>volumeClaimTemplates</code></span>) e identità DNS stabile (<span class="codespan-content"><code>pod-0</code></span>)</td></tr><tr><td><span class="codespan-content"><code>Deployment</code></span></td><td>order, delivery, drone, kafka-ui</td><td>Stateless: K8s può ricrearli/riprogrammarli liberamente</td></tr></tbody></table><p>Un <span class="codespan-content"><code>Deployment</code></span> tratta i suoi pod come <strong>intercambiabili</strong>: se uno muore, ne crea un
+altro identico, con un nome casuale e nessun legame con storage o identità precedenti.
+Va benissimo per i microservizi: non hanno stato locale da preservare (lo stato vive
+su MongoDB e Kafka). Un <span class="codespan-content"><code>StatefulSet</code></span>, invece, dà a ogni pod un&rsquo;<strong>identità stabile</strong>
+(<span class="codespan-content"><code>kafka-0</code></span>, <span class="codespan-content"><code>mongodb-0</code></span>) e un <strong>volume persistente dedicato</strong> (tramite
+<span class="codespan-content"><code>volumeClaimTemplates</code></span>) che sopravvive ai riavvii. Kafka e MongoDB ne hanno bisogno:
+un broker che perdesse il suo log a ogni restart, o un database che perdesse i suoi
+dati, sarebbero inutili.</p><h3 id="service-headless-per-gli-statefulset">Service headless per gli StatefulSet</h3><pre><code class="language-yaml"># kafka.yml e mongodb.yml
+spec:
+  clusterIP: None     # &larr; headless</code></pre><p>MongoDB e Kafka usano un <strong>Service headless</strong> (<span class="codespan-content"><code>clusterIP: None</code></span>). Un Service normale
+espone un singolo IP virtuale che fa da load-balancer verso i pod; un Service headless
+<strong>non</strong> alloca un IP virtuale, ma crea record DNS che puntano direttamente ai singoli
+pod. È il requisito di Kubernetes per dare a ogni pod di uno <span class="codespan-content"><code>StatefulSet</code></span> un nome DNS
+stabile. I client interni raggiungono comunque il broker tramite il nome breve del
+Service (<span class="codespan-content"><code>kafka:9092</code></span>, <span class="codespan-content"><code>mongodb:27017</code></span>), che il DNS del cluster risolve.</p><blockquote><p>[NOTE!]
+Per Kafka esiste anche un secondo Service <span class="codespan-content"><code>kafka-cluster-ip</code></span> di tipo <span class="codespan-content"><code>ClusterIP</code></span>,
+affiancato a quello headless. Il primo serve l&rsquo;identità stabile dello StatefulSet;
+il secondo fornisce un endpoint con IP virtuale stabile per i client che non hanno
+bisogno di raggiungere uno specifico pod.</p></blockquote><h3 id="configmap-vs-secret">ConfigMap vs Secret</h3><p>La separazione segue la sensibilità del dato.</p><table><thead><tr><th>Dato</th><th>Risorsa</th><th>Perché</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>KAFKA_BROKERS</code></span>, config Kafka UI</td><td>ConfigMap (<span class="codespan-content"><code>droneflow-config</code></span>)</td><td>Non sensibile</td></tr><tr><td><span class="codespan-content"><code>MONGODB_URI</code></span> (con credenziali), <span class="codespan-content"><code>MONGO_USERNAME/PASSWORD</code></span></td><td>Secret (<span class="codespan-content"><code>droneflow-secret</code></span>)</td><td>Sensibile</td></tr></tbody></table><p>Entrambi vengono consumati dai pod con <span class="codespan-content"><code>envFrom</code></span>, che inietta <strong>tutte</strong> le chiavi
+come variabili d&rsquo;ambiente in un colpo solo:</p><pre><code class="language-yaml"># order-service.yml
+envFrom:
+  - configMapRef: { name: droneflow-config }
+  - secretRef:    { name: droneflow-secret }</code></pre><p>Per questo le chiavi seguono la convenzione <span class="codespan-content"><code>UPPER_SNAKE_CASE</code></span>: devono essere nomi di
+variabili d&rsquo;ambiente validi. Il Secret usa <span class="codespan-content"><code>stringData</code></span> (valori in chiaro nel
+manifest) invece di <span class="codespan-content"><code>data</code></span> (che richiederebbe base64): comodo in sviluppo, da
+gestire diversamente in produzione.</p><h3 id="ingress-selettivo">Ingress selettivo</h3><pre><code class="language-yaml"># ingress.yml
+- path: /order  &rarr; order-service:8080
+- path: /drone  &rarr; drone-service:8082</code></pre><p>Solo <span class="codespan-content"><code>order-service</code></span> e <span class="codespan-content"><code>drone-service</code></span> espongono HTTP, quindi solo loro sono
+instradati dall&rsquo;Ingress. <span class="codespan-content"><code>delivery-service</code></span> è <strong>event-driven puro</strong> (consuma solo
+Kafka, nessuna route HTTP) e non compare. È un riflesso diretto, a livello
+infrastrutturale, della natura stateless e headless del Delivery Service descritta in
+<a href="../delivery">Delivery Service</a>.</p><hr /><h2 id="_4-il-broker-kafka-in-kraft-su-kubernetes">4. Il broker Kafka in KRaft su Kubernetes</h2><p>A differenza di <span class="codespan-content"><code>docker-compose</code></span> (due listener, vedi <a href="kafka.qd)">Messaging Layer</a>, su
+Kubernetes il broker espone un solo listener rilevante per il cluster:</p><table><thead><tr><th>Variabile</th><th>Valore</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>KAFKA_PROCESS_ROLES</code></span></td><td><span class="codespan-content"><code>broker,controller</code></span></td></tr><tr><td><span class="codespan-content"><code>KAFKA_LISTENERS</code></span></td><td><span class="codespan-content"><code>PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093</code></span></td></tr><tr><td><span class="codespan-content"><code>KAFKA_ADVERTISED_LISTENERS</code></span></td><td><span class="codespan-content"><code>PLAINTEXT://kafka:9092</code></span></td></tr><tr><td><span class="codespan-content"><code>KAFKA_CONTROLLER_QUORUM_VOTERS</code></span></td><td><span class="codespan-content"><code>1@localhost:9093</code></span></td></tr><tr><td><span class="codespan-content"><code>KAFKA_LISTENER_SECURITY_PROTOCOL_MAP</code></span></td><td><span class="codespan-content"><code>PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT</code></span></td></tr><tr><td><span class="codespan-content"><code>CLUSTER_ID</code></span></td><td>UUID base64url di <strong>22 caratteri</strong> (vincolo Confluent)</td></tr><tr><td><span class="codespan-content"><code>KAFKA_AUTO_CREATE_TOPICS_ENABLE</code></span></td><td><span class="codespan-content"><code>true</code></span></td></tr></tbody></table><blockquote><p>⚠️ I valori delle liste separate da virgola (<span class="codespan-content"><code>broker,controller</code></span>, la listener map)
+<strong>non devono contenere spazi</strong>: Kafka li interpreta come stringhe letterali e
+fallisce l&rsquo;avvio.</p></blockquote><p>L&rsquo;errore <span class="codespan-content"><code>UnknownTopicOrPartition: saga-events</code></span> all&rsquo;avvio è <strong>benigno</strong>: i consumer si
+sottoscrivono prima che il topic esista; con <span class="codespan-content"><code>KAFKA_AUTO_CREATE_TOPICS_ENABLE=true</code></span> il
+topic viene creato alla prima produzione.</p><hr /><h2 id="_5-sequenza-di-deployment">5. Sequenza di deployment</h2><pre><code class="language-powershell"># 1. Creare il cluster (mappa localhost:8080 &rarr; Traefik :80)
+k3d cluster create droneflow --port &quot;8080:80@loadbalancer&quot;
+
+# 2. Build delle immagini dal ROOT del progetto (serve la crate `common`)
+docker build -t order-service:latest    -f .\order\Dockerfile    .
+docker build -t delivery-service:latest -f .\delivery\Dockerfile .
+docker build -t drone-service:latest    -f .\drone\Dockerfile    .
+
+# 3. Importare le immagini locali nel cluster k3d
+k3d image import order-service:latest delivery-service:latest drone-service:latest -c droneflow
+
+# 4. Applicare i manifest (namespace, config e secret per primi)
+kubectl apply -f k8s/namespace.yml
+kubectl apply -f k8s/configmap.yml
+kubectl apply -f k8s/secret.yml
+kubectl apply -f k8s/
+
+# 5. Verificare
+kubectl get pods -n droneflow</code></pre><blockquote><p>Le immagini usano <span class="codespan-content"><code>imagePullPolicy: IfNotPresent</code></span>, così K8s usa la versione
+importata in locale invece di cercarla su un registry remoto.</p></blockquote><h3 id="nota-sul-build-delle-immagini">Nota sul build delle immagini</h3><p>Il <span class="codespan-content"><code>docker build</code></span> parte <strong>dalla root del progetto</strong> (il <span class="codespan-content"><code>.</code></span> finale), non dalla
+cartella del singolo servizio, perché il <span class="codespan-content"><code>Dockerfile</code></span> deve poter copiare l&rsquo;intero
+workspace (compresa la crate <span class="codespan-content"><code>common</code></span>). I Dockerfile usano un <strong>multi-stage build con
+<span class="codespan-content"><code>cargo-chef</code></span></strong>: un primo stadio pre-computa e mette in cache la compilazione delle
+dipendenze (invalidata solo quando cambiano <span class="codespan-content"><code>Cargo.lock</code></span> o un <span class="codespan-content"><code>Cargo.toml</code></span>), così che
+modifiche al solo codice applicativo non ricompilino l&rsquo;intero albero di dipendenze.
+L&rsquo;immagine runtime finale è una <span class="codespan-content"><code>debian:bookworm-slim</code></span> minimale con solo
+<span class="codespan-content"><code>ca-certificates</code></span>, che esegue il binario come utente non-root.</p><hr /><h2 id="_6-lezioni-di-integrazione-compose--k8s">6. Lezioni di integrazione (compose → K8s)</h2><p>Il porting da <span class="codespan-content"><code>docker-compose</code></span> ha richiesto di allineare il <strong>contratto delle
+variabili d&rsquo;ambiente</strong>: il valore deve corrispondere <em>esattamente</em> a ciò che
+l&rsquo;applicazione legge con <span class="codespan-content"><code>env::var(...)</code></span>.</p><table><thead><tr><th>Problema riscontrato</th><th>Causa</th><th>Fix</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>POST /</code></span> va in timeout</td><td>L&rsquo;app legge <span class="codespan-content"><code>MONGODB_URI</code></span>, la ConfigMap definiva <span class="codespan-content"><code>MONGO_URI</code></span> → fallback a <span class="codespan-content"><code>localhost</code></span> → il driver Mongo blocca su server-selection (~30s)</td><td>Rinominata la chiave in <span class="codespan-content"><code>MONGODB_URI</code></span></td></tr><tr><td>Connessione Mongo rifiutata</td><td>URI senza credenziali né <span class="codespan-content"><code>authSource=admin</code></span></td><td><span class="codespan-content"><code>mongodb://root:root@mongodb:27017/?authSource=admin</code></span> nel Secret</td></tr><tr><td>Auth fallita dopo modifica password</td><td>Lo StatefulSet inizializza l&rsquo;utente root solo su un <strong>volume vuoto</strong></td><td><span class="codespan-content"><code>kubectl delete pvc -l app=mongodb</code></span> per forzare la re-inizializzazione</td></tr></tbody></table><blockquote><p><strong>Takeaway:</strong> una chiave di ConfigMap che l&rsquo;app non legge viene ignorata
+silenziosamente — non c&rsquo;è errore, solo un fallback a default sbagliati. In K8s la
+diagnosi parte sempre da <span class="codespan-content"><code>kubectl logs</code></span> e <span class="codespan-content"><code>kubectl describe pod</code></span>.</p></blockquote><hr /><h2 id="_7-script-di-test">7. Script di test</h2><p>Due script PowerShell nella root verificano il deployment tramite
+<span class="codespan-content"><code>kubectl port-forward</code></span> (bypassano l&rsquo;Ingress per evitare problemi di path-prefix):</p><table><thead><tr><th>Script</th><th>Scopo</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>health-check.ps1</code></span></td><td>Stato di pod/service/ingress + ping <span class="codespan-content"><code>/health</code></span></td></tr><tr><td><span class="codespan-content"><code>test-k8s.ps1</code></span></td><td>Flusso completo: crea ordine → verifica avanzamento SAGA → stato drone</td></tr></tbody></table><blockquote><p>Nota PowerShell 5.1: i file <span class="codespan-content"><code>.ps1</code></span> devono restare in <strong>ASCII puro</strong>. Caratteri
+Unicode (es. <span class="codespan-content"><code>&mdash;</code></span>, box-drawing <span class="codespan-content"><code>─</code></span>) rompono il parser e causano errori fuorvianti
+(<span class="codespan-content"><code>missing terminator</code></span>, <span class="codespan-content"><code>missing '}'</code></span>).</p></blockquote>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

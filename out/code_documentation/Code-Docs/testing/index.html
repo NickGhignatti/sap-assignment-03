@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="testing-amp-qualità" data-depth="1"><a href="#testing-amp-qualità">Testing &amp; qualità</a><ol><li data-target-id="_1-filosofia" data-depth="2"><a href="#_1-filosofia">1. Filosofia</a></li><li data-target-id="_2-la-piramide-dei-test-in-questo-progetto" data-depth="2"><a href="#_2-la-piramide-dei-test-in-questo-progetto">2. La piramide dei test in questo progetto</a></li><li data-target-id="_3-cosa-è-coperto-dai-test-unitari" data-depth="2"><a href="#_3-cosa-è-coperto-dai-test-unitari">3. Cosa è coperto dai test unitari</a><ol><li data-target-id="common--i-contratti-dati-e-il-trasporto" data-depth="3"><a href="#common--i-contratti-dati-e-il-trasporto">common — i contratti dati e il trasporto</a></li><li data-target-id="ordersaga--la-macchina-a-stati-della-saga" data-depth="3"><a href="#ordersaga--la-macchina-a-stati-della-saga">order::saga — la macchina a stati della SAGA</a></li><li data-target-id="dronebeliefs--la-belief-base-dellrsquoagente" data-depth="3"><a href="#dronebeliefs--la-belief-base-dellrsquoagente">drone::beliefs — la belief base dell&rsquo;agente</a></li><li data-target-id="droneintentions--deliberazione-e-pianificazione-bdi" data-depth="3"><a href="#droneintentions--deliberazione-e-pianificazione-bdi">drone::intentions — deliberazione e pianificazione BDI</a></li></ol></li><li data-target-id="_4-eseguire-i-test" data-depth="2"><a href="#_4-eseguire-i-test">4. Eseguire i test</a></li><li data-target-id="_5-cosa-non-è-coperto-da-unit-test-e-perché" data-depth="2"><a href="#_5-cosa-non-è-coperto-da-unit-test-e-perché">5. Cosa non è coperto da unit test (e perché)</a></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="il-sistema-oggi" data-decorative="">Il sistema oggi</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common (libreria)</a></li><li><a href="../order">Order Service</a></li><li><a href="../delivery">Delivery Service</a></li><li><a href="../drone">Drone Service</a></li><li><a href="../agent">Flotta ad Agenti (BDI)</a></li></ul><h2 id="infrastruttura-amp-operabilità" data-decorative="">Infrastruttura &amp; operabilità</h2><ul><li><a href="../kafka">Messaging Layer (Kafka)</a></li><li><a href="../k8s">Deployment Kubernetes</a></li><li><a href="../slo">Osservabilità &amp; SLO</a></li><li><a href="../testing" aria-current="page">Testing &amp; qualità</a></li></ul><h2 id="appendice" data-decorative="">Appendice</h2><ul><li><a href="../evoluzione">Evoluzione del progetto</a></li><li><a href="../conclusioni">Conclusioni</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="testing-amp-qualità" data-depth="1"><a href="#testing-amp-qualità">Testing &amp; qualità</a><ol><li data-target-id="_1-filosofia" data-depth="2"><a href="#_1-filosofia">1. Filosofia</a></li><li data-target-id="_2-la-piramide-dei-test-in-questo-progetto" data-depth="2"><a href="#_2-la-piramide-dei-test-in-questo-progetto">2. La piramide dei test in questo progetto</a></li><li data-target-id="_3-cosa-è-coperto-dai-test-unitari" data-depth="2"><a href="#_3-cosa-è-coperto-dai-test-unitari">3. Cosa è coperto dai test unitari</a><ol><li data-target-id="common--i-contratti-dati-e-il-trasporto" data-depth="3"><a href="#common--i-contratti-dati-e-il-trasporto">common — i contratti dati e il trasporto</a></li><li data-target-id="ordersaga--la-macchina-a-stati-della-saga" data-depth="3"><a href="#ordersaga--la-macchina-a-stati-della-saga">order::saga — la macchina a stati della SAGA</a></li><li data-target-id="dronebeliefs--la-belief-base-dellrsquoagente" data-depth="3"><a href="#dronebeliefs--la-belief-base-dellrsquoagente">drone::beliefs — la belief base dell&rsquo;agente</a></li><li data-target-id="droneintentions--deliberazione-e-pianificazione-bdi" data-depth="3"><a href="#droneintentions--deliberazione-e-pianificazione-bdi">drone::intentions — deliberazione e pianificazione BDI</a></li></ol></li><li data-target-id="_4-eseguire-i-test" data-depth="2"><a href="#_4-eseguire-i-test">4. Eseguire i test</a></li><li data-target-id="_5-cosa-non-è-coperto-da-unit-test-e-perché" data-depth="2"><a href="#_5-cosa-non-è-coperto-da-unit-test-e-perché">5. Cosa non è coperto da unit test (e perché)</a></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><h1 class="page-break" id="testing-amp-qualità">Testing &amp; qualità</h1><blockquote><p>[NOTE!]
+Questa pagina descrive la strategia di test del codice Rust: cosa è coperto, a
+quale livello della <em>test pyramid</em>, e perché alcune scelte di design rendono il
+dominio testabile senza infrastruttura. La verifica end-to-end del sistema
+deployato è invece negli script descritti in <a href="../k8s">Deployment Kubernetes</a>.</p></blockquote><h2 id="_1-filosofia">1. Filosofia</h2><p>La logica di <strong>dominio</strong> — la macchina a stati della SAGA, le belief dell&rsquo;agente, la
+deliberazione BDI, i contratti dati — è separata dall&rsquo;<strong>I/O</strong> (Kafka, MongoDB, HTTP).
+Questo permette di testarla con <strong>unit test puri</strong>: nessun broker, nessun database,
+nessun runtime di rete. I test girano in millisecondi con un semplice <span class="codespan-content"><code>cargo test</code></span> e
+sono deterministici.</p><p>Dove la logica era inizialmente annidata nell&rsquo;I/O, è stata <strong>estratta</strong> per renderla
+testabile. L&rsquo;esempio principale è la deliberazione dell&rsquo;agente: la catena di guardie
+che decide se accettare o rifiutare una consegna viveva dentro
+<span class="codespan-content"><code>DroneAgent::deliberate</code></span> (accoppiata a store e producer Kafka). È stata estratta in
+una funzione pura <span class="codespan-content"><code>intentions::deliberate(&amp;DroneBeliefs) -&gt; DroneIntention</code></span>, che
+l&rsquo;agente ora si limita a invocare. Il <em>ragionamento</em> (puro, testabile) è così
+separato dall&rsquo;<em>azione</em> (l&rsquo;I/O in <span class="codespan-content"><code>execute</code></span>) — una separazione che riflette fedelmente
+la teoria BDI (vedi <a href="agent.qd)">Flotta ad Agenti</a>.</p><hr /><h2 id="_2-la-piramide-dei-test-in-questo-progetto">2. La piramide dei test in questo progetto</h2><figure><pre class="mermaid">flowchart TB
+    E[&quot;E2E / sistema\ntest-k8s.ps1, teste2e\n(create order &rarr; saga &rarr; drone)&quot;]
+    I[&quot;Integrazione\nMongoDB / Kafka\n(coperta dagli script su cluster)&quot;]
+    U[&quot;Unit (puri)\ncommon &middot; order::saga &middot; drone::beliefs &middot; drone::intentions\ncargo test &mdash; 29 test&quot;]
+
+    E --- I --- U</pre></figure><table><thead><tr><th>Livello</th><th>Dove</th><th>Come si esegue</th></tr></thead><tbody><tr><td><strong>Unit (puri)</strong></td><td><span class="codespan-content"><code>common</code></span>, <span class="codespan-content"><code>order::saga</code></span>, <span class="codespan-content"><code>drone::beliefs</code></span>, <span class="codespan-content"><code>drone::intentions</code></span></td><td><span class="codespan-content"><code>cargo test</code></span> (nessuna infrastruttura)</td></tr><tr><td><strong>Integrazione</strong></td><td>persistenza MongoDB, produzione/consumo Kafka</td><td>implicita negli script su cluster</td></tr><tr><td><strong>End-to-end</strong></td><td>flusso ordine→saga→drone</td><td><span class="codespan-content"><code>test-k8s.ps1</code></span>, <span class="codespan-content"><code>teste2e</code></span> (<a href="k8s.qd)">k8s.qd</a></td></tr></tbody></table><p>La base della piramide — i test unitari puri — è quella su cui si è investito di più,
+coerentemente con la forma classica: tanti test piccoli, veloci e stabili.</p><hr /><h2 id="_3-cosa-è-coperto-dai-test-unitari">3. Cosa è coperto dai test unitari</h2><h3 id="common--i-contratti-dati-e-il-trasporto"><span class="codespan-content"><code>common</code></span> — i contratti dati e il trasporto</h3><table><thead><tr><th>File</th><th>Test</th><th>Cosa verifica</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>events.rs</code></span></td><td><span class="codespan-content"><code>saga_event_serializes_with_type_field</code></span>, <span class="codespan-content"><code>drone_event_round_trip</code></span></td><td>il discriminante <span class="codespan-content"><code>&quot;type&quot;</code></span> e il round-trip JSON degli enum</td></tr><tr><td><span class="codespan-content"><code>messages.rs</code></span></td><td><span class="codespan-content"><code>equality_is_based_only_on_order_id</code></span>, <span class="codespan-content"><code>serde_round_trip_preserves_fields</code></span></td><td>l&rsquo;uguaglianza per <span class="codespan-content"><code>order_id</code></span> e la stabilità della serializzazione</td></tr><tr><td><span class="codespan-content"><code>trace.rs</code></span></td><td>inject/extract dell&rsquo;header, id non vuoto/unico, assenza header</td><td>il contratto di propagazione del trace id (vedi <a href="../common">Common</a> §6)</td></tr></tbody></table><h3 id="ordersaga--la-macchina-a-stati-della-saga"><span class="codespan-content"><code>order::saga</code></span> — la macchina a stati della SAGA</h3><p>I test coprono il cuore logico dell&rsquo;orchestratore, senza toccare MongoDB né Kafka:</p><ul><li>stato iniziale (<span class="codespan-content"><code>Started</code></span>, step <span class="codespan-content"><code>OrderValidation</code></span>, nessuno step completato);</li><li>la progressione <span class="codespan-content"><code>next()</code></span> degli step;</li><li>il completamento dopo i tre step (status <span class="codespan-content"><code>Completed</code></span>, <span class="codespan-content"><code>end_time</code></span> valorizzato);</li><li><span class="codespan-content"><code>steps_to_compensate()</code></span> che restituisce gli step in <strong>ordine inverso</strong> di
+completamento (proprietà chiave della compensazione SAGA);</li><li><span class="codespan-content"><code>needs_compensation()</code></span>: vero solo se la saga è <span class="codespan-content"><code>Failed</code></span> <strong>e</strong> ha step completati
+(un fallimento di validazione, senza step, non richiede compensazione).</li></ul><h3 id="dronebeliefs--la-belief-base-dellrsquoagente"><span class="codespan-content"><code>drone::beliefs</code></span> — la belief base dell&rsquo;agente</h3><ul><li>una belief nuova è <span class="codespan-content"><code>Idle</code></span> e disponibile;</li><li><span class="codespan-content"><code>from_order</code></span> calcola correttamente <span class="codespan-content"><code>can_carry_payload</code></span> (peso ≤ <span class="codespan-content"><code>MAX_PAYLOAD_WEIGHT</code></span>)
+e <span class="codespan-content"><code>can_meet_deadline</code></span> (deadline &gt; 0);</li><li><span class="codespan-content"><code>update_dispatched</code></span> entra in <span class="codespan-content"><code>ExecutingDelivery</code></span> e fissa il <span class="codespan-content"><code>dispatch_time</code></span>;</li><li><span class="codespan-content"><code>update_returned</code></span> / <span class="codespan-content"><code>update_compensated</code></span> riportano la belief a <span class="codespan-content"><code>Idle</code></span> disponibile;</li><li><span class="codespan-content"><code>has_arrived</code></span> è vero <strong>solo</strong> se la fase è <span class="codespan-content"><code>ExecutingDelivery</code></span> e l&rsquo;orario di arrivo
+previsto è passato.</li></ul><h3 id="droneintentions--deliberazione-e-pianificazione-bdi"><span class="codespan-content"><code>drone::intentions</code></span> — deliberazione e pianificazione BDI</h3><ul><li><span class="codespan-content"><code>deliberate</code></span>: <span class="codespan-content"><code>Idle</code></span> senza ordine; <span class="codespan-content"><code>AcceptDelivery</code></span> se fattibile; <span class="codespan-content"><code>RefuseDelivery</code></span>
+per peso eccessivo o deadline non rispettabile;</li><li><span class="codespan-content"><code>plan_for</code></span>: ogni intenzione mappa alla sequenza di azioni attesa
+(<span class="codespan-content"><code>AcceptDelivery</code></span> → <span class="codespan-content"><code>[StoreCreated, PublishDroneAssigned, StoreDispatched]</code></span>,
+<span class="codespan-content"><code>CompleteDelivery</code></span> → <span class="codespan-content"><code>[StoreDelivered, StoreReturned]</code></span>, ecc.).</li></ul><hr /><h2 id="_4-eseguire-i-test">4. Eseguire i test</h2><pre><code class="language-bash"># Tutti i test del workspace
+cargo test --workspace
+
+# Solo una crate
+cargo test -p common
+cargo test -p order
+cargo test -p drone</code></pre><p>I test non richiedono Kafka, MongoDB o variabili d&rsquo;ambiente: sono puri e
+deterministici. La verifica del sistema completo (con infrastruttura) si fa invece
+con gli script PowerShell su cluster k3d descritti in <a href="../k8s">Deployment Kubernetes</a>.</p><hr /><h2 id="_5-cosa-non-è-coperto-da-unit-test-e-perché">5. Cosa non è coperto da unit test (e perché)</h2><p>L&rsquo;esecuzione delle azioni dell&rsquo;agente (<span class="codespan-content"><code>DroneAgent::execute</code></span>), la persistenza
+(<span class="codespan-content"><code>DroneEventStore</code></span>), i consumer/producer Kafka e gli handler HTTP <strong>non</strong> hanno unit
+test dedicati: sono <em>adapter</em> di I/O, il cui valore si verifica solo contro
+l&rsquo;infrastruttura reale. Testarli in isolamento richiederebbe mock pesanti che
+verificherebbero più il mock che il comportamento. Sono invece coperti <strong>end-to-end</strong>
+dagli script su cluster, che esercitano il flusso reale (ordine → SAGA → assegnazione
+drone → stato). È la stessa logica della <em>test pyramid</em>: poche verifiche di
+integrazione/E2E sopra una larga base di unit test puri.</p>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

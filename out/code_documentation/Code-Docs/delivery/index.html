@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator" content="Quarkdown">
+    <meta charset="UTF-8">
+    <meta name="description" content="Code Docs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="quarkdown:root-path" content="..">
+    <meta name="quarkdown:search-index" content="../search-index.json">
+    <title>Code Docs</title>
+    <script src="../script/quarkdown.min.js"></script>
+    <script>const capabilities = window.quarkdownCapabilities</script>
+    <script>window.texMacros = {}</script>
+    <link href="../lib/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="../lib/highlight.js/highlightjs.min.js"></script>
+    <script src="../lib/highlightjs-line-numbers/highlightjs-line-numbers.min.js"></script>
+    <script src="../lib/highlightjs-copy/highlightjs-copy.min.js"></script>
+    <link href="../lib/highlightjs-copy/highlightjs-copy.min.css" rel="stylesheet">
+    <script>capabilities.code = true;</script>
+    <script src="../lib/mermaid/mermaid.min.js"></script>
+    <script>capabilities.mermaid = true;</script>
+    <link href="../theme/theme.css" rel="stylesheet">
+    <style>
+
+body {
+    --qd-content-width: 1000.0px;}
+
+body.quarkdown-slides.quarkdown-slides .reveal {
+    width: 1000.0px;}
+
+@page {
+    size: 1000.0px auto;}
+</style>
+    <script>prepare(new DocsDocument());</script>
+<template id="sidebar-template"><nav class="sidebar" role="doc-toc"><ol><li data-target-id="delivery-service--documentazione-tecnica" data-depth="1"><a href="#delivery-service--documentazione-tecnica">Delivery Service — Documentazione Tecnica</a><ol><li data-target-id="_1-responsabilità" data-depth="2"><a href="#_1-responsabilità">1. Responsabilità</a></li><li data-target-id="_2-architettura-interna" data-depth="2"><a href="#_2-architettura-interna">2. Architettura interna</a></li><li data-target-id="_3-flusso-interno--deliveryserviceschedule" data-depth="2"><a href="#_3-flusso-interno--deliveryserviceschedule">3. Flusso interno — DeliveryService::schedule()</a><ol><li data-target-id="perché-il-sagaid-è-vuoto-in-deliveryscheduled" data-depth="3"><a href="#perché-il-sagaid-è-vuoto-in-deliveryscheduled">Perché il saga_id è vuoto in DeliveryScheduled?</a></li></ol></li><li data-target-id="_4-diagramma-di-sequenza" data-depth="2"><a href="#_4-diagramma-di-sequenza">4. Diagramma di sequenza</a></li><li data-target-id="_5-strategia-di-commit-kafka" data-depth="2"><a href="#_5-strategia-di-commit-kafka">5. Strategia di commit Kafka</a></li><li data-target-id="_6-rete-di-petri--ciclo-di-vita-del-messaggio" data-depth="2"><a href="#_6-rete-di-petri--ciclo-di-vita-del-messaggio">6. Rete di Petri — Ciclo di vita del messaggio</a></li><li data-target-id="_7-reference-dei-moduli" data-depth="2"><a href="#_7-reference-dei-moduli">7. Reference dei moduli</a><ol><li data-target-id="mainrs--wiring-e-avvio" data-depth="3"><a href="#mainrs--wiring-e-avvio">main.rs — wiring e avvio</a></li><li data-target-id="servicers--deliveryservice" data-depth="3"><a href="#servicers--deliveryservice">service.rs — DeliveryService</a></li><li data-target-id="consumerrs--task-consumer-kafka" data-depth="3"><a href="#consumerrs--task-consumer-kafka">consumer.rs — task consumer Kafka</a></li></ol></li></ol></li></ol></nav>
+</template>  </head>
+  <body class="quarkdown quarkdown-docs">
+    <header>
+      <aside class="margin-area"></aside>
+      <main>
+        <div class="search-wrapper">
+          <div class="search-field"><i class="bi bi-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"><kbd>/</kbd></div>
+        </div>
+      </main>
+      <aside class="margin-area"></aside>
+    </header>
+    <div class="content-wrapper">
+      <aside class="margin-area" id="margin-area-left">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+      <main><div class="page-margin-content page-margin-top-left" data-on-left-page="top-left" data-on-right-page="top-left"><p>Documentation</p></div><div class="page-margin-content page-margin-left-top" data-on-left-page="left-top" data-on-right-page="left-top"><nav role="navigation" data-role="page-list"><h3 id="il-sistema-oggi" data-decorative="">Il sistema oggi</h3><ul><li><a href="../architettura">Architettura</a></li><li><a href="../common">Common (libreria)</a></li><li><a href="../order">Order Service</a></li><li><a href="../delivery" aria-current="page">Delivery Service</a></li><li><a href="../drone">Drone Service</a></li><li><a href="../agent">Flotta ad Agenti (BDI)</a></li></ul><h2 id="infrastruttura-amp-operabilità" data-decorative="">Infrastruttura &amp; operabilità</h2><ul><li><a href="../kafka">Messaging Layer (Kafka)</a></li><li><a href="../k8s">Deployment Kubernetes</a></li><li><a href="../slo">Osservabilità &amp; SLO</a></li><li><a href="../testing">Testing &amp; qualità</a></li></ul><h2 id="appendice" data-decorative="">Appendice</h2><ul><li><a href="../evoluzione">Evoluzione del progetto</a></li><li><a href="../conclusioni">Conclusioni</a></li></ul></nav></div><div class="page-margin-content page-margin-right-top" data-on-left-page="right-top" data-on-right-page="right-top"><h3 id="table-of-contents">On this page</h3><nav role="table-of-contents" data-role="table-of-contents"><ol><li data-target-id="delivery-service--documentazione-tecnica" data-depth="1"><a href="#delivery-service--documentazione-tecnica">Delivery Service — Documentazione Tecnica</a><ol><li data-target-id="_1-responsabilità" data-depth="2"><a href="#_1-responsabilità">1. Responsabilità</a></li><li data-target-id="_2-architettura-interna" data-depth="2"><a href="#_2-architettura-interna">2. Architettura interna</a></li><li data-target-id="_3-flusso-interno--deliveryserviceschedule" data-depth="2"><a href="#_3-flusso-interno--deliveryserviceschedule">3. Flusso interno — DeliveryService::schedule()</a><ol><li data-target-id="perché-il-sagaid-è-vuoto-in-deliveryscheduled" data-depth="3"><a href="#perché-il-sagaid-è-vuoto-in-deliveryscheduled">Perché il saga_id è vuoto in DeliveryScheduled?</a></li></ol></li><li data-target-id="_4-diagramma-di-sequenza" data-depth="2"><a href="#_4-diagramma-di-sequenza">4. Diagramma di sequenza</a></li><li data-target-id="_5-strategia-di-commit-kafka" data-depth="2"><a href="#_5-strategia-di-commit-kafka">5. Strategia di commit Kafka</a></li><li data-target-id="_6-rete-di-petri--ciclo-di-vita-del-messaggio" data-depth="2"><a href="#_6-rete-di-petri--ciclo-di-vita-del-messaggio">6. Rete di Petri — Ciclo di vita del messaggio</a></li><li data-target-id="_7-reference-dei-moduli" data-depth="2"><a href="#_7-reference-dei-moduli">7. Reference dei moduli</a><ol><li data-target-id="mainrs--wiring-e-avvio" data-depth="3"><a href="#mainrs--wiring-e-avvio">main.rs — wiring e avvio</a></li><li data-target-id="servicers--deliveryservice" data-depth="3"><a href="#servicers--deliveryservice">service.rs — DeliveryService</a></li><li data-target-id="consumerrs--task-consumer-kafka" data-depth="3"><a href="#consumerrs--task-consumer-kafka">consumer.rs — task consumer Kafka</a></li></ol></li></ol></li></ol></nav></div><h1 id="code-docs" data-decorative="">Code Docs</h1><h1 class="page-break" id="delivery-service--documentazione-tecnica">Delivery Service — Documentazione Tecnica</h1><h2 id="_1-responsabilità">1. Responsabilità</h2><p>Il Delivery Service è il <strong>servizio di coordinamento intermedio</strong> della pipeline.
+È il più semplice dei tre: ha un&rsquo;unica responsabilità e nessuno stato persistente.</p><p>Riceve gli ordini <em>validati</em> dall&rsquo;Order Service (sul topic <span class="codespan-content"><code>order-requests</code></span>), assegna
+a ciascuno un piano di consegna generando un <span class="codespan-content"><code>delivery_id</code></span>, e lo inoltra al Drone
+Service (sul topic <span class="codespan-content"><code>drone-requests</code></span>), notificando contestualmente l&rsquo;orchestratore
+SAGA dell&rsquo;avvenuta schedulazione (con un evento <span class="codespan-content"><code>DeliveryScheduled</code></span> su <span class="codespan-content"><code>saga-events</code></span>).</p><p>Non espone <strong>alcuna interfaccia HTTP</strong>: la sua unica interfaccia è Kafka. È un
+servizio <em>puramente event-driven</em>, e questo ne semplifica enormemente il ciclo di
+vita (nessun server da avviare, nessuna porta, nessun health check HTTP).</p><hr /><h2 id="_2-architettura-interna">2. Architettura interna</h2><figure><pre class="mermaid">graph LR
+    K_IN[[&quot;Kafka\norder-requests&quot;]]
+    CONS[&quot;consumer.rs\nKafka Consumer Task&quot;]
+    SVC[&quot;service.rs\nDeliveryService&quot;]
+    K_OUT_D[[&quot;Kafka\ndrone-requests&quot;]]
+    K_OUT_S[[&quot;Kafka\nsaga-events&quot;]]
+
+    K_IN --&gt;|&quot;OrderMessage&quot;| CONS
+    CONS --&gt; SVC
+    SVC --&gt;|&quot;OrderMessage&quot;| K_OUT_D
+    SVC --&gt;|&quot;DeliveryScheduled&quot;| K_OUT_S</pre></figure><p><strong>Lettura del diagramma.</strong> Il flusso è strettamente lineare: un <span class="codespan-content"><code>OrderMessage</code></span>
+entra da <span class="codespan-content"><code>order-requests</code></span>, viene gestito dal task consumer (<span class="codespan-content"><code>consumer.rs</code></span>), passato
+al <span class="codespan-content"><code>DeliveryService</code></span> (<span class="codespan-content"><code>service.rs</code></span>), che produce due messaggi in uscita — l&rsquo;ordine
+verso <span class="codespan-content"><code>drone-requests</code></span> e l&rsquo;evento <span class="codespan-content"><code>DeliveryScheduled</code></span> verso <span class="codespan-content"><code>saga-events</code></span>. Non c&rsquo;è
+alcun database nel diagramma perché il servizio è <strong>stateless</strong>: l&rsquo;unico &ldquo;stato&rdquo; è
+il <span class="codespan-content"><code>delivery_id</code></span> generato per ogni ordine, che viene immediatamente incluso nel
+messaggio in uscita e non necessita di persistenza locale.</p><hr /><h2 id="_3-flusso-interno--deliveryserviceschedule">3. Flusso interno — <span class="codespan-content"><code>DeliveryService::schedule()</code></span></h2><figure><pre class="mermaid">flowchart TD
+    A[&quot;OrderMessage ricevuto&quot;]
+    B[&quot;delivery_id = Uuid::new_v4()&quot;]
+    C[&quot;publish_to_topic\ndrone-requests\nOrderMessage\nkey = order_id&quot;]
+    D[&quot;publish_to_topic\nsaga-events\nDeliveryScheduled\nkey = order_id&quot;]
+    E[&quot;Ok(())&quot;]
+
+    A --&gt; B --&gt; C --&gt; D --&gt; E</pre></figure><p><strong>Lettura del diagramma.</strong> Il metodo <span class="codespan-content"><code>schedule()</code></span> è una sequenza di quattro passi
+senza rami: genera il <span class="codespan-content"><code>delivery_id</code></span>, inoltra l&rsquo;ordine al Drone Service, pubblica
+l&rsquo;evento di avanzamento per l&rsquo;orchestratore, ritorna <span class="codespan-content"><code>Ok</code></span>. Entrambe le
+pubblicazioni usano <span class="codespan-content"><code>order_id</code></span> come <strong>chiave di partizione</strong>: questo garantisce che
+il messaggio per il drone e l&rsquo;evento per l&rsquo;orchestratore (relativi allo stesso
+ordine) finiscano nella stessa partizione e siano consumati nell&rsquo;ordine in cui sono
+stati prodotti. L&rsquo;uso di <span class="codespan-content"><code>?</code></span> su entrambe le <span class="codespan-content"><code>publish_to_topic</code></span> significa che, se una
+pubblicazione fallisce, l&rsquo;intero <span class="codespan-content"><code>schedule()</code></span> ritorna <span class="codespan-content"><code>Err</code></span> e — come si vede nella
+sezione 5 — l&rsquo;offset non viene committato.</p><h3 id="perché-il-sagaid-è-vuoto-in-deliveryscheduled">Perché il <span class="codespan-content"><code>saga_id</code></span> è vuoto in <span class="codespan-content"><code>DeliveryScheduled</code></span>?</h3><pre><code class="language-rust">SagaEvent::DeliveryScheduled {
+    saga_id: String::new(),  // intenzionalmente vuoto
+    order_id: order.order_id.clone(),
+    delivery_id,
+    timestamp: Utc::now(),
+}</code></pre><p>Il Delivery Service <strong>non conosce il <span class="codespan-content"><code>saga_id</code></span></strong>: l&rsquo;<span class="codespan-content"><code>OrderMessage</code></span> che riceve non lo
+contiene (è un dettaglio interno dell&rsquo;Order Service). Lascia quindi il campo vuoto.
+L&rsquo;orchestratore, ricevendo l&rsquo;evento, ignora il <span class="codespan-content"><code>saga_id</code></span> e recupera la saga tramite
+<span class="codespan-content"><code>find_by_order_id(order_id)</code></span> — l&rsquo;<span class="codespan-content"><code>order_id</code></span> è la <strong>chiave di correlazione naturale</strong>
+di tutto il sistema, presente in ogni messaggio. Questo disaccoppia il Delivery
+Service dai dettagli interni della SAGA: gli basta propagare l&rsquo;<span class="codespan-content"><code>order_id</code></span>.</p><hr /><h2 id="_4-diagramma-di-sequenza">4. Diagramma di sequenza</h2><figure><pre class="mermaid">sequenceDiagram
+    participant K as Kafka
+    participant CONS as consumer.rs
+    participant SVC as service.rs
+
+    K-&gt;&gt;CONS: OrderMessage da order-requests
+    CONS-&gt;&gt;CONS: deserializza OrderMessage
+
+    alt order_id vuoto
+        CONS-&gt;&gt;K: commit offset &mdash; scarta (poison pill)
+    else errore transiente in schedule()
+        CONS-&gt;&gt;SVC: schedule(order)
+        SVC--&gt;&gt;CONS: Err(e)
+        CONS-&gt;&gt;CONS: NON committa &mdash; Kafka rielabora
+    else successo
+        CONS-&gt;&gt;SVC: schedule(order)
+        SVC-&gt;&gt;SVC: delivery_id = Uuid::new_v4()
+        SVC-&gt;&gt;K: produce drone-requests (OrderMessage)
+        SVC-&gt;&gt;K: produce saga-events (DeliveryScheduled)
+        SVC--&gt;&gt;CONS: Ok(())
+        CONS-&gt;&gt;K: commit offset
+    end</pre></figure><p><strong>Lettura del diagramma.</strong> Il consumer distingue tre esiti, esattamente come gli
+altri servizi (vedi <a href="kafka.qd)">Messaging Layer (Kafka)</a>. Un <span class="codespan-content"><code>order_id</code></span> vuoto o un
+JSON malformato sono <em>poison pill</em>: il messaggio non diventerà mai valido, quindi si
+committa per saltarlo. Un errore <em>transiente</em> dentro <span class="codespan-content"><code>schedule()</code></span> (es. broker
+momentaneamente irraggiungibile) <strong>non</strong> viene committato, così Kafka lo
+rielaborerà. Solo il successo porta al commit dell&rsquo;offset.</p><hr /><h2 id="_5-strategia-di-commit-kafka">5. Strategia di commit Kafka</h2><table><thead><tr><th>Caso</th><th>Comportamento</th><th>Motivazione</th></tr></thead><tbody><tr><td>Payload vuoto (tombstone)</td><td><span class="codespan-content"><code>commit</code></span> + skip</td><td>I tombstone sono cancellazioni intenzionali, mai da rielaborare</td></tr><tr><td>Deserializzazione fallita</td><td><span class="codespan-content"><code>commit</code></span> + skip</td><td>Messaggio malformato — rielaborarlo ciclerebbe all&rsquo;infinito</td></tr><tr><td><span class="codespan-content"><code>order_id</code></span> vuoto</td><td><span class="codespan-content"><code>commit</code></span> + skip</td><td>Il messaggio non diventerà mai valido (poison pill)</td></tr><tr><td>Errore in <span class="codespan-content"><code>schedule()</code></span> (transiente)</td><td><strong>no commit</strong></td><td>Es. broker irraggiungibile — Kafka rielabora</td></tr><tr><td>Successo</td><td><span class="codespan-content"><code>commit</code></span></td><td>Messaggio elaborato correttamente</td></tr></tbody></table><p>Il commit è eseguito in modalità <span class="codespan-content"><code>CommitMode::Async</code></span> (fire-and-forget, throughput
+più alto). Non committare equivale al <span class="codespan-content"><code>nack(requeue=true)</code></span> di AMQP; committare per
+saltare equivale al <span class="codespan-content"><code>nack(requeue=false)</code></span>.</p><hr /><h2 id="_6-rete-di-petri--ciclo-di-vita-del-messaggio">6. Rete di Petri — Ciclo di vita del messaggio</h2><figure><pre class="mermaid">flowchart LR
+    P0((&quot;● p0\nMessaggio\nin coda&quot;))
+    T0[&quot;t0: consume\norder-requests&quot;]
+    P1((&quot;p1\nMessaggio\nletto&quot;))
+    T_VAL[&quot;t_val: valida\norder_id&quot;]
+    P2((&quot;p2\nOrdine\nvalido&quot;))
+    P_INV((&quot;p_inv\nOrdine\nnon valido&quot;))
+    T_PUB1[&quot;t_pub1: publish\ndrone-requests&quot;]
+    P3((&quot;p3\ndrone-requests\naggiornata&quot;))
+    T_PUB2[&quot;t_pub2: publish\nDeliveryScheduled&quot;]
+    P4((&quot;p4\nSAGA\nnotificata&quot;))
+    T_ACK[&quot;t_ack: commit&quot;]
+    T_SKIP[&quot;t_skip: commit\n(skip)&quot;]
+    P_END((&quot;p_end\nDone&quot;))
+
+    P0 --&gt; T0 --&gt; P1
+    P1 --&gt; T_VAL
+    T_VAL --&gt;|&quot;valido&quot;| P2
+    T_VAL --&gt;|&quot;non valido&quot;| P_INV
+    P_INV --&gt; T_SKIP --&gt; P_END
+    P2 --&gt; T_PUB1 --&gt; P3
+    P3 --&gt; T_PUB2 --&gt; P4
+    P4 --&gt; T_ACK --&gt; P_END</pre></figure><p><strong>Lettura del diagramma.</strong> Il token (un messaggio) parte in coda (<span class="codespan-content"><code>p0</code></span>), viene letto
+(<span class="codespan-content"><code>t0</code></span>) e validato (<span class="codespan-content"><code>t_val</code></span>). Un ordine non valido va in <span class="codespan-content"><code>p_inv</code></span> e da lì viene
+saltato con un commit. Un ordine valido attraversa le due pubblicazioni (<span class="codespan-content"><code>t_pub1</code></span>,
+<span class="codespan-content"><code>t_pub2</code></span>) e termina con il commit dell&rsquo;offset (<span class="codespan-content"><code>t_ack</code></span>). I due rami convergono nel
+posto terminale <span class="codespan-content"><code>p_end</code></span>: in entrambi i casi l&rsquo;offset avanza, ma per ragioni diverse
+(elaborato vs. saltato).</p><hr /><h2 id="_7-reference-dei-moduli">7. Reference dei moduli</h2><h3 id="mainrs--wiring-e-avvio"><span class="codespan-content"><code>main.rs</code></span> — wiring e avvio</h3><p><span class="codespan-content"><code>main.rs</code></span> è minimale, coerentemente con la semplicità del servizio:</p><ul><li><strong>Kafka producer.</strong> <span class="codespan-content"><code>acks=all</code></span>, <span class="codespan-content"><code>message.timeout.ms=5000</code></span> — condiviso dal
+<span class="codespan-content"><code>DeliveryService</code></span> per pubblicare sia su <span class="codespan-content"><code>drone-requests</code></span> sia su <span class="codespan-content"><code>saga-events</code></span>.</li><li><strong>Kafka consumer.</strong> <span class="codespan-content"><code>group.id=delivery-service</code></span> (cursore indipendente da quello
+dell&rsquo;Order Service sui topic), <span class="codespan-content"><code>auto.offset.reset=earliest</code></span>,
+<span class="codespan-content"><code>enable.auto.commit=false</code></span>.</li><li><strong>Nessuna dichiarazione di topologia.</strong> A differenza di AMQP (dove servivano
+<span class="codespan-content"><code>exchange_declare</code></span>/<span class="codespan-content"><code>queue_declare</code></span>), in Kafka i topic sono creati automaticamente
+alla prima produzione (<span class="codespan-content"><code>KAFKA_AUTO_CREATE_TOPICS_ENABLE=true</code></span>). Il <span class="codespan-content"><code>main</code></span> si limita
+a costruire il <span class="codespan-content"><code>DeliveryService</code></span> e avviare il consumer.</li><li><strong>Graceful shutdown.</strong> Non essendoci un server HTTP, il <span class="codespan-content"><code>main</code></span> attende
+semplicemente <span class="codespan-content"><code>tokio::signal::ctrl_c()</code></span> e termina. Questo dà al loop di consumo il
+tempo di completare l&rsquo;eventuale messaggio in elaborazione prima dell&rsquo;uscita.</li></ul><blockquote><p>[NOTE!]
+<strong>Statelessness e scaling orizzontale.</strong> Poiché il Delivery Service non ha stato,
+avviarne più repliche è banale: condividono il <span class="codespan-content"><code>group.id=delivery-service</code></span>, e
+Kafka distribuisce automaticamente le partizioni di <span class="codespan-content"><code>order-requests</code></span> tra di esse.
+Ogni partizione è assegnata a una sola replica alla volta, quindi non c&rsquo;è rischio
+di doppia elaborazione di uno stesso ordine. Nessuna modifica al codice è
+necessaria per scalare.</p></blockquote><h3 id="servicers--deliveryservice"><span class="codespan-content"><code>service.rs</code></span> — <span class="codespan-content"><code>DeliveryService</code></span></h3><table><thead><tr><th>Membro</th><th>Descrizione</th></tr></thead><tbody><tr><td><span class="codespan-content"><code>DeliveryService { producer }</code></span></td><td>Struct <span class="codespan-content"><code>Clone</code></span> (il <span class="codespan-content"><code>FutureProducer</code></span> è <span class="codespan-content"><code>Arc</code></span>-backed)</td></tr><tr><td><span class="codespan-content"><code>new(producer)</code></span></td><td>Costruttore</td></tr><tr><td><span class="codespan-content"><code>schedule(order)</code></span></td><td>Genera <span class="codespan-content"><code>delivery_id</code></span>, pubblica su <span class="codespan-content"><code>drone-requests</code></span> e <span class="codespan-content"><code>saga-events</code></span> (vedi §3)</td></tr><tr><td><span class="codespan-content"><code>publish_to_topic(topic, key, msg)</code></span></td><td>Helper privato: serializza in JSON e produce con <span class="codespan-content"><code>key</code></span>, timeout 5s</td></tr></tbody></table><p>Le costanti del modulo (<span class="codespan-content"><code>SAGA_EVENTS_TOPIC</code></span>, <span class="codespan-content"><code>DRONE_REQUESTS_TOPIC</code></span>) sostituiscono
+i vecchi nomi di coda/exchange AMQP.</p><h3 id="consumerrs--task-consumer-kafka"><span class="codespan-content"><code>consumer.rs</code></span> — task consumer Kafka</h3><p><span class="codespan-content"><code>start(consumer, svc)</code></span> sottoscrive <span class="codespan-content"><code>order-requests</code></span> e spawna il loop di consumo in
+un <span class="codespan-content"><code>tokio::task</code></span>. Per ogni messaggio: gestisce il payload vuoto, deserializza in
+<span class="codespan-content"><code>OrderMessage</code></span>, applica il <em>guard</em> <span class="codespan-content"><code>order.order_id.is_empty()</code></span> (skip in caso di
+<span class="codespan-content"><code>order_id</code></span> vuoto), e in caso valido chiama <span class="codespan-content"><code>svc.schedule(order)</code></span>. La gestione del
+commit segue la tabella della sezione 5.</p>
+        <div id="footnote-area">
+          <div class="footnote-rule"></div>
+        </div>
+        <div id="sibling-pages-button-area"></div>
+        <footer>
+          <div class="position-left"></div>
+          <div class="position-center"></div>
+          <div class="position-right"></div>
+        </footer>
+      </main>
+      <aside class="margin-area" id="margin-area-right">
+        <div class="position-top"></div>
+        <div class="position-middle"></div>
+        <div class="position-bottom"></div>
+      </aside>
+    </div>
+  </body>
+</html>

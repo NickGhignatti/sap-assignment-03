@@ -1,0 +1,139 @@
+.docname {Code Docs}
+.include {docs}
+
+# Evoluzione del progetto
+
+> [NOTE!]
+> Questa pagina racconta **come** DroneFlow è arrivato alla sua forma attuale. Le
+> altre pagine descrivono il sistema *com'è oggi*; qui si documenta *com'era* e
+> *perché è cambiato*. È materiale d'appendice: utile a capire le motivazioni delle
+> scelte architetturali, non necessario a usare o estendere il sistema.
+
+Il progetto ha attraversato tre trasformazioni architetturali principali, ognuna
+motivata da un requisito dell'assignment:
+
+1. **Transport layer**: da RabbitMQ/AMQP a Apache Kafka.
+2. **Drone Service**: da servizio imperativo a flotta di agenti BDI.
+3. **Deployment & osservabilità**: da `docker-compose` a Kubernetes con SLO misurati.
+
+Le prime due sono raccontate qui in dettaglio. La terza è descritta nelle pagine
+[Deployment Kubernetes](k8s.qd) e [Osservabilità & SLO](slo.qd), che sono già di
+natura "estensione".
+
+---
+
+## 1. Da RabbitMQ/AMQP a Apache Kafka
+
+La versione iniziale del sistema usava **RabbitMQ** come message broker, con il
+protocollo AMQP e la crate `lapin`. La riprogettazione ha sostituito l'intero
+**transport layer** con **Apache Kafka** (crate `rdkafka`), lasciando invariata la
+business logic: orchestrazione SAGA, compensazione, modelli dati e persistenza
+MongoDB non sono cambiati.
+
+| Layer | v1 (AMQP) | v2 (Kafka) | Modificato? |
+|---|---|---|---|
+| Crate di trasporto | `lapin 2` | `rdkafka 0.37` | ✅ |
+| Broker | RabbitMQ 3 | Kafka 3.8 (KRaft, no Zookeeper) | ✅ |
+| Topologia messaggi | Exchange topic + routing keys | Topic flat + message key | ✅ |
+| Modello consumer | Push (il broker chiama il servizio) | Pull (`consumer.recv().await`) | ✅ |
+| Acknowledgement | `basic_ack` / `basic_nack` | `commit_message` / no-commit | ✅ |
+| Business logic | Saga orchestration, compensazione | Invariata | ⬛ |
+| Modelli dati | `SagaEvent`, `DroneEvent`, `OrderMessage` | Invariati | ⬛ |
+| Persistenza MongoDB | Stato saga, event sourcing | Invariata | ⬛ |
+| API HTTP | `POST /order`, endpoint stato drone | Invariate | ⬛ |
+
+### I cambiamenti concettuali principali
+
+**Da routing key a chiave di partizione.** In AMQP, un *topic exchange* instradava i
+messaggi alle code in base a una *routing key* (es. `saga.compensate.drone`): era il
+broker a filtrare. In Kafka non esiste questo meccanismo: ogni consumer riceve
+*tutti* i messaggi del topic a cui è sottoscritto, e il filtraggio avviene in codice
+applicativo (un `match` sul tipo di evento). La "chiave" in Kafka ha un ruolo
+diverso: determina la **partizione** e quindi l'ordinamento, non l'instradamento. Il
+sistema usa `order_id` come chiave per garantire l'ordinamento per-ordine (vedi
+[Messaging Layer](kafka.qd)).
+
+**Da push a pull.** In AMQP il broker *spingeva* i messaggi al consumer. In Kafka il
+consumer *tira* (`recv().await`): chiede attivamente il prossimo messaggio. Questo dà
+al consumer il pieno controllo sul ritmo di consumo.
+
+**Da ack/nack a commit di offset.** L'`basic_ack` di AMQP confermava un singolo
+messaggio; in Kafka si committa l'*offset* (la posizione nel log). La semantica
+at-least-once si ottiene committando solo dopo l'elaborazione riuscita. La
+corrispondenza:
+
+| AMQP | Kafka | Significato |
+|---|---|---|
+| `basic_ack` | `commit_message` (dopo successo) | Messaggio elaborato |
+| `basic_nack(requeue=true)` | non committare | Errore transiente, rielabora |
+| `basic_nack(requeue=false)` | committa per saltare | Poison pill, scarta |
+
+**Eliminazione delle dichiarazioni di topologia.** In AMQP ogni servizio doveva
+dichiarare exchange e code all'avvio (`exchange_declare`, `queue_declare`), in modo
+idempotente. In Kafka, con `KAFKA_AUTO_CREATE_TOPICS_ENABLE=true`, i topic nascono
+alla prima produzione: il codice di bootstrap si semplifica.
+
+> [NOTE!]
+> Una traccia di questa storia è ancora visibile nei commenti del codice sorgente,
+> che spesso annotano "questo sostituisce X di AMQP" — un aiuto per chi conosceva la
+> versione precedente.
+
+---
+
+## 2. Da `DroneService` imperativo a flotta di agenti BDI
+
+La versione iniziale del Drone Service era un **servizio imperativo**: un'unica
+struct `DroneService` con una mappa condivisa `InFlightMap` (`Arc<Mutex<HashMap<...>>>`)
+che teneva traccia dei droni in volo, e metodi (`start_delivery`, `settle_arrived`,
+`compensate`) che applicavano direttamente la logica con `if` sparsi.
+
+La riprogettazione ha adottato un approccio **agent-oriented** (modello BDI —
+Belief/Desire/Intention): il `DroneService` imperativo è stato sostituito da una
+**flotta di agenti autonomi** (`DroneFleet`), ognuno dei quali ragiona sul proprio
+stato interno per decidere se accettare, rifiutare o completare una consegna.
+
+| Aspetto | v2 (service imperativo) | v3 (agent-based) | Modificato? |
+|---|---|---|---|
+| Unità di esecuzione | `DroneService` singolo | `DroneFleet` di `DroneAgent` | ✅ |
+| Decisione di consegna | `if` sparsi nel service | `deliberate()` sulle belief | ✅ |
+| Stato del drone | `InFlightMap` condivisa | `DroneBeliefs` per agente | ✅ |
+| Selezione del drone | implicita (uno solo) | `AssignmentStrategy` (strategy pattern) | ✅ |
+| Esecuzione azioni | chiamate dirette | piano `Vec<DroneDesire>` eseguito da `execute()` | ✅ |
+| Event Sourcing su MongoDB | invariato | invariato | ⬛ |
+| Integrazione Kafka | invariata | invariata | ⬛ |
+| Modelli `DroneEvent` / `SagaEvent` | invariati | invariati | ⬛ |
+
+### Cosa è cambiato e cosa no
+
+Il cambiamento è stato **interno** al Drone Service: il protocollo Kafka (topic,
+`SagaEvent`) e l'event sourcing sono rimasti identici. È cambiato *chi* prende le
+decisioni e *come*:
+
+- Lo **stato** è passato da una mappa globale condivisa (`InFlightMap`) a una belief
+  base **privata per agente** (`DroneBeliefs`). Non c'è più un lock condiviso sullo
+  stato dei droni: ogni agente è isolato.
+- La **decisione** è passata da `if` imperativi nel service a un metodo
+  `deliberate()` che legge le belief e produce un'intenzione — separando il
+  ragionamento (cosa fare) dall'azione (come farlo).
+- La **selezione** del drone, prima implicita (ce n'era uno solo, di fatto), è ora
+  esplicita e intercambiabile tramite lo Strategy pattern (`AssignmentStrategy`,
+  con `RoundRobinStrategy` in produzione).
+
+L'architettura ad agenti è documentata in [Flotta ad Agenti (BDI)](agent.qd).
+
+> [NOTE!]
+> La struct imperativa `DroneService` è **ancora presente** nel file
+> `drone/src/service.rs`, conservata per riferimento storico. Il `main.rs` del Drone
+> Service **non la usa**: istanzia la `DroneFleet`. L'unico elemento del modulo ancora
+> referenziato dal resto del codice è la costante `SAGA_EVENTS_TOPIC`.
+
+---
+
+## 3. Sintesi
+
+Ogni trasformazione ha rispettato lo stesso principio: **cambiare un livello alla
+volta, lasciando stabile il contratto verso gli altri**. La migrazione a Kafka non ha
+toccato la business logic; la riprogettazione ad agenti non ha toccato il protocollo
+Kafka. Questa disciplina — resa possibile dalla centralizzazione dei tipi in
+[`common`](common.qd) e dal disaccoppiamento via eventi — è ciò che ha permesso di
+far evolvere il sistema in modo incrementale e verificabile.
